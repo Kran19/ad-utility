@@ -1,0 +1,24 @@
+FROM node:22-alpine
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy root monorepo manifest files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY packages/shared/package.json ./packages/shared/
+
+# Install dependencies
+RUN pnpm install
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY apps/frontend ./apps/frontend
+
+# Build shared package
+RUN pnpm --filter @ad-utility/shared build
+
+EXPOSE 3000
+
+CMD ["pnpm", "--filter", "@ad-utility/frontend", "dev"]

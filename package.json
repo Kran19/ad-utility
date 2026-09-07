@@ -1,0 +1,19 @@
+{
+  "name": "ad-utility-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-domain utility platform with centralized Ad Engine, AI Gateway, and Analytics",
+  "packageManager": "pnpm@11.10.0",
+  "scripts": {
+    "dev": "pnpm --filter @ad-utility/backend dev & pnpm --filter @ad-utility/frontend dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

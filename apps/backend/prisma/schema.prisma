@@ -1,0 +1,410 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum RoleType {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  ANALYST
+}
+
+enum UtilityExecutionMode {
+  LOCAL
+  SERVER
+  AI
+}
+
+enum UtilityStatus {
+  ACTIVE
+  DRAFT
+  DISABLED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  EXPIRED
+  ARCHIVED
+}
+
+enum CreativeType {
+  IMAGE
+  VIDEO
+  HTML
+  IFRAME
+}
+
+enum PlacementCode {
+  HEADER_BANNER
+  TOP_CONTENT
+  AFTER_TOOL
+  MID_CONTENT
+  BOTTOM_CONTENT
+  SIDEBAR
+  MOBILE_STICKY
+  DESKTOP_STICKY
+}
+
+enum DeviceType {
+  MOBILE
+  TABLET
+  DESKTOP
+}
+
+enum AiRequestStatus {
+  SUCCESS
+  FAILED
+  RATE_LIMITED
+}
+
+// ==========================================
+// DOMAIN 1: AUTH & RBAC
+// ==========================================
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  userRoles    UserRole[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            RoleType         @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  action          String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  entityType  String
+  entityId    String?
+  actorUserId String?
+  actorEmail  String?
+  actorIp     String?
+  details     Json?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}
+
+// ==========================================
+// DOMAIN 2: UTILITY METADATA LAYER
+// ==========================================
+
+model UtilityCategory {
+  id           String    @id @default(uuid())
+  slug         String    @unique
+  name         String
+  description  String?
+  icon         String?
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  utilities    Utility[]
+
+  @@map("utility_categories")
+}
+
+model Utility {
+  id                 String               @id @default(uuid())
+  slug               String               @unique
+  name               String
+  description        String
+  categoryId         String
+  implementationMode UtilityExecutionMode @default(LOCAL)
+  status             UtilityStatus        @default(ACTIVE)
+  isFeatured         Boolean              @default(false)
+  displayOrder       Int                  @default(0)
+  seoTitle           String
+  seoDescription     String
+  canonicalUrl       String?
+  faqContent         Json?                @default("[]")
+  relatedSlugs       String[]             @default([])
+  config             Json?                @default("{}")
+  version            String               @default("1.0.0")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  category           UtilityCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([status, displayOrder])
+  @@index([categoryId])
+  @@map("utilities")
+}
+
+// ==========================================
+// DOMAIN 3: ADVERTISING ENGINE
+// ==========================================
+
+model AdCampaign {
+  id                 String            @id @default(uuid())
+  name               String
+  status             CampaignStatus    @default(DRAFT)
+  priority           Int               @default(50)
+  weight             Int               @default(100)
+  dailyImpressionCap Int?
+  totalImpressionCap Int?
+  startDate          DateTime?
+  endDate            DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  targetingRules     AdTargetingRule[]
+  schedules          AdSchedule[]
+  impressions        AdImpression[]
+  clicks             AdClick[]
+
+  @@index([status, startDate, endDate])
+  @@index([priority])
+  @@map("ad_campaigns")
+}
+
+model AdCreative {
+  id               String            @id @default(uuid())
+  name             String
+  type             CreativeType      @default(IMAGE)
+  mediaUrl         String?
+  targetUrl        String?
+  width            Int?
+  height           Int?
+  altText          String?
+  customHtml       String?           @db.Text
+  isGlobalFallback Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  targetingRules   AdTargetingRule[]
+  impressions      AdImpression[]
+  clicks           AdClick[]
+
+  @@index([type])
+  @@index([isGlobalFallback])
+  @@map("ad_creatives")
+}
+
+model AdPlacement {
+  id             String            @id @default(uuid())
+  code           PlacementCode     @unique
+  name           String
+  description    String?
+  supportedTypes CreativeType[]    @default([IMAGE, VIDEO, HTML, IFRAME])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  targetingRules AdTargetingRule[]
+  impressions    AdImpression[]
+  clicks         AdClick[]
+
+  @@map("ad_placements")
+}
+
+model AdTargetingRule {
+  id               String        @id @default(uuid())
+  campaignId       String
+  placementId      String
+  creativeId       String
+  deviceTypes      DeviceType[]  @default([MOBILE, TABLET, DESKTOP])
+  utilitySlugs     String[]      @default([])
+  categorySlugs    String[]      @default([])
+  countries        String[]      @default([])
+  priorityOverride Int?
+  weight           Int           @default(100)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  campaign         AdCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  placement        AdPlacement   @relation(fields: [placementId], references: [id], onDelete: Cascade)
+  creative         AdCreative    @relation(fields: [creativeId], references: [id], onDelete: Cascade)
+
+  @@index([placementId, isActive])
+  @@index([campaignId])
+  @@index([creativeId])
+  @@map("ad_targeting_rules")
+}
+
+model AdSchedule {
+  id         String     @id @default(uuid())
+  campaignId String
+  dayOfWeek  Int
+  startHour  Int        @default(0)
+  endHour    Int        @default(23)
+  timezone   String     @default("UTC")
+  createdAt  DateTime   @default(now())
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, dayOfWeek])
+  @@map("ad_schedules")
+}
+
+model AdImpression {
+  id            String      @id @default(uuid())
+  creativeId    String
+  campaignId    String
+  placementId   String
+  utilitySlug   String?
+  deviceType    DeviceType  @default(DESKTOP)
+  country       String?
+  ipHash        String?
+  userAgentHash String?
+  sessionToken  String?
+  timestamp     DateTime    @default(now())
+  creative      AdCreative  @relation(fields: [creativeId], references: [id], onDelete: Cascade)
+  campaign      AdCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  placement     AdPlacement @relation(fields: [placementId], references: [id], onDelete: Cascade)
+
+  @@index([timestamp])
+  @@index([campaignId, timestamp])
+  @@index([creativeId, timestamp])
+  @@index([utilitySlug, timestamp])
+  @@map("ad_impressions")
+}
+
+model AdClick {
+  id           String      @id @default(uuid())
+  creativeId   String
+  campaignId   String
+  placementId  String
+  utilitySlug  String?
+  deviceType   DeviceType  @default(DESKTOP)
+  country      String?
+  ipHash       String?
+  sessionToken String?
+  timestamp    DateTime    @default(now())
+  creative     AdCreative  @relation(fields: [creativeId], references: [id], onDelete: Cascade)
+  campaign     AdCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  placement    AdPlacement @relation(fields: [placementId], references: [id], onDelete: Cascade)
+
+  @@index([timestamp])
+  @@index([campaignId, timestamp])
+  @@index([creativeId, timestamp])
+  @@map("ad_clicks")
+}
+
+// ==========================================
+// DOMAIN 4: AI USAGE TRACKING
+// ==========================================
+
+model AiRequest {
+  id               String          @id @default(uuid())
+  requestId        String          @unique
+  utilitySlug      String
+  model            String
+  promptTemplate   String?
+  inputTokens      Int             @default(0)
+  outputTokens     Int             @default(0)
+  totalTokens      Int             @default(0)
+  estimatedCostUsd Float           @default(0.0)
+  durationMs       Int             @default(0)
+  status           AiRequestStatus @default(SUCCESS)
+  errorMessage     String?
+  ipHash           String?
+  timestamp        DateTime        @default(now())
+
+  @@index([timestamp])
+  @@index([utilitySlug, timestamp])
+  @@index([status])
+  @@map("ai_requests")
+}
+
+// ==========================================
+// DOMAIN 5: FIRST-PARTY TELEMETRY
+// ==========================================
+
+model AnalyticsEvent {
+  id            String   @id @default(uuid())
+  eventType     String
+  utilitySlug   String?
+  placementCode String?
+  creativeId    String?
+  sessionToken  String?
+  anonymousId   String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmContent    String?
+  utmTerm       String?
+  metadata      Json?    @default("{}")
+  timestamp     DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([eventType, timestamp])
+  @@index([utilitySlug, timestamp])
+  @@index([sessionToken])
+  @@map("analytics_events")
+}
+
+// ==========================================
+// DOMAIN 6: PLATFORM SETTINGS
+// ==========================================
+
+model Setting {
+  key         String   @id
+  value       Json
+  category    String   @default("general")
+  description String?
+  isEncrypted Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("settings")
+}
