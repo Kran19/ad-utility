@@ -15,5 +15,12 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "overrides": {
+    "js-yaml": "^4.3.1",
+    "lodash": "^4.17.24",
+    "qs": "^6.16.0",
+    "body-parser": "^1.20.6",
+    "file-type": "^21.3.2"
   }
 }

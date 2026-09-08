@@ -3,8 +3,11 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { UtilityPublicDto, ApiEnvelope } from '@ad-utility/shared';
+import { getSiteOrigin, getInternalApiUrl, siteConfig } from '../../lib/site-config';
 import { AdSlot } from '../../components/ads/ad-slot';
 import { ToolRunner } from '../../components/utility/tool-runner';
+import { Breadcrumbs } from '../../components/navigation/Breadcrumbs';
+import { JsonLd } from '../../components/seo/JsonLd';
 
 interface PageProps {
   params: {
@@ -13,14 +16,11 @@ interface PageProps {
 }
 
 async function fetchUtilityMetadata(slug: string): Promise<UtilityPublicDto | null> {
-  const apiUrl =
-    process.env.INTERNAL_API_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    (typeof window === 'undefined' ? 'http://backend:4000/api/v1' : 'http://localhost:4000/api/v1');
+  const apiUrl = getInternalApiUrl();
 
   try {
     const res = await fetch(`${apiUrl}/utilities/${slug}`, {
-      cache: 'no-store',
+      next: { revalidate: 3600 },
     });
 
     if (!res.ok) {
@@ -30,15 +30,17 @@ async function fetchUtilityMetadata(slug: string): Promise<UtilityPublicDto | nu
     const data: ApiEnvelope<UtilityPublicDto> = await res.json();
     return data.success && data.data ? data.data : null;
   } catch (err) {
-    try {
-      const fallbackUrl = 'http://localhost:4000/api/v1';
-      const fallbackRes = await fetch(`${fallbackUrl}/utilities/${slug}`, { cache: 'no-store' });
-      if (fallbackRes.ok) {
-        const fallbackData: ApiEnvelope<UtilityPublicDto> = await fallbackRes.json();
-        return fallbackData.success && fallbackData.data ? fallbackData.data : null;
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const fallbackUrl = 'http://localhost:4001/api/v1';
+        const fallbackRes = await fetch(`${fallbackUrl}/utilities/${slug}`, { next: { revalidate: 3600 } });
+        if (fallbackRes.ok) {
+          const fallbackData: ApiEnvelope<UtilityPublicDto> = await fallbackRes.json();
+          return fallbackData.success && fallbackData.data ? fallbackData.data : null;
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
     return null;
   }
@@ -46,25 +48,44 @@ async function fetchUtilityMetadata(slug: string): Promise<UtilityPublicDto | nu
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const utility = await fetchUtilityMetadata(params.slug);
+  const origin = getSiteOrigin();
 
-  if (!utility) {
+  if (!utility || utility.status !== 'ACTIVE') {
     return {
-      title: 'Utility Not Found | Ad Utility Platform',
-      description: 'The requested utility could not be found.',
+      title: `Tool Not Found | ${siteConfig.name}`,
+      description: 'The requested utility could not be found or is unavailable.',
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
+  const title = `${utility.seoTitle || utility.name} — Free Online Tool | ${siteConfig.name}`;
+  const description = utility.seoDescription || utility.description;
+  const canonicalUrl = `${origin}/${utility.slug}`;
+
   return {
-    title: `${utility.seoTitle || utility.name} | Ad Utility Platform`,
-    description: utility.seoDescription || utility.description,
+    title,
+    description,
     alternates: {
-      canonical: utility.canonicalUrl || `/${utility.slug}`,
+      canonical: canonicalUrl,
     },
     openGraph: {
-      title: utility.seoTitle || utility.name,
-      description: utility.seoDescription || utility.description,
+      title,
+      description,
       type: 'website',
-      url: `/${utility.slug}`,
+      url: canonicalUrl,
+      siteName: siteConfig.name,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    robots: {
+      index: true,
+      follow: true,
     },
   };
 }
@@ -76,10 +97,84 @@ export default async function UtilityPage({ params }: PageProps) {
     notFound();
   }
 
+  const origin = getSiteOrigin();
+  const canonicalUrl = `${origin}/${utility.slug}`;
+  const categoryUrl = `${origin}/category/${utility.categorySlug}`;
+
+  // 1. WebApplication Structured Data Schema
+  const webApplicationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: utility.name,
+    description: utility.description,
+    url: canonicalUrl,
+    applicationCategory: utility.categoryName,
+    operatingSystem: 'All',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+  };
+
+  // 2. BreadcrumbList Structured Data Schema
+  const breadcrumbListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: origin,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: utility.categoryName,
+        item: categoryUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: utility.name,
+        item: canonicalUrl,
+      },
+    ],
+  };
+
+  // 3. FAQPage Schema — only if visible FAQ items genuinely exist
+  const hasFaqs = Array.isArray(utility.faqContent) && utility.faqContent.length > 0;
+  const faqPageSchema = hasFaqs
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: utility.faqContent.map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.answer,
+          },
+        })),
+      }
+    : null;
+
+  const breadcrumbs = [
+    { name: 'Home', url: '/', position: 1 },
+    { name: utility.categoryName, url: `/category/${utility.categorySlug}`, position: 2 },
+    { name: utility.name, url: `/${utility.slug}`, position: 3 },
+  ];
+
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 pb-20">
+    <main className="min-h-screen bg-slate-950 text-slate-100 pb-20">
+      {/* Structured Data Scripts */}
+      <JsonLd data={webApplicationSchema} />
+      <JsonLd data={breadcrumbListSchema} />
+      {faqPageSchema && <JsonLd data={faqPageSchema} />}
+
       {/* Top Navigation Bar */}
-      <header className="border-b border-gray-800/80 bg-gray-900/60 backdrop-blur-md sticky top-0 z-40">
+      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold text-white flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black">
@@ -87,13 +182,7 @@ export default async function UtilityPage({ params }: PageProps) {
             </span>
             <span>UtilityPlatform</span>
           </Link>
-          <nav className="flex items-center gap-4 text-sm text-gray-400">
-            <Link href="/" className="hover:text-white transition-colors">
-              All Tools
-            </Link>
-            <span className="text-gray-700">/</span>
-            <span className="text-gray-200 capitalize">{utility.categoryName}</span>
-          </nav>
+          <Breadcrumbs items={breadcrumbs} />
         </div>
       </header>
 
@@ -109,10 +198,13 @@ export default async function UtilityPage({ params }: PageProps) {
         {/* Hero & Utility Header */}
         <section className="space-y-3 text-center sm:text-left">
           <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-950 text-blue-400 border border-blue-800/60 uppercase tracking-wider">
+            <Link
+              href={`/category/${utility.categorySlug}`}
+              className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-950 text-blue-400 border border-blue-800/60 uppercase tracking-wider hover:bg-blue-900 transition-colors"
+            >
               {utility.categoryName}
-            </span>
-            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-800 text-gray-300 border border-gray-700">
+            </Link>
+            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 border border-slate-700">
               v{utility.version}
             </span>
             {utility.isFeatured && (
@@ -124,7 +216,7 @@ export default async function UtilityPage({ params }: PageProps) {
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             {utility.name}
           </h1>
-          <p className="text-lg text-gray-400 max-w-3xl">
+          <p className="text-lg text-slate-400 max-w-3xl">
             {utility.description}
           </p>
         </section>
@@ -149,20 +241,20 @@ export default async function UtilityPage({ params }: PageProps) {
         />
 
         {/* How-to Guide & Documentation Section */}
-        <section className="bg-gray-900/60 border border-gray-800/80 rounded-xl p-6 sm:p-8 space-y-4">
+        <section className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 sm:p-8 space-y-4">
           <h2 className="text-2xl font-bold text-white">How to Use {utility.name}</h2>
-          <div className="prose prose-invert max-w-none text-gray-300 space-y-3 text-sm sm:text-base leading-relaxed">
+          <div className="max-w-none text-slate-300 space-y-3 text-sm sm:text-base leading-relaxed">
             <p>
-              This utility is designed for high performance, reliability, and security. Follow these steps to use the tool:
+              This utility is designed for high performance, reliability, and security. Follow these simple steps:
             </p>
-            <ol className="list-decimal list-inside space-y-2 text-gray-300">
-              <li>Enter or paste your content in the input field above.</li>
-              <li>Click the &ldquo;Run {utility.name}&rdquo; button to execute the tool.</li>
-              <li>View the formatted or transformed output instantly in the result pane.</li>
-              <li>Copy or export the output for your workflow.</li>
+            <ol className="list-decimal list-inside space-y-2 text-slate-300">
+              <li>Upload your source file or enter text in the designated input area above.</li>
+              <li>Configure any desired options (e.g. output format, quality, compression, or tone).</li>
+              <li>Execute the tool to process the operation with instant performance.</li>
+              <li>Inspect and download the converted result or copy it directly to your clipboard.</li>
             </ol>
-            <p className="text-xs text-gray-400">
-              All computations respect our strict privacy and isolation standards.
+            <p className="text-xs text-slate-500 pt-2 border-t border-slate-800">
+              Zero storage retention: All operations process in memory or isolated execution tiers without permanent disk retention.
             </p>
           </div>
         </section>
@@ -175,20 +267,20 @@ export default async function UtilityPage({ params }: PageProps) {
         />
 
         {/* Frequently Asked Questions (FAQ) Section */}
-        {utility.faqContent && utility.faqContent.length > 0 && (
+        {hasFaqs && (
           <section className="space-y-4">
             <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
             <div className="space-y-3">
               {utility.faqContent.map((faq, idx) => (
                 <details
                   key={idx}
-                  className="group bg-gray-900/80 border border-gray-800 rounded-lg p-4 open:bg-gray-900 transition-colors"
+                  className="group bg-slate-900/80 border border-slate-800 rounded-lg p-4 open:bg-slate-900 transition-colors"
                 >
-                  <summary className="font-medium text-gray-200 cursor-pointer list-none flex items-center justify-between">
+                  <summary className="font-medium text-slate-200 cursor-pointer list-none flex items-center justify-between">
                     <span>{faq.question}</span>
-                    <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                    <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
                   </summary>
-                  <p className="mt-3 text-sm text-gray-400 leading-relaxed border-t border-gray-800/60 pt-3">
+                  <p className="mt-3 text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
                     {faq.answer}
                   </p>
                 </details>
@@ -206,19 +298,27 @@ export default async function UtilityPage({ params }: PageProps) {
 
         {/* Related Utilities Section */}
         {utility.relatedSlugs && utility.relatedSlugs.length > 0 && (
-          <section className="space-y-4 pt-4 border-t border-gray-800">
-            <h3 className="text-xl font-bold text-white">Related Utilities</h3>
+          <section className="space-y-4 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white">Related Utilities</h3>
+              <Link
+                href={`/category/${utility.categorySlug}`}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                More in {utility.categoryName} &rarr;
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {utility.relatedSlugs.map((relSlug) => (
                 <Link
                   key={relSlug}
                   href={`/${relSlug}`}
-                  className="p-4 rounded-lg bg-gray-900/60 border border-gray-800/80 hover:border-blue-500/50 hover:bg-gray-900 transition-all flex items-center justify-between group"
+                  className="p-4 rounded-lg bg-slate-900/60 border border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900 transition-all flex items-center justify-between group"
                 >
-                  <span className="font-medium text-gray-300 group-hover:text-blue-400 transition-colors capitalize">
+                  <span className="font-medium text-slate-300 group-hover:text-blue-400 transition-colors capitalize">
                     {relSlug.replace(/-/g, ' ')}
                   </span>
-                  <span className="text-gray-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
+                  <span className="text-slate-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
                 </Link>
               ))}
             </div>

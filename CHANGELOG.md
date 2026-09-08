@@ -8,6 +8,247 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Completed Phase 22 (SEO Content Intelligence, Programmatic Landing Pages & Organic Growth Engine):
+  - Shared SEO Contracts: Added `SeoOpportunityDto`, `SeoPageHealthDto`, `SeoLandingPageDto`, `SeoInternalLinkOpportunityDto`, `OrganicAcquisitionDto`, `SeoUtilityPerformanceDto`, `SeoCategoryPerformanceDto`, `SeoContentCoverageDto`, `SeoHealthDto`, `SeoRecommendationDto`, and `SeoIntelligenceDto` to `@ad-utility/shared`.
+  - First-Party Organic Classification: Classified search referrers and UTM parameters with zero third-party cookies or tracker scripts.
+  - Deterministic SEO Opportunity Score (0–100): Transparent scoring combining Task Completion Strength (35%), Demand Signal (25%), On-Page Health Gap (20%), and Internal Link Gap (20%).
+  - Technical Page Health Audit: Automated inspection of metadata completeness, canonical consistency, structured data (JSON-LD), and breadcrumbs.
+  - Reciprocal & Semantic Internal Linking Engine: Deterministic link graph connecting complementary utilities into natural workflows.
+  - Content Coverage Matrix: Audited content coverage across all active utility and category landing pages.
+  - Sitemap & Discoverability Verification: Automated audit of XML sitemap inclusion for all active utilities and categories.
+  - Backend SEO Intelligence Service: Created `SeoIntelligenceService` in `apps/backend/src/admin/services/seo-intelligence.service.ts` with 5 new admin analytics endpoints protected by JWT and RBAC.
+  - Redis 60s Fail-Open Caching: Cached summaries under `admin:seo:intelligence:${periodDays}`.
+  - Admin Analytics UI: Added dedicated **SEO & Organic Growth** tab to `apps/frontend/src/app/admin/analytics/page.tsx`.
+  - Automated SEO Test Suite: Added `apps/backend/test/seo-intelligence.spec.ts` (13 assertions).
+  - Shared package, backend, and Next.js frontend production builds passing cleanly.
+  - Documentation: `docs/seo-content-intelligence.md`, `docs/decisions/ADR-022-seo-content-intelligence.md`, `PHASE_22_VERIFICATION_REPORT.md`.
+- Completed Phase 21 (Advanced Growth, Retention & User Journey Intelligence):
+  - Shared Journey & Retention Contracts: Added `JourneyStepDto`, `UserJourneyDto`, `RetentionCohortDto`, `RetentionMetricsDto`, `SessionDepthDto`, `CrossUtilityFlowDto`, `ReturningVisitorMetricsDto`, `AcquisitionRetentionDto`, `DeviceRetentionDto`, `ExperimentJourneyImpactDto`, `JourneyQualityScoreDto`, `RetentionHealthDto`, `JourneyOpportunityDto`, and `JourneyIntelligenceDto` to `@ad-utility/shared`.
+  - Privacy-First Anonymous Session Paradigm: Aggregates ephemeral anonymous session tokens with zero PII, zero raw token exposure, zero user profiling, and zero external analytics tracking.
+  - Deterministic Journey Quality Score: Explainable 0–100 indicator combining task completion (35%), result download (25%), multi-utility exploration (20%), return rate (15%), and error-free execution (5%).
+  - Deterministic Retention Health Score: Explainable 0–100 index reflecting D1 retention (35%), D7 retention (30%), return visitor rate (20%), and multi-session progression (15%).
+  - Anonymous Retention Cohorts: Progression matrix across D0, D1, D7, D14, and D30 intervals with sample maturity tagging (`MATURE` vs `INSUFFICIENT_DATA`).
+  - Session Depth Breakdown: Bounded distribution across 1, 2, 3, and 4+ utilities with completion rates, export rates, and ad CTR.
+  - Cross-Utility Flow Transitions: Bounded top-20 sequential tool discovery pathways.
+  - Advisory Opportunities Engine: Prioritized non-destructive recommendations with explicit confidence levels.
+  - Backend Journey Intelligence Service: Created `JourneyIntelligenceService` with `/journey` and `/journey/opportunities` endpoints protected by JWT and RBAC.
+  - Redis 60s Fail-Open Caching: Cached summaries under `admin:journey:summary:${periodDays}`.
+  - Admin Analytics UI: Added dedicated **Journey & Retention** tab to the control panel.
+  - Automated Journey Test Suite: Added `apps/backend/test/journey-intelligence.spec.ts` (12 assertions).
+  - Total test baseline expanded to **297/297 passing tests across 21 test suites (100% pass rate)**.
+  - Launch smoke verified: **16/16 passing checks (100% pass rate)**.
+  - Performance smoke benchmark verified: all lightweight endpoints < 10ms.
+  - Real OpenAI provider integration remains strictly **DEFERRED** (`AI_PROVIDER=mock`, zero external API calls).
+  - Documentation: `docs/journey-retention-intelligence.md`, `docs/decisions/ADR-021-journey-retention-intelligence.md`, `PHASE_21_VERIFICATION_REPORT.md`.
+- Completed Phase 20 (Revenue Attribution, Ad Optimization & Business Intelligence):
+  - Shared BI & Attribution Contracts: Added `BusinessKpisDto`, `AcquisitionAttributionDto`, `UtilityBusinessValueDto`, `AdBusinessValueDto`, `CrossDimensionalYieldDto`, `BusinessHealthDto`, `OptimizationOpportunityDto`, and `BusinessIntelligenceDto` to `@ad-utility/shared`.
+  - Zero Fabricated Revenue Policy: Strictly returned `revenueAvailable: false` with deterministic proxy scores and observed interaction metrics.
+  - Platform Business Health Score: Deterministic 0–100 indicator composing acquisition quality, funnel health, ad yield, and reliability.
+  - Acquisition Quality Scoring: Deterministic 0–100 score for traffic channels based on task completion and engagement.
+  - Utility Opportunity Scoring: Deterministic 0–100 score prioritizing tool optimization and monetization synergy.
+  - Advisory Opportunities Engine: Categorized recommendations across acquisition, utilities, ads, and experiments.
+  - Backend BI Service: Created `BusinessIntelligenceService` with `/business-intelligence` and `/opportunities` endpoints.
+  - Admin Analytics UI: Added dedicated **Executive BI & Health** tab to the control panel.
+  - Automated BI Test Suite: Added `apps/backend/test/business-intelligence.spec.ts` (12 assertions).
+  - Total test baseline expanded to **285/285 passing tests across 20 test suites (100% pass rate)**.
+  - Documentation: `docs/business-intelligence.md`, `docs/decisions/ADR-020-business-intelligence.md`, `PHASE_20_VERIFICATION_REPORT.md`.
+- Completed Phase 19 (Revenue Optimization, Ad Yield & Monetization Intelligence):
+  - Shared Monetization Contracts: Added `AdYieldSummaryDto`, `PlacementYieldDto`, `CreativePerformanceDto`, `DeviceYieldDto`, `UtilityMonetizationDto`, `MonetizationRecommendationDto`, `ExperimentMonetizationDto`, and `MonetizationIntelligenceDto` to `@ad-utility/shared`.
+  - Zero Fabricated Revenue Policy: Strictly separated observed interactions (impressions, clicks, CTR, task completion associations) from proxy metrics (deterministic 0–100 scores, engagement indexes, fill rate telemetry availability). Zero artificial revenue numbers generated.
+  - Deterministic Optimization Scoring: Built explainable, bounded 0–100 optimization scores for ad placements and creatives based on target CTR benchmarks, volume adequacy, and underperformance penalties.
+  - Advisory Recommendations Engine: Implemented non-destructive, rule-based recommendation generator covering low CTR warnings, high yield highlights, creative format disparities, mobile web yield gaps, and utility monetization synergy.
+  - Backend Monetization Intelligence Service: Implemented `MonetizationIntelligenceService` executing high-performance SQL aggregations across `ad_impressions`, `ad_clicks`, `ad_placements`, `ad_creatives`, `ad_campaigns`, and `analytics_events`.
+  - Admin Monetization APIs: Added `GET /api/v1/admin/analytics/monetization` and `GET /api/v1/admin/analytics/monetization/recommendations` protected by JWT auth and `@RequirePermissions('analytics:read')`.
+  - Redis Caching & Fail-Open Resilience: Cached monetization summaries with 60-second TTL under `admin:monetization:intel:*` with fail-open fallback on Redis disconnections.
+  - Admin Analytics Dashboard Upgrade: Redesigned the Next.js Admin Panel analytics page with a dedicated **Ad Yield & Monetization** view featuring KPI cards, placement yield matrix, creative performance tables, device analytics, utility conversion correlation, advisory recommendations feed, and A/B experiment monetization breakdown.
+  - Automated Monetization Test Suite: Added `apps/backend/test/monetization-intelligence.spec.ts` (15 assertions covering metric aggregation, bounded date ranges, 0-100 score calculations, advisory recommendation generation, privacy protection, and Redis caching).
+  - Total test baseline expanded to **273/273 passing tests across 19 test suites (100% pass rate)**.
+  - Launch smoke tests verified: **16/16 passing checks (100% pass rate)**.
+  - Performance smoke benchmark verified: all lightweight endpoints < 10ms (readiness: 3.8ms, utilities: 4.4ms, case-converter: 2.5ms).
+  - Real OpenAI provider integration remains strictly **DEFERRED** (`AI_PROVIDER=mock`, zero external API calls).
+  - Documentation: `docs/monetization-intelligence.md`, `docs/decisions/ADR-019-monetization-intelligence.md`, `PHASE_19_VERIFICATION_REPORT.md`.
+- Completed Phase 18 (Growth Analytics, Experimentation & Conversion Intelligence):
+  - Funnel Intelligence: Implemented 4-stage utility conversion tracking (`PAGE_VIEW` -> `TOOL_START` -> `TOOL_COMPLETE` -> `RESULT_DOWNLOAD`) with stage-by-stage drop-off rates and mathematical division-by-zero protection.
+  - Acquisition & Attribution: Added multi-touch first-party UTM attribution tracking (`utmSource`, `utmMedium`, `utmCampaign`) with SSR-safe session storage capture and visit volume reporting.
+  - Utility Performance Intelligence: Aggregated utility-level metrics including page views, tool starts, tool completions, errors, result downloads, completion rates, error rates, export rates, and average execution durations.
+  - Ad Monetization Analytics: Aggregated impression volume, click volume, and authoritative CTR across 8 ad placements, devices (Desktop, Mobile, Tablet), campaigns, and creatives.
+  - Deterministic A/B Experimentation Engine: Created reproducible session-hashed variant assignment (`getExperimentVariant` using 32-bit FNV-1a hash over `experimentId:sessionToken`), exposure event validation (`EXPERIMENT_EXPOSURE`), and variant conversion rate measurement with leader detection.
+  - Admin Growth & Analytics Dashboard: Redesigned the Next.js Admin Panel analytics page with 6 interactive views (Funnel & Conversion, Acquisition & Attribution, Utility Intelligence, Ad Monetization, A/B Experimentation, and Live Telemetry Stream).
+  - Automated Growth Test Suite: Added `apps/backend/test/growth-intelligence.spec.ts` (13 assertions covering deterministic variant hashing, weighted variant distribution, zero-data bounds, funnel calculations, utility benchmarks, ad CTR, and admin RBAC).
+  - Total test baseline expanded to **258/258 passing tests across 18 test suites (100% pass rate)**.
+  - Launch smoke tests verified: 16/16 passing checks (100% pass rate).
+  - Real OpenAI provider integration remains **DEFERRED** (`AI_PROVIDER=mock`, zero external API calls).
+  - Documentation: `docs/growth-intelligence.md`, `docs/decisions/ADR-018-growth-intelligence.md`, `PHASE_18_VERIFICATION_REPORT.md`.
+- Completed Phase 17 (Scale Readiness, Caching & Performance Engineering):
+  - HTTP Public API Caching: Added `Cache-Control` headers on public catalog endpoints (`GET /api/v1/utilities`, `GET /api/v1/utilities/categories`, `GET /api/v1/utilities/:slug`, `GET /api/v1/utilities/categories/:categorySlug`) with `public, max-age=60, s-maxage=300, stale-while-revalidate=600`.
+  - Targeted Cache Invalidation: Integrated `UtilitiesCacheService` into `AdminUtilitiesService` (invalidates `detail:<slug>`, `list:`, `categories:`, `category:<slug>` on utility or category mutations) and `RedisAdCacheService` into `AdminAdsService` (invalidates `cache:adslot:*` on campaign, creative, placement, and targeting rule mutations).
+  - Multi-Tier Redis Caching & Resilience: Verified fail-open behavior for utility catalog, category directory, ad slot evaluation, frequency capping, and deduplication.
+  - Database Query Efficiency & Pagination Bounds: Audited all Prisma queries for N+1 prevention, strict `select` field projection, bounded query pagination (`take`, `skip`, default/maximum page limits), and SQL aggregation for analytics.
+  - Concurrency & Resource Protections: Verified resource caps (70MB request body parser limit, binary magic-byte inspection for JPEG, PNG, and PDF, execution timeouts, memory cleanup).
+  - Automated Performance & Resilience Test Suite: Created `apps/backend/test/performance-resilience.spec.ts` (11 assertions covering cache headers, targeted invalidation, Redis fail-open, query pagination, load concurrency, and mock AI isolation).
+  - Total test baseline expanded to **245/245 passing tests across 17 test suites (100% pass rate)**.
+  - Launch smoke tests verified: 16/16 passing checks (100% pass rate).
+  - Automated Performance Smoke Test script created: `scripts/performance-smoke-test.ps1`.
+  - Real OpenAI provider integration remains **DEFERRED** (`AI_PROVIDER=mock`, zero external API calls).
+  - Documentation: `docs/scale-readiness.md`, `docs/decisions/ADR-017-scale-readiness.md`, `PHASE_17_VERIFICATION_REPORT.md`.
+- Completed Phase 16 (Production Stability, Observability & Operational Hardening):
+  - Unified Request Correlation: implemented `RequestIdMiddleware` to sanitize/generate `X-Request-Id` and propagate it across all service contexts, response headers, and error bodies.
+  - Structured Logging: added `LoggingInterceptor` logging HTTP method, URL, status code, duration in milliseconds, and `requestId` with zero secrets or raw payloads.
+  - Error Observability & Masking: updated `GlobalExceptionFilter` to attach correlation `requestId` to all error responses while sanitizing internal details and hiding stack traces from public clients.
+  - Observability Probes: updated `HealthController` with distinct `/health/liveness` (vitality & process uptime) and `/health/readiness` (PostgreSQL fail-closed, Redis fail-open).
+  - Graceful Shutdown: verified NestJS shutdown hooks (`app.enableShutdownHooks()`) with clean Prisma and Redis disconnection handlers on `SIGTERM`/`SIGINT`.
+  - Redis Resilience Matrix: verified fail-open behavior for Ad Cache, Frequency Capping, Analytics Deduplication, and Utility Metadata Cache.
+  - Utility Reliability: verified execution timeout enforcement, resource limits (70MB body parser, magic-byte guards, canvas constraints), and propagated `requestId`.
+  - Frontend Error Resilience: updated `tool-runner.tsx` to handle 400, 404, 408, 429, 503, and network errors with actionable user banners.
+  - Added test suite `apps/backend/test/operational-resilience.spec.ts` (15 assertions).
+  - Total test baseline expanded to **234/234 passing tests across 16 test suites (100% pass rate)**.
+  - Launch smoke tests verified: 16/16 passing checks.
+  - Documentation: `docs/operational-hardening.md`, `docs/decisions/ADR-016-operational-hardening.md`, `PHASE_16_VERIFICATION_REPORT.md`.
+- Completed Phase 15.1 (Real OpenAI Provider Smoke Verification):
+  - Created and executed opt-in live provider verification test in `ai-provider-integration.spec.ts` enforcing `AI_REAL_PROVIDER_TEST=true`, `AI_PROVIDER=openai`, and `OPENAI_API_KEY`.
+  - Verified CI opt-in gate behavior: gracefully bypasses live call when secret is absent without failing automated test runs or making false claims.
+  - Verified simulated provider failure modes: missing key returns 503 `AI_SERVICE_UNAVAILABLE` (no silent mock fallback); invalid key (401) is safely sanitized to HTTP 503 without leaking Authorization headers or API keys; daily budget ceiling guard returns HTTP 429 `DAILY_BUDGET_EXCEEDED`.
+  - Verified non-AI subsystem isolation: all 9 non-AI utilities (Image, PDF, Text), Ad Engine, Analytics funnel, Admin RBAC, and Observability health probes remain 100% operational during simulated AI provider failures.
+  - Verified secret isolation across source code, frontend static artifacts, Dockerfiles, and database tables.
+  - Total test baseline expanded to **219/219 passing tests across 15 test suites (100% pass rate)**.
+  - Launch smoke tests passing 16/16 checks (100% pass rate).
+  - Documented in `PHASE_15_1_VERIFICATION_REPORT.md`.
+- Completed Phase 15 (Real AI Provider Integration & Governance):
+  - Real OpenAI Provider Integration activated in `AiGatewayService` behind explicit provider configuration `AI_PROVIDER=openai`.
+  - Offline deterministic mock engine preserved as default (`AI_PROVIDER=mock`) for automated testing and offline development.
+  - Server-side model governance with strict allowlist (`SUPPORTED_AI_MODELS`: `gpt-4o-mini`, `gpt-4o`, `gpt-3.5-turbo`, `mock-ai`), rejecting arbitrary model identifiers with HTTP 400.
+  - Configuration-driven dynamic pricing matrix in `AiCostCalculatorService` with updated official rates ($0.15/$0.60 per 1M on `gpt-4o-mini`) and optional `AI_PRICING_OVERRIDES_JSON`.
+  - Application-level spending protection via `AI_DAILY_BUDGET_USD` (default $5.00/day) preventing uncontrolled spend.
+  - Subsystem isolation: Fail-safe guarantee verified where AI provider misconfiguration/outage does not degrade non-AI tools (image, PDF, text tools, ad engine, analytics).
+  - Backend-only secret containment: `OPENAI_API_KEY` strictly confined to runtime environment variables.
+  - Comprehensive testing suite: `apps/backend/test/ai-provider-integration.spec.ts` with 14 assertions and opt-in real provider test (`AI_REAL_PROVIDER_TEST=true`).
+  - Total test baseline expanded to **217/217 passing tests across 15 test suites (100% pass rate)**.
+  - Documentation and ADR: `docs/ai-production.md`, `docs/decisions/ADR-015-real-ai-provider.md`, `PHASE_15_VERIFICATION_REPORT.md`.
+- Completed Phase 14 (Growth, Conversion & Monetization Optimization):
+  - Conversion funnel telemetry (`TOOL_INPUT`, `RESULT_DOWNLOAD`, `TOOL_COPY`, `TOOL_RESET`, `AD_CLICK`, `AD_IMPRESSION`).
+  - Related utility cross-linking matrix and SEO navigation across all categories.
+  - Acquisition analytics and UTM campaign attribution reporting.
+  - 203/203 passing tests across 14 test suites.
+- API Origin Hardening & Multi-Environment Resolution:
+  - Centralized client API origin resolver `getClientApiUrl()` in `apps/frontend/src/lib/site-config.ts`.
+  - Production browsers resolve to same-origin `/api/v1` behind reverse proxy with trailing slashes normalized.
+  - Zero browser dependency on `localhost:4000` or `localhost:4001`.
+  - Refactored `ad-slot.tsx`, `analytics.ts`, `admin-api.ts`, workspaces, and `tool-runner.tsx`.
+- House & Fallback Ad Assurance:
+  - Audited all 8 standard ad placements (`HEADER_BANNER`, `TOP_CONTENT`, `AFTER_TOOL`, `MID_CONTENT`, `BOTTOM_CONTENT`, `SIDEBAR`, `MOBILE_STICKY`, `DESKTOP_STICKY`).
+  - Implemented universal fallback on `AFTER_TOOL` backed by `Global Fallback Campaign` (`TIER_4_GLOBAL_FALLBACK`).
+  - Implemented clean empty-state handling (`TIER_5_NO_AD` -> `null`) for unbooked slots with zero CLS and zero layout breakage.
+  - Verified signed HMAC-SHA256 tracking token issuance, impression beaconing, and click attribution.
+- Launch Smoke Testing:
+  - Implemented cross-platform launch smoke test scripts (`scripts/launch-smoke-test.ps1` and `scripts/launch-smoke-test.sh`).
+  - Executed live automated test suite verifying 16/16 checks (100% pass rate) covering public pages, SEO routes, backend health, utility execution, monetization ad delivery, click attribution, analytics ingestion, and auth RBAC boundaries.
+- Phase 13 Automated Test Suite:
+  - Added `apps/backend/test/production-launch.spec.ts` (13 assertions).
+  - Total test baseline expanded to **183/183 passing tests across 12 test suites (100% pass rate)**.
+- Pre-Launch Disaster Recovery Drill:
+  - Fresh database backup drill executed (`scripts/backup-db.ps1`), producing verified 259 KB backup artifact.
+  - Ignored backup and scratch files in `.gitignore`.
+- Documentation & ADRs:
+  - `docs/privacy-data-handling.md` (SHA-256 IP/UA hashing, anonymous session tokens, zero utility input persistence, cookie disclosures).
+  - `docs/search-engine-launch-checklist.md` (operator checklist for GSC, Bing Webmaster Tools, and XML sitemaps).
+  - `docs/production-launch.md` (comprehensive launch runbook).
+  - `docs/decisions/ADR-013-production-launch.md` (architectural decisions).
+  - `PHASE_13_VERIFICATION_REPORT.md` (verification report with Section 36 scorecard).
+- Completed Phase 12 (Production Readiness & Deployment).
+- Production Hardening & Operations:
+  - Transitive dependency vulnerability remediation via pnpm overrides (`js-yaml`, `lodash`, `qs`, `body-parser`, `file-type`), reducing vulnerabilities from 19 down to 6.
+  - Database migration lifecycle management via `_prisma_migrations` baseline resolution and `prisma:deploy` script (`pnpm --filter @ad-utility/backend prisma:deploy`).
+  - Automated disaster recovery scripts (`scripts/backup-db.sh`, `scripts/restore-db.sh`, `scripts/backup-db.ps1`, `scripts/restore-db.ps1`).
+  - Executed end-to-end live disaster recovery drill on disposable target `ad_utility_restore_test` verifying 18 tables and row counts.
+  - Split health probes in `health.controller.ts`:
+    - `GET /api/v1/health/liveness`: Process vitality and uptime (never fails on database disconnects).
+    - `GET /api/v1/health/readiness`: Verifies PostgreSQL database connectivity via `$queryRaw SELECT 1` (returns HTTP 503 on drop).
+    - `GET /api/v1/health`: Legacy health endpoint backward compatibility.
+  - Distributed request correlation middleware (`RequestIdMiddleware`) attaching `X-Request-Id` (UUIDv4) to all requests and responses.
+  - Enabled NestJS shutdown hooks (`app.enableShutdownHooks()`) for graceful connection termination.
+  - Production Docker Compose (`docker-compose.prod.yml`) hardening:
+    - Stripped public host ports for PostgreSQL (`5432`) and Redis (`6379`), isolating stateful services inside `ad_utility_prod_network`.
+    - Configured Redis memory ceiling: `--maxmemory 256mb --maxmemory-policy volatile-lru`.
+    - Healthchecks, restart policies, and resource configurations.
+    - Zero `OPENAI_API_KEY` in environment or compose configurations.
+  - Continuous Integration pipeline defined in `.github/workflows/ci.yml`.
+  - Production readiness test suite in `apps/backend/test/production-readiness.spec.ts` (8 assertions covering probes, request IDs, cookie security, mock AI execution).
+  - **170/170 total automated tests passing across 11 test suites (100% pass rate)**.
+  - Operational runbook (`docs/operations-runbook.md`), production guide (`docs/production-readiness.md`), and ADR-012 (`docs/decisions/ADR-012-production-readiness.md`).
+- Completed Phase 11 (Automated Testing & Security Hardening).
+- Platform Protection & Security Controls:
+  - Global Exception Filter (`GlobalExceptionFilter`) intercepting all runtime errors, masking database query internals and suppressing stack traces in responses.
+  - HTTP Security Response Headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
+  - Disabled `X-Powered-By` header across NestJS backend and Next.js frontend (`poweredByHeader: false`).
+  - Binary Magic-Byte Signature Verification in `buffer-utils.ts` for JPEG (`0xFFD8FF`), PNG (`0x89504E47`), and PDF (`%PDF-`), actively rejecting PE/ELF executables disguised as documents.
+  - Filename Path Traversal Sanitization (`sanitizeFilename`) stripping null bytes (`\x00`), control characters, directory traversal sequences (`..`, `/`, `\`), and constraining names to safe 100-character alphanumeric strings.
+  - Stored XSS defense on custom HTML ad creatives (`validateHtmlSafety`) blocking `<script>`, `</script>`, inline DOM event handlers (`onerror=`, `onload=`, `onclick=`), and `javascript:` URIs.
+  - Redis cache fail-open defensive fallbacks on all category and utility public reads.
+  - Body-parser request size limits (60MB global limit, 15MB image adapter limit, 25MB PDF adapter limit).
+- Automated Test Suite Expansion:
+  - New test suite in `apps/backend/test/security-hardening.spec.ts` covering 34 security assertions across 8 categories (Authentication, RBAC privilege escalation, DTO input validation, File security, Injection/XSS, Rate limiting, Security headers, Resilience).
+  - **162/162 total automated tests passing across 10 test suites (100% pass rate)**.
+- Documentation & ADRs:
+  - `docs/security-hardening.md` (comprehensive threat model and defense guidelines).
+  - `docs/decisions/ADR-011-security-hardening.md` (architectural decisions and tradeoffs).
+  - `PHASE_11_VERIFICATION_REPORT.md` (formal verification report).
+- Shared contracts in `@ad-utility/shared`:
+  - SEO contracts in `packages/shared/src/contracts/seo.ts`: `CategoryPublicDto`, `BreadcrumbItemDto`, `SitemapEntryDto`, `SiteMetadataDto`.
+- Backend Public Category Endpoints & Redis Caching:
+  - `UtilitiesCacheService`: Redis caching layer with 300s TTL, key prefix invalidation, and fail-open offline fallback to PostgreSQL.
+  - Public category listing and detail APIs: `GET /api/v1/utilities/categories` and `GET /api/v1/utilities/categories/:categorySlug`.
+  - Exclusion of DRAFT and DISABLED utilities from all public directory views.
+- Frontend SEO & Performance Engine (`apps/frontend`):
+  - Dynamic `sitemap.ts`: Generates authoritative `/sitemap.xml` indexing homepage, active categories, and all 12 active MVP utilities.
+  - Dynamic `robots.ts`: Emits `/robots.txt` disallowing `/admin/` and `/api/` while pointing to canonical sitemap.
+  - Accessible Breadcrumbs component (`Breadcrumbs.tsx`) using semantic `<nav aria-label="Breadcrumb">` and matching microdata.
+  - Safe structured data component (`JsonLd.tsx`) outputting `WebSite`, `WebApplication`, `BreadcrumbList`, and `FAQPage` schemas.
+  - Crawlable category directory (`/category/[categorySlug]`) and homepage tool index in raw server-rendered HTML.
+  - Dynamic workspace code splitting via `next/dynamic` in `tool-runner.tsx` (Shared First Load JS: 87.4 kB).
+  - Absolute canonical URLs, OpenGraph metadata, and Twitter card tags across all indexable routes.
+- Automated Phase 10 test suite in `apps/backend/test/seo-performance.spec.ts` (**128/128 total backend tests passing across all 9 suites**).
+- Documentation in `docs/seo-performance.md` and `docs/decisions/ADR-010-seo-performance.md`.
+
+- Completed Phase 9 (Implementation of Initial MVP Utilities — 12 Production Tools).
+- Shared contracts in `@ad-utility/shared`:
+  - Typed input/output contracts for 12 MVP utilities in `packages/shared/src/contracts/mvp-utilities.ts`.
+  - Deterministic `LOCAL` text adapters: `TextCleanerAdapter` and `CaseConverterAdapter` in `packages/shared/src/registry/text-adapters.ts`.
+  - Registered into hybrid `UtilityRegistry.createDefault()`.
+- Backend Executable Adapters in `apps/backend/src/utilities/adapters/`:
+  - `utils/buffer-utils.ts`: Magic bytes validation (JPEG `0xFFD8FF`, PNG `0x89504E47`, PDF `%PDF-`), base64 parsing/encoding, filename sanitization.
+  - Image Adapters: `JpgToPngAdapter` (with `pngjs`/`jpeg-js`), `PngToJpgAdapter` (with white matte compositing), `ImageCompressorAdapter`.
+  - PDF Adapters: `PdfCompressorAdapter`, `PdfMergeAdapter`, `PdfSplitAdapter` (with `pdf-lib`/`jszip`), and `PdfToJpgAdapter` (with `pdfjs-dist` legacy build and `@napi-rs/canvas` real page rasterization).
+  - AI Adapters: `AiHumanizerAdapter`, `AiParaphraserAdapter`, `AiGrammarCheckerAdapter` routing strictly through `AiGatewayService` and persisting to Prisma `AiRequest`.
+  - `registerServerAdapters()` in `UtilitiesService`.
+- Frontend Workspaces (`apps/frontend/src/components/utility/workspaces/`):
+  - `ImageWorkspace.tsx`: Drag-and-drop, format badge, visual preview, quality slider, instant download.
+  - `PdfWorkspace.tsx`: Multi-file reordering for merge, custom page range extraction for split, scale selection and single/ZIP downloads for PDF-to-JPG.
+  - `TextWorkspace.tsx`: Dual-pane editor, cleaning rule checkboxes, one-click case transformations, live word/character counters.
+  - `AiWorkspace.tsx`: Tone/style selectors, character limit badges, structured grammar mistake cards, copy to clipboard.
+  - `ToolRunner.tsx`: Dynamic routing to specialized workspaces with fallback to generic runner, preserving `<AdSlot />` and analytics telemetry.
+- Automated Phase 9 test suite in `apps/backend/test/utilities-mvp.spec.ts` (**118/118 total backend tests passing across all 8 suites**).
+- Documentation in `docs/mvp-utilities.md` and `docs/decisions/ADR-009-mvp-utility-implementation.md`.
+
+- Completed Phase 8 (Admin Control Panel & Management Console).
+- Shared contracts in `@ad-utility/shared`: `AdminUserDto`, `AdminCreateUserDto`, `AdminUpdateUserDto`, `AdminRoleDto`, `AdminDashboardMetricsDto`, `AdminAuditLogDto`, `AdminPaginationQueryDto`, `PaginatedResult`, `AdminSettingDto`, `AdminUpdateSettingDto`.
+- Backend `AdminModule` (`apps/backend/src/admin/`):
+  - `AuditService`: Transactional mutation audit logger recording actions, actors, and JSON diffs to PostgreSQL `audit_logs`.
+  - `AdminDashboardController` & `AdminDashboardService`: Real-time KPI aggregation (`/api/v1/admin/dashboard`).
+  - `AdminUsersController` & `AdminUsersService`: User accounts and RBAC role assignment management (`/api/v1/admin/users`, `/roles`).
+  - `AdminUtilitiesController` & `AdminUtilitiesService`: Database utility metadata, SEO, FAQs, and categories (`/api/v1/admin/utilities`, `/categories`).
+  - `AdminAdsController` & `AdminAdsService`: Ad campaigns, creatives with URL/HTML safety checks, placements, targeting rules, schedules (`/api/v1/admin/ads/*`).
+  - `AdminAnalyticsController` & `AdminAnalyticsService`: Telemetry stream and traffic breakdowns (`/api/v1/admin/analytics/overview`).
+  - `AdminAiController` & `AdminAiService`: AI model utilization, token metrics, and cost telemetry (`/api/v1/admin/ai/overview`).
+  - `AdminSettingsController` & `AdminSettingsService`: Platform settings with secret masking (`/api/v1/admin/settings`).
+  - `AdminAuditController` & `AdminAuditService`: Paginated audit log retrieval (`/api/v1/admin/audit-logs`).
+- Frontend Next.js Admin Panel (`apps/frontend/src/app/admin/`):
+  - `lib/admin-api.ts` & `context/admin-auth-context.tsx`: Bearer token client and permission context.
+  - `layout.tsx`: Responsive sidebar with permission-aware navigation, user badge, and mobile drawer.
+  - `page.tsx`: Operational dashboard with 8 KPI metrics and quick links.
+  - CRUD interfaces for Campaigns, Creatives, Placements, Targeting, Schedules, Utilities, Users, Analytics, AI Usage, Settings, and Audit Logs.
+- Automated Phase 8 test suite in `apps/backend/test/admin.spec.ts` (**95/95 total tests passing across all 7 suites**).
+- Documentation in `docs/admin-control-panel.md` and `docs/decisions/ADR-008-admin-control-panel-architecture.md`.
+
 - Completed Phase 7 (First-Party Analytics Engine & Telemetry Collection).
 - Shared contracts in `@ad-utility/shared`: `AnalyticsEventType`, `AnalyticsEventDto`, `AnalyticsBatchIngestionDto`, `AnalyticsQueryDto`, `AnalyticsUtilityMetric`, `AnalyticsSummaryDto`.
 - Backend `AnalyticsModule` (`apps/backend/src/analytics/`):

@@ -3,10 +3,27 @@
  */
 export type AiModel = 'gpt-4o-mini' | 'gpt-4o' | 'gpt-3.5-turbo' | 'mock-ai';
 
+export const DEFAULT_SUPPORTED_AI_MODELS: readonly AiModel[] = [
+  'gpt-4o-mini',
+  'gpt-4o',
+  'gpt-3.5-turbo',
+  'mock-ai',
+] as const;
+
+export const DEFAULT_AI_MODEL: AiModel = 'gpt-4o-mini';
+
 /**
  * AI Provider Types
  */
 export type AiProvider = 'openai' | 'mock';
+
+/**
+ * Model Pricing Schema (USD per 1,000,000 tokens)
+ */
+export interface AiModelPricing {
+  inputPer1MUsd: number;
+  outputPer1MUsd: number;
+}
 
 /**
  * Standard Chat / Completion Message
@@ -52,4 +69,7 @@ export interface AiUsageSummaryDto {
   totalTokens: number;
   totalCostUsd: number;
   successRate: number;
+  providerMode?: string;
+  dailyBudgetUsd?: number;
+  todaySpendUsd?: number;
 }

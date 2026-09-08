@@ -18,6 +18,9 @@ describe('Phase 2: Database Architecture & Prisma Verification', () => {
   });
 
   afterAll(async () => {
+    await prisma.utility.deleteMany({
+      where: { slug: { startsWith: 'test-tool-' } },
+    });
     await prisma.$disconnect();
   });
 

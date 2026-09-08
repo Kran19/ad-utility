@@ -96,9 +96,9 @@ describe('Phase 6: Centralized AI Gateway & Model Governance Verification', () =
       const costMini = costCalculator.calculateCostUsd('gpt-4o-mini', 10000, 2000);
       expect(costMini).toBe(0.0027);
 
-      // 10,000 input tokens, 2,000 output tokens on gpt-4o ($5.00/$15.00 per 1M)
+      // 10,000 input tokens, 2,000 output tokens on gpt-4o ($2.50/$10.00 per 1M)
       const costGpt4 = costCalculator.calculateCostUsd('gpt-4o', 10000, 2000);
-      expect(costGpt4).toBe(0.08);
+      expect(costGpt4).toBe(0.045);
 
       // mock-ai is free
       const costMock = costCalculator.calculateCostUsd('mock-ai', 10000, 2000);

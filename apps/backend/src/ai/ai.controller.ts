@@ -71,8 +71,23 @@ export class AiController {
       },
     });
 
+    const now = new Date();
+    const startOfDayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    const todayAggregate = await this.prisma.aiRequest.aggregate({
+      _sum: {
+        estimatedCostUsd: true,
+      },
+      where: {
+        timestamp: {
+          gte: startOfDayUtc,
+        },
+        status: 'SUCCESS',
+      },
+    });
+
     const totalTokens = aggregate._sum.totalTokens || 0;
     const totalCostUsd = aggregate._sum.estimatedCostUsd || 0;
+    const todaySpendUsd = todayAggregate._sum.estimatedCostUsd || 0;
     const successRate = totalRequests > 0 ? parseFloat(((successRequests / totalRequests) * 100).toFixed(1)) : 100;
 
     return {
@@ -82,6 +97,9 @@ export class AiController {
         totalTokens,
         totalCostUsd: parseFloat(totalCostUsd.toFixed(4)),
         successRate,
+        providerMode: this.aiGatewayService.getProviderMode(),
+        dailyBudgetUsd: this.aiGatewayService.getDailyBudgetUsd(),
+        todaySpendUsd: parseFloat(todaySpendUsd.toFixed(4)),
       },
       meta: {
         timestamp: new Date().toISOString(),

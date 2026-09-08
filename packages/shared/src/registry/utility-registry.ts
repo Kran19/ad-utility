@@ -5,6 +5,10 @@ import {
   TextHashAdapter,
   AiSummarizerPlaceholderAdapter,
 } from './reference-adapters';
+import {
+  TextCleanerAdapter,
+  CaseConverterAdapter,
+} from './text-adapters';
 
 export class UtilityRegistry {
   private readonly adapters = new Map<string, UtilityAdapter>();
@@ -61,6 +65,8 @@ export class UtilityRegistry {
     registry.register(new WordCounterAdapter());
     registry.register(new TextHashAdapter());
     registry.register(new AiSummarizerPlaceholderAdapter());
+    registry.register(new TextCleanerAdapter());
+    registry.register(new CaseConverterAdapter());
     return registry;
   }
 }

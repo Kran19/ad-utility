@@ -8,6 +8,7 @@ import {
   DeviceType,
   ApiEnvelope,
 } from '@ad-utility/shared';
+import { getClientApiUrl } from '../../lib/site-config';
 
 interface AdSlotProps {
   placement: AdPlacement;
@@ -64,7 +65,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
 
     const fetchAd = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+        const apiUrl = getClientApiUrl();
         const res = await fetch(`${apiUrl}/ads/slot`, {
           method: 'POST',
           headers: {
@@ -122,7 +123,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
         const [entry] = entries;
         if (entry.isIntersecting && !impressionRecordedRef.current) {
           impressionRecordedRef.current = true;
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+          const apiUrl = getClientApiUrl();
           fetch(`${apiUrl}/ads/impression`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -152,7 +153,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
     if (!adCreative) return;
 
     e.preventDefault();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+    const apiUrl = getClientApiUrl();
 
     try {
       const res = await fetch(`${apiUrl}/ads/click`, {

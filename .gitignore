@@ -39,3 +39,9 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Backups & Scratch
+backups/
+*.sql
+*.sql.gz
+scratch/

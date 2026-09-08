@@ -17,4 +17,7 @@ export interface ApiEnvelope<T = any> {
     timestamp?: string;
     [key: string]: any;
   };
+  timestamp?: string;
 }
+
+export type ApiResponse<T = any> = ApiEnvelope<T>;

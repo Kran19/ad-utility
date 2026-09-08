@@ -6,9 +6,11 @@ const VALID_EVENT_TYPES: Set<string> = new Set([
   'TOOL_START',
   'TOOL_COMPLETE',
   'TOOL_ERROR',
+  'RESULT_DOWNLOAD',
   'AD_IMPRESSION',
   'AD_CLICK',
   'AI_REQUEST',
+  'EXPERIMENT_EXPOSURE',
 ]);
 
 @Injectable()

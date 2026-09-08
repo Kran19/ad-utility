@@ -1,0 +1,87 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    name: Build, Test & Security Verification
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_secure_password
+          POSTGRES_DB: ad_utility_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        command: redis-server --requirepass redis_secure_password
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli -a redis_secure_password ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 11.10.0
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma client
+        run: pnpm --filter @ad-utility/backend prisma:generate
+
+      - name: Verify Prisma migrations
+        run: pnpm --filter @ad-utility/backend prisma:status
+        env:
+          DATABASE_URL: postgresql://postgres:postgres_secure_password@localhost:5432/ad_utility_db?schema=public
+
+      - name: Build shared contracts
+        run: pnpm --filter @ad-utility/shared build
+
+      - name: Build backend application
+        run: pnpm --filter @ad-utility/backend build
+
+      - name: Build frontend application
+        run: pnpm --filter @ad-utility/frontend build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://tools.example.com
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+
+      - name: Run automated test suites
+        run: pnpm --filter @ad-utility/backend test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres_secure_password@localhost:5432/ad_utility_db?schema=public
+          REDIS_URL: redis://:redis_secure_password@localhost:6379
+          JWT_SECRET: super_secret_jwt_key_change_in_production_min_32_chars
+          JWT_REFRESH_SECRET: super_secret_refresh_key_change_in_production
+
+      - name: Production dependency security audit
+        run: pnpm audit --prod || true

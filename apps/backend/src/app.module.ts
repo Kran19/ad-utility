@@ -7,6 +7,7 @@ import { UtilitiesModule } from './utilities/utilities.module';
 import { AdsModule } from './ads/ads.module';
 import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AdsModule,
     AiModule,
     AnalyticsModule,
+    AdminModule,
     HealthModule,
   ],
 })

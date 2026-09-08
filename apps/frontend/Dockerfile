@@ -20,6 +20,8 @@ RUN pnpm --filter @ad-utility/frontend build
 # Stage 2: Runner
 FROM node:22-alpine AS runner
 
+RUN apk add --no-cache wget
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
@@ -33,6 +35,7 @@ COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --prod
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/apps/frontend/next.config.mjs ./apps/frontend/
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
 COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
 

@@ -6,13 +6,63 @@ import {
   UtilityExecutionResponseDto,
   defaultUtilityRegistry,
 } from '@ad-utility/shared';
+import dynamic from 'next/dynamic';
 import { trackToolStart, trackToolComplete, trackToolError } from '../../lib/analytics';
+import { getClientApiUrl } from '../../lib/site-config';
+
+const WorkspaceLoading = () => (
+  <div className="w-full h-64 rounded-xl bg-slate-900/50 border border-slate-800 animate-pulse flex items-center justify-center text-slate-500 text-sm">
+    Loading utility workspace...
+  </div>
+);
+
+const ImageWorkspace = dynamic(
+  () => import('./workspaces/ImageWorkspace').then((mod) => mod.ImageWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
+
+const PdfWorkspace = dynamic(
+  () => import('./workspaces/PdfWorkspace').then((mod) => mod.PdfWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
+
+const TextWorkspace = dynamic(
+  () => import('./workspaces/TextWorkspace').then((mod) => mod.TextWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
+
+const AiWorkspace = dynamic(
+  () => import('./workspaces/AiWorkspace').then((mod) => mod.AiWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
 
 interface ToolRunnerProps {
   utility: UtilityPublicDto;
 }
 
 export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
+  // 1. Dispatch to dedicated rich workspaces for MVP categories
+  if (utility.categorySlug === 'image' || ['jpg-to-png', 'png-to-jpg', 'image-compressor'].includes(utility.slug)) {
+    return <ImageWorkspace utility={utility} />;
+  }
+
+  if (utility.categorySlug === 'pdf' || ['pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg'].includes(utility.slug)) {
+    return <PdfWorkspace utility={utility} />;
+  }
+
+  if (['text-cleaner', 'case-converter'].includes(utility.slug)) {
+    return <TextWorkspace utility={utility} />;
+  }
+
+  if (utility.categorySlug === 'ai' || ['ai-humanizer', 'ai-paraphraser', 'ai-grammar-checker'].includes(utility.slug)) {
+    return <AiWorkspace utility={utility} />;
+  }
+
+  // 2. Generic fallback workspace for reference utilities (json-formatter, word-counter, text-hash, ai-summarizer)
+  return <GenericToolWorkspace utility={utility} />;
+};
+
+const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
   const [inputVal, setInputVal] = useState<string>('');
   const [outputVal, setOutputVal] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -53,7 +103,7 @@ export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
         trackToolComplete(utility.slug, elapsed);
       } else {
         // Execute on server / AI Gateway via backend API
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+        const apiUrl = getClientApiUrl();
         const res = await fetch(`${apiUrl}/utilities/${utility.slug}/execute`, {
           method: 'POST',
           headers: {
@@ -62,9 +112,29 @@ export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
           body: JSON.stringify({ input: { text: inputVal } }),
         });
 
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || data.error?.message || 'Execution failed');
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {
+          // Non-JSON response (e.g. 502/504 gateway error)
+        }
+
+        if (!res.ok || !data?.success) {
+          let message = data?.message || data?.error?.message;
+          if (!message) {
+            if (res.status === 429) {
+              message = 'Rate limit reached. Please wait a few seconds before trying again.';
+            } else if (res.status === 503) {
+              message = 'Service temporarily unavailable. Please try again shortly.';
+            } else if (res.status === 408) {
+              message = 'Execution timed out. Please try with smaller input.';
+            } else if (res.status === 404) {
+              message = 'Utility not found or disabled.';
+            } else {
+              message = 'An unexpected error occurred during execution. Please try again.';
+            }
+          }
+          throw new Error(message);
         }
 
         const executionData = data.data as UtilityExecutionResponseDto;
@@ -82,7 +152,10 @@ export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
         trackToolComplete(utility.slug, executionData.executionTimeMs);
       }
     } catch (err: any) {
-      const errMsg = err.message || 'An unexpected error occurred during execution';
+      let errMsg = err.message || 'An unexpected error occurred during execution';
+      if (err.name === 'TypeError' && errMsg.includes('fetch')) {
+        errMsg = 'Network connection error. Please check your internet connection.';
+      }
       setErrorMsg(errMsg);
 
       // 3. Emit TOOL_ERROR telemetry

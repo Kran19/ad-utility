@@ -163,6 +163,36 @@ export class RedisAdCacheService implements OnModuleDestroy {
   }
 
   /**
+   * Generic get JSON cache entry
+   */
+  async getJson<T = any>(cacheKey: string): Promise<T | null> {
+    if (!this.isAvailable() || !this.client) {
+      return null;
+    }
+    try {
+      const data = await this.client.get(cacheKey);
+      if (!data) return null;
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Generic set JSON cache entry with TTL
+   */
+  async setJson(cacheKey: string, value: any, ttlSeconds = 60): Promise<void> {
+    if (!this.isAvailable() || !this.client) {
+      return;
+    }
+    try {
+      await this.client.set(cacheKey, JSON.stringify(value), 'EX', ttlSeconds);
+    } catch {
+      // ignore (fail open)
+    }
+  }
+
+  /**
    * Invalidate ad cache keys
    */
   async invalidateCache(pattern = 'cache:adslot:*'): Promise<void> {

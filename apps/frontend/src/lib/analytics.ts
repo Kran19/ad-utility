@@ -1,4 +1,5 @@
-import { AnalyticsEventDto, AnalyticsEventType } from '@ad-utility/shared';
+import { AnalyticsEventDto, AnalyticsEventType, getExperimentVariant } from '@ad-utility/shared';
+import { getClientApiUrl } from './site-config';
 
 const SESSION_KEY = 'ad_platform_session_token';
 const UTM_KEY = 'ad_platform_utm_data';
@@ -68,7 +69,7 @@ export function trackEvent(payload: Omit<AnalyticsEventDto, 'sessionToken'> & { 
   try {
     const sessionToken = payload.sessionToken || getAnonymousSessionToken();
     const utm = captureUtmParams();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+    const apiUrl = getClientApiUrl();
 
     const eventData: AnalyticsEventDto = {
       eventId: 'evt_' + Math.random().toString(36).substring(2) + Date.now().toString(36),
@@ -110,6 +111,17 @@ export function trackEvent(payload: Omit<AnalyticsEventDto, 'sessionToken'> & { 
 }
 
 /**
+ * Deterministically resolve assigned variant for an experiment
+ */
+export function getAssignedExperimentVariant(
+  experimentId: string,
+  variants: Array<{ id: string; weight?: number }>,
+): string {
+  const sessionToken = getAnonymousSessionToken();
+  return getExperimentVariant(experimentId, sessionToken, variants);
+}
+
+/**
  * Telemetry Helpers
  */
 export function trackPageView(utilitySlug?: string): void {
@@ -126,4 +138,23 @@ export function trackToolComplete(utilitySlug: string, executionTimeMs?: number)
 
 export function trackToolError(utilitySlug: string, errorMessage?: string): void {
   trackEvent({ eventType: 'TOOL_ERROR', utilitySlug, metadata: { errorMessage: errorMessage?.substring(0, 200) } });
+}
+
+export function trackResultDownload(utilitySlug: string, metadata?: Record<string, any>): void {
+  trackEvent({ eventType: 'RESULT_DOWNLOAD', utilitySlug, metadata });
+}
+
+export function trackExperimentExposure(
+  experimentId: string,
+  variant: string,
+  metadata?: Record<string, any>,
+): void {
+  trackEvent({
+    eventType: 'EXPERIMENT_EXPOSURE',
+    metadata: {
+      experimentId,
+      variant,
+      ...(metadata || {}),
+    },
+  });
 }

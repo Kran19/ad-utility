@@ -9,14 +9,25 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiRateLimiterService } from './ai-rate-limiter.service';
 import { AiCostCalculatorService } from './ai-cost-calculator.service';
-import { AiGenerateRequestDto, AiGenerateResponseDto, AiMessage } from '@ad-utility/shared';
+import {
+  AiGenerateRequestDto,
+  AiGenerateResponseDto,
+  AiMessage,
+  DEFAULT_SUPPORTED_AI_MODELS,
+  DEFAULT_AI_MODEL,
+} from '@ad-utility/shared';
 import { AiRequestStatus } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 
 @Injectable()
 export class AiGatewayService {
   private readonly logger = new Logger(AiGatewayService.name);
+  private readonly providerMode: string;
   private readonly openAiApiKey?: string;
+  private readonly defaultModel: string;
+  private readonly allowedModels: Set<string>;
+  private readonly dailyBudgetUsd: number;
+  private readonly requestTimeoutMs: number = 20000;
 
   constructor(
     private readonly config: ConfigService,
@@ -24,7 +35,41 @@ export class AiGatewayService {
     private readonly rateLimiter: AiRateLimiterService,
     private readonly costCalculator: AiCostCalculatorService,
   ) {
-    this.openAiApiKey = this.config.get<string>('OPENAI_API_KEY');
+    this.providerMode = (this.config.get<string>('AI_PROVIDER') || 'mock').toLowerCase().trim();
+    this.openAiApiKey = this.config.get<string>('OPENAI_API_KEY')?.trim();
+    this.defaultModel = this.config.get<string>('AI_DEFAULT_MODEL') || DEFAULT_AI_MODEL;
+    
+    const configuredAllowed = this.config.get<string>('AI_ALLOWED_MODELS');
+    if (configuredAllowed) {
+      this.allowedModels = new Set(
+        configuredAllowed.split(',').map((m) => m.trim().toLowerCase()).filter(Boolean),
+      );
+    } else {
+      this.allowedModels = new Set(
+        DEFAULT_SUPPORTED_AI_MODELS.map((m) => m.toLowerCase()),
+      );
+    }
+
+    const budgetConfig = this.config.get<string>('AI_DAILY_BUDGET_USD');
+    this.dailyBudgetUsd = budgetConfig ? parseFloat(budgetConfig) : 5.0;
+
+    this.logger.log(
+      `AI Gateway initialized: providerMode=${this.providerMode}, defaultModel=${this.defaultModel}, dailyBudget=$${this.dailyBudgetUsd}`,
+    );
+  }
+
+  /**
+   * Returns current provider mode ('mock' | 'openai')
+   */
+  getProviderMode(): string {
+    return this.providerMode;
+  }
+
+  /**
+   * Returns daily budget in USD
+   */
+  getDailyBudgetUsd(): number {
+    return this.dailyBudgetUsd;
   }
 
   /**
@@ -39,7 +84,7 @@ export class AiGatewayService {
     const ipHash = ip ? createHash('sha256').update(ip).digest('hex').substring(0, 32) : undefined;
     const clientIdentifier = ipHash || dto.sessionId || 'anonymous_user';
 
-    // 1. Validate Input
+    // 1. Validate Input Prompt
     if (!dto.prompt || typeof dto.prompt !== 'string' || dto.prompt.trim().length === 0) {
       throw new BadRequestException('Prompt is required and cannot be empty');
     }
@@ -48,13 +93,22 @@ export class AiGatewayService {
       throw new BadRequestException('Prompt exceeds maximum limit of 50,000 characters');
     }
 
-    // 2. Rate Limiting Check
+    // 2. Validate Model Allowlist
+    const requestedModel = (dto.model || this.defaultModel).toLowerCase();
+    if (!this.allowedModels.has(requestedModel)) {
+      throw new BadRequestException(
+        `Model "${dto.model}" is not supported or permitted by governance allowlist.`,
+      );
+    }
+    const selectedModel = requestedModel;
+
+    // 3. Application Rate Limiting Check (15 req/min per identifier)
     const rateLimit = await this.rateLimiter.checkRateLimit(clientIdentifier, 15);
     if (!rateLimit.allowed) {
       await this.logAiRequestTelemetry({
         requestId,
         utilitySlug: dto.utilitySlug || 'unknown',
-        model: dto.model || 'gpt-4o-mini',
+        model: selectedModel,
         promptTemplate: dto.systemPrompt,
         inputTokens: this.costCalculator.estimateTokenCount(dto.prompt),
         outputTokens: 0,
@@ -78,7 +132,10 @@ export class AiGatewayService {
       );
     }
 
-    const selectedModel = dto.model || 'gpt-4o-mini';
+    // 4. Daily Spending Budget Guard Check
+    await this.checkDailyBudget(requestId, dto, selectedModel, startTime, ipHash);
+
+    // 5. Dispatch to Real Provider or Mock Engine
     let resultText = '';
     let inputTokens = 0;
     let outputTokens = 0;
@@ -86,14 +143,27 @@ export class AiGatewayService {
     let errorMessage: string | undefined;
 
     try {
-      // 3. Dispatch to OpenAI API or Mock Provider
-      if (this.openAiApiKey && this.openAiApiKey.trim().length > 0 && selectedModel !== 'mock-ai') {
+      if (this.providerMode === 'openai') {
+        // Enforce fail-safe missing API key validation
+        if (!this.openAiApiKey || this.openAiApiKey.length === 0) {
+          throw new HttpException(
+            {
+              success: false,
+              error: {
+                code: 'AI_SERVICE_UNAVAILABLE',
+                message: 'AI service is temporarily unavailable due to server configuration.',
+              },
+            },
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
+
         const openAiResponse = await this.callOpenAiApi(dto, selectedModel);
         resultText = openAiResponse.text;
         inputTokens = openAiResponse.inputTokens;
         outputTokens = openAiResponse.outputTokens;
       } else {
-        // Fallback Mock AI Engine for offline/test environments
+        // Deterministic offline Mock AI Provider
         const mockResponse = this.generateMockResponse(dto, selectedModel);
         resultText = mockResponse.text;
         inputTokens = mockResponse.inputTokens;
@@ -101,8 +171,8 @@ export class AiGatewayService {
       }
     } catch (err: any) {
       status = AiRequestStatus.FAILED;
-      errorMessage = err.message;
-      this.logger.error(`AI Gateway execution failed for ${dto.utilitySlug}: ${err.message}`);
+      errorMessage = err.message || 'Unknown AI error';
+      this.logger.error(`AI Gateway execution failed for ${dto.utilitySlug}: ${errorMessage}`);
 
       await this.logAiRequestTelemetry({
         requestId,
@@ -119,12 +189,57 @@ export class AiGatewayService {
         ipHash,
       });
 
+      // Pass through already structured HttpExceptions (e.g. 503, 429, 400)
+      if (err instanceof HttpException) {
+        throw err;
+      }
+
+      // Map upstream errors to safe internal user responses
+      if (err.name === 'AbortError' || errorMessage.includes('timeout')) {
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'AI_TIMEOUT',
+              message: 'AI request timed out. Please try again.',
+            },
+          },
+          HttpStatus.GATEWAY_TIMEOUT,
+        );
+      }
+
+      if (errorMessage.includes('429')) {
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'AI_PROVIDER_RATE_LIMITED',
+              message: 'AI provider is experiencing high load. Please try again in a few seconds.',
+            },
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      if (errorMessage.includes('401') || errorMessage.includes('403')) {
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'AI_SERVICE_UNAVAILABLE',
+              message: 'AI service is temporarily unavailable.',
+            },
+          },
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+
       throw new HttpException(
         {
           success: false,
           error: {
             code: 'AI_EXECUTION_FAILED',
-            message: `AI generation failed: ${err.message}`,
+            message: 'AI generation failed. Please try again.',
           },
         },
         HttpStatus.BAD_GATEWAY,
@@ -135,7 +250,7 @@ export class AiGatewayService {
     const totalTokens = inputTokens + outputTokens;
     const estimatedCostUsd = this.costCalculator.calculateCostUsd(selectedModel, inputTokens, outputTokens);
 
-    // 4. Asynchronously log telemetry to PostgreSQL
+    // 6. Asynchronously log telemetry to PostgreSQL ai_requests
     this.logAiRequestTelemetry({
       requestId,
       utilitySlug: dto.utilitySlug || 'unknown',
@@ -166,7 +281,75 @@ export class AiGatewayService {
   }
 
   /**
-   * Direct OpenAI Chat Completions API invocation with timeout
+   * Daily Budget Guard: Checks current UTC day spending against daily budget
+   */
+  private async checkDailyBudget(
+    requestId: string,
+    dto: AiGenerateRequestDto,
+    selectedModel: string,
+    startTime: number,
+    ipHash?: string,
+  ): Promise<void> {
+    try {
+      const now = new Date();
+      const startOfDayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+
+      const dailySpend = await this.prisma.aiRequest.aggregate({
+        _sum: {
+          estimatedCostUsd: true,
+        },
+        where: {
+          timestamp: {
+            gte: startOfDayUtc,
+          },
+          status: AiRequestStatus.SUCCESS,
+        },
+      });
+
+      const todaySpent = dailySpend._sum.estimatedCostUsd || 0;
+
+      if (todaySpent >= this.dailyBudgetUsd) {
+        this.logger.warn(
+          `Daily AI budget exceeded: spent=$${todaySpent.toFixed(4)}, budget=$${this.dailyBudgetUsd.toFixed(4)}`,
+        );
+
+        await this.logAiRequestTelemetry({
+          requestId,
+          utilitySlug: dto.utilitySlug || 'unknown',
+          model: selectedModel,
+          promptTemplate: dto.systemPrompt,
+          inputTokens: this.costCalculator.estimateTokenCount(dto.prompt),
+          outputTokens: 0,
+          totalTokens: this.costCalculator.estimateTokenCount(dto.prompt),
+          estimatedCostUsd: 0,
+          durationMs: Date.now() - startTime,
+          status: AiRequestStatus.FAILED,
+          errorMessage: `Daily AI budget of $${this.dailyBudgetUsd} exceeded`,
+          ipHash,
+        });
+
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'AI_BUDGET_EXCEEDED',
+              message: 'Daily AI processing limit has been reached. Please try again tomorrow.',
+            },
+          },
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      // If DB aggregation fails, log warning but do not block service
+      this.logger.warn(`Failed to verify daily AI budget: ${err.message}`);
+    }
+  }
+
+  /**
+   * Direct OpenAI Chat Completions API invocation with timeout and input separation
    */
   private async callOpenAiApi(
     dto: AiGenerateRequestDto,
@@ -174,18 +357,24 @@ export class AiGatewayService {
   ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
     const messages: AiMessage[] = [];
 
+    // System instruction (application-controlled)
     if (dto.systemPrompt) {
       messages.push({ role: 'system', content: dto.systemPrompt });
     }
 
+    // User content (untrusted input)
     if (dto.messages && dto.messages.length > 0) {
       messages.push(...dto.messages);
     } else {
       messages.push({ role: 'user', content: dto.prompt });
     }
 
+    // Output token cap (server-side maximum constraint)
+    const maxTokens = Math.max(1, Math.min(4000, dto.maxTokens ?? 1500));
+    const temperature = typeof dto.temperature === 'number' ? Math.max(0, Math.min(2, dto.temperature)) : 0.7;
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+    const timeoutId = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -197,8 +386,8 @@ export class AiGatewayService {
         body: JSON.stringify({
           model,
           messages,
-          temperature: dto.temperature ?? 0.7,
-          max_tokens: dto.maxTokens ?? 1500,
+          temperature,
+          max_tokens: maxTokens,
         }),
         signal: controller.signal,
       });
@@ -224,7 +413,7 @@ export class AiGatewayService {
   }
 
   /**
-   * Deterministic Mock AI Provider for testing and local development
+   * Deterministic Mock AI Provider for offline testing and local development
    */
   private generateMockResponse(
     dto: AiGenerateRequestDto,
@@ -236,6 +425,17 @@ export class AiGatewayService {
     if (dto.utilitySlug === 'ai-summarizer') {
       const wordCount = prompt.split(/\s+/).length;
       text = `Key Takeaways & Summary:\n• Overview of ${wordCount} words processed accurately.\n• Essential themes and conclusions extracted cleanly.\n• Formatted for quick reading and comprehension.`;
+    } else if (dto.utilitySlug === 'ai-humanizer') {
+      text = `[Humanized]: ${prompt.replace(/\b(furthermore|moreover|in conclusion|delve|testament)\b/gi, 'also')}`;
+    } else if (dto.utilitySlug === 'ai-paraphraser') {
+      text = `[Paraphrased]: Restructured phrasing of the source text while preserving full original context: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`;
+    } else if (dto.utilitySlug === 'ai-grammar-checker') {
+      text = JSON.stringify({
+        correctedText: prompt,
+        issueCount: 0,
+        issues: [],
+        overallFeedback: 'No critical grammatical or syntactical errors detected in the text.',
+      });
     } else {
       text = `[AI Generated Output (${model})]: Successfully processed input for ${dto.utilitySlug || 'utility'}. Output based on prompt: "${prompt.substring(0, 60)}${prompt.length > 60 ? '...' : ''}"`;
     }

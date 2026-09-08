@@ -102,9 +102,9 @@ describe('Phase 4: Utility Engine, Hybrid Registry & Execution Verification', ()
       expect(result.faqContent.length).toBeGreaterThan(0);
     });
 
-    it('should throw 404 for DRAFT utility (pdf-compressor)', async () => {
+    it('should throw 404 for DRAFT utility (draft-tool)', async () => {
       await expect(
-        utilitiesService.getPublicUtility('pdf-compressor'),
+        utilitiesService.getPublicUtility('draft-tool'),
       ).rejects.toThrow('unpublished or disabled');
     });
 
