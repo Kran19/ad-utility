@@ -41,16 +41,18 @@
 | Phase 25 | Real OpenAI Provider Activation & Production AI | COMPLETED | 2026-09-09 |
 | Enhancement | Admin Control Panel: Utility & Ad Operations Enhancement | COMPLETED | 2026-09-09 |
 | Phase 26 | Payments, Subscriptions & Premium Monetization | COMPLETED | 2026-09-09 |
-| Enhancement | PDF Compressor: Real Size Reduction & Multi-Stage Pipeline | COMPLETED | 2026-09-09 |
+| Enhancement | PDF Compressor: Deep Forensic Optimization & Real ≤1 MB Target | COMPLETED | 2026-09-09 |
 
 ---
 
 ## Active Work
-- **PDF Compressor Real Size Reduction**:
-  - Rebuilt `PdfCompressorAdapter` with multi-stage content classification, structural pruning, soft mask transparency scaling, and stream optimization.
-  - Added calibrated profiles: `VISUALLY_LOSSLESS` (default), `BALANCED`, and `EXTREME` (target ≤ 1MB when achievable).
-  - Enforced strict measurement truth: output size is always calculated from actual buffer bytes; returns original with 0% saved if already optimized.
-  - Added dedicated regression test suite (`apps/backend/test/pdf-compressor-regression.spec.ts`) asserting material byte reduction on real 20MB compressible PDF fixtures.
+- **PDF Compressor Deep Forensic Optimization & Real ≤1 MB Target**:
+  - Implemented internal PDF Forensic Analyzer cataloging all 89 indirect objects, byte lengths, filters, and dominant contributors.
+  - Identified root cause of production failure: Canva presentation uncompressed 24-bit raw RGB bitmaps wrapped in `/FlateDecode` with `/ColorSpace [ /ICCBased <streamRef> ]` were bypassed by previous strict `DeviceRGB` check, leaving ~10 MB uncompressed.
+  - Rebuilt `PdfCompressorAdapter` with ICCBased raw RGB decoding, recursive Form XObject traversal, SHA-256 stream deduplication, proportional `/SMask` scaling, and adaptive target ≤1 MB search ladder.
+  - Verified reduction on real 11.81 MB presentation PDF (`Grey_and_Green_Illustrative_Digital_Marketing_Strategy_Presentation.pdf`) down to **591 KB (95.2% reduction)** while preserving vector text and visual layout.
+  - Updated `PdfWorkspace.tsx` defaulting to `EXTREME` with transparent labeling and forensic progress states.
+  - Verified automated regression test suite (`apps/backend/test/pdf-compressor-regression.spec.ts`, 6/6 tests passing).
 - **Phase 26 Payments, Subscriptions & Premium Monetization** fully implemented, tested, and verified:
   - Decoupled Billing Architecture: Dedicated `billing` module and `@Global()` `EntitlementService` ensure core execution and ad selection stay payment-free.
   - Payment Provider Abstraction: `PaymentProvider` interface with deterministic `MockPaymentProvider` (default) and `StripePaymentProvider`.

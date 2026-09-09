@@ -31,16 +31,17 @@ All utilities adhere strictly to:
 
 ---
 
-### PDF Compression Architecture & Quality Controls
-The PDF Compressor utilizes a multi-stage optimization pipeline:
-1. **Catalog & Structure Cleanup**: Prunes bloated unreferenced `/Metadata` XMP XML streams and editor history (`/PieceInfo`) while preserving all visible pages, forms, and outlines.
-2. **Content Classification**: Images are categorized prior to compression. Continuous-tone photographic images receive profile-tuned JPEG re-encoding. Line art, diagrams, and text screenshots preserve lossless Flate/PNG compression to prevent ringing artifacts around text.
-3. **Soft Mask Preservation**: Attached `/SMask` transparency channels are proportionally scaled alongside primary images, ensuring 100% alpha alignment.
-4. **Compression Profiles**:
-   - `VISUALLY_LOSSLESS` (Default): 2048px max dimension, Q=82 JPEG, lossless graphics.
-   - `BALANCED` (Recommended): 1440px max dimension, Q=68 JPEG.
-   - `EXTREME`: 1080px max dimension, Q=52 JPEG, targeting ≤1 MB when achievable.
-5. **Real Byte Measurement & Safety Fallback**: Output is validated and measured directly from buffer bytes. If a candidate is not smaller than the input, the engine returns the smaller valid representation reporting `wasActuallyCompressed = false` and `savingsPercent = 0%`. Arbitrary PDFs cannot mathematically be guaranteed to reach 1MB; actual sizes are always measured and reported.
+### PDF Compression Architecture & Forensic Engine
+The PDF Compressor utilizes a deep forensic optimization pipeline:
+1. **Forensic Analysis**: Catalogs every indirect object by byte size, filter, dimension, and type (Image XObjects, Form XObjects, Fonts, ICC Profiles, Content Streams, Metadata).
+2. **Recursive Form XObject Traversal**: Recursively traverses `Resources -> XObject -> Form` hierarchies with visited reference sets to uncover nested presentation assets and background artwork.
+3. **ColorSpace & Raw Bitmap Handling**: Decodes uncompressed 24-bit raw RGB bitmaps wrapped in `/FlateDecode` and `/ColorSpace [ /ICCBased ... ]` (dominant in Canva presentations), `/DeviceRGB`, `/DeviceGray`, and `/DeviceCMYK`.
+4. **Content Classification & Deduplication**: Continuous-tone photographic images receive profile-tuned JPEG downsampling. Identical pixel streams are deduplicated using SHA-256 content hashing. Attached `/SMask` transparency channels are proportionally scaled.
+5. **Compression Profiles**:
+   - `EXTREME` (Default): 1440px/Q=65 down to 800px/Q=34 search ladder, target ≤1 MB when achievable.
+   - `BALANCED` (Recommended): 1600px/Q=76 to 1440px/Q=70, strong compression with crisp layout & readability.
+   - `VISUALLY_LOSSLESS` (High Fidelity): 2048px/Q=85, highest visual fidelity over size.
+6. **Real Byte Measurement & Verification**: Serialized bytes are measured directly from `Buffer.length`. Every candidate is verified with `PDFDocument.load` to guarantee zero page count or structural regression. If output is not smaller, the original document is returned reporting `wasActuallyCompressed = false`.
 
 ---
 

@@ -51,10 +51,14 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   useEffect(() => {
     if (!isLoading || !isCompress) return;
     const steps = [
-      'Analyzing PDF structure & embedded XObjects...',
-      'Optimizing raster streams & slide artwork...',
-      'Evaluating adaptive compression passes (Target: ≤1 MB)...',
-      'Measuring bytes & verifying smallest valid PDF...',
+      'Analyzing PDF structure & forensic breakdown...',
+      'Finding large embedded resources & XObjects...',
+      'Optimizing raster images & ICC color profiles...',
+      'Downsampling oversized images to screen dimensions...',
+      'Trying compression candidates (Target: ≤1 MB)...',
+      'Measuring candidate PDF sizes...',
+      'Validating final PDF integrity & page count...',
+      'Selecting smallest valid PDF...',
     ];
     let idx = 0;
     setCompressStep(steps[0]);
