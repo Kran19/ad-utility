@@ -23,18 +23,19 @@ FROM node:22-alpine AS runner
 
 RUN apk add --no-cache wget
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* ./
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN pnpm install --prod
-
+# Copy all resolved modules, shared dist, and Next build artifacts from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/frontend/node_modules ./apps/frontend/node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/frontend/next.config.mjs ./apps/frontend/
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
@@ -46,4 +47,6 @@ USER node
 
 EXPOSE 3000
 
-CMD ["pnpm", "--filter", "@ad-utility/frontend", "start"]
+WORKDIR /app/apps/frontend
+
+CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "3000", "-H", "0.0.0.0"]
