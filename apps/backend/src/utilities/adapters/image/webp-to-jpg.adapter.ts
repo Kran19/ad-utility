@@ -74,7 +74,7 @@ export class WebpToJpgAdapter implements UtilityAdapter<WebpToJpgInput, WebpToJp
     ctx.drawImage(img, 0, 0, width, height);
 
     const q = (input.quality || 85) / 100;
-    const jpegBuffer = canvas.toBuffer('image/jpeg', { quality: q });
+    const jpegBuffer = canvas.toBuffer('image/jpeg', q);
     const dataUrl = bufferToDataUrl(jpegBuffer, 'image/jpeg');
 
     const outFilename = input.filename?.endsWith('.jpg') ? input.filename : `${input.filename || 'converted'}.jpg`;

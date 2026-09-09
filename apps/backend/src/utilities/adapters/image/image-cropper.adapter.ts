@@ -110,9 +110,9 @@ export class ImageCropperAdapter implements UtilityAdapter<ImageCropperInput, Im
     const q = (input.quality || 85) / 100;
     let outBuffer: Buffer;
     if (targetFormat === 'image/jpeg') {
-      outBuffer = canvas.toBuffer('image/jpeg', { quality: q });
+      outBuffer = canvas.toBuffer('image/jpeg', q);
     } else if (targetFormat === 'image/webp') {
-      outBuffer = canvas.toBuffer('image/webp', { quality: q });
+      outBuffer = canvas.toBuffer('image/webp', q);
     } else {
       outBuffer = canvas.toBuffer('image/png');
     }
