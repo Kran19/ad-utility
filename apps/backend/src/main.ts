@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -54,10 +55,10 @@ async function bootstrap() {
   // Real per-adapter file-size limits (15MB images / 25MB PDFs / 50MB pdf-merge combined)
   // are enforced inside each adapter — this only allows the request to reach those guards.
   app.getHttpAdapter().getInstance().use(
-    require('express').json({ limit: '70mb' }),
+    json({ limit: '70mb' }),
   );
   app.getHttpAdapter().getInstance().use(
-    require('express').urlencoded({ extended: true, limit: '70mb' }),
+    urlencoded({ extended: true, limit: '70mb' }),
   );
 
 
