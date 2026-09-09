@@ -1,0 +1,86 @@
+import {
+  UtilityAdapter,
+  UtilityExecutionContext,
+  UtilityResourceLimits,
+  PngToWebpInput,
+  PngToWebpOutput,
+} from '@ad-utility/shared';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
+import {
+  parseBase64Payload,
+  bufferToDataUrl,
+  validatePngMagicBytes,
+  sanitizeFilename,
+} from '../utils/buffer-utils';
+
+export class PngToWebpAdapter implements UtilityAdapter<PngToWebpInput, PngToWebpOutput> {
+  readonly slug = 'png-to-webp';
+  readonly name = 'PNG to WebP';
+  readonly description = 'Convert PNG images to WebP while preserving full alpha channel transparency';
+  readonly version = '1.0.0';
+  readonly mode = 'SERVER';
+  readonly resourceLimits: UtilityResourceLimits = {
+    maxFileSizeBytes: 20 * 1024 * 1024, // 20MB
+    maxExecutionTimeMs: 10000,
+    allowedMimeTypes: ['image/png'],
+  };
+
+  validateInput(input: unknown): PngToWebpInput {
+    if (!input || typeof input !== 'object') {
+      throw new Error('Input must be an object with "fileData"');
+    }
+    const { fileData, quality, lossless, filename } = input as any;
+    if (typeof fileData !== 'string' || fileData.trim().length === 0) {
+      throw new Error('Property "fileData" is required');
+    }
+
+    return {
+      fileData,
+      quality: typeof quality === 'number' && quality >= 1 && quality <= 100 ? quality : 80,
+      lossless: lossless === true,
+      filename: sanitizeFilename(filename, 'converted', 'webp'),
+    };
+  }
+
+  async execute(input: PngToWebpInput, _context: UtilityExecutionContext): Promise<PngToWebpOutput> {
+    const { buffer } = parseBase64Payload(input.fileData);
+
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 20971520;
+    if (buffer.length > maxBytes) {
+      throw new Error(`File size exceeds the 20MB limit`);
+    }
+
+    validatePngMagicBytes(buffer);
+
+    let img: any;
+    try {
+      img = await loadImage(buffer);
+    } catch (err: any) {
+      throw new Error(`Failed to decode PNG image: ${err.message}`);
+    }
+
+    const { width, height } = img;
+    if (!width || !height || width <= 0 || height <= 0) {
+      throw new Error('Invalid image dimensions');
+    }
+
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    // Draw directly without background fill to preserve transparency
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const q = (input.quality || 80) / 100;
+    const webpBuffer = canvas.toBuffer('image/webp', { quality: q });
+    const dataUrl = bufferToDataUrl(webpBuffer, 'image/webp');
+
+    const outFilename = input.filename?.endsWith('.webp') ? input.filename : `${input.filename || 'converted'}.webp`;
+
+    return {
+      dataUrl,
+      filename: outFilename,
+      sizeBytes: webpBuffer.length,
+      width,
+      height,
+    };
+  }
+}

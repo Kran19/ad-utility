@@ -9,6 +9,7 @@ export * from './contracts/mvp-utilities';
 export * from './contracts/seo';
 export * from './contracts/personalization';
 export * from './contracts/billing';
+export * from './contracts/phase27-utilities';
 export * from './registry/utility-registry';
 export * from './registry/reference-adapters';
 export * from './registry/text-adapters';

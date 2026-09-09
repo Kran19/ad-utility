@@ -23,7 +23,7 @@ RUN pnpm --filter @ad-utility/backend build
 # Stage 2: Runner
 FROM node:22-alpine AS runner
 
-RUN apk add --no-cache openssl wget
+RUN apk add --no-cache openssl wget ffmpeg
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 

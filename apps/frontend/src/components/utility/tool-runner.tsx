@@ -36,29 +36,68 @@ const AiWorkspace = dynamic(
   { loading: () => <WorkspaceLoading />, ssr: false },
 );
 
+const VideoWorkspace = dynamic(
+  () => import('./workspaces/VideoWorkspace').then((mod) => mod.VideoWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
+
+const AudioWorkspace = dynamic(
+  () => import('./workspaces/AudioWorkspace').then((mod) => mod.AudioWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
+
+const QrWorkspace = dynamic(
+  () => import('./workspaces/QrWorkspace').then((mod) => mod.QrWorkspace),
+  { loading: () => <WorkspaceLoading />, ssr: false },
+);
+
 interface ToolRunnerProps {
   utility: UtilityPublicDto;
 }
 
 export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
-  // 1. Dispatch to dedicated rich workspaces for MVP categories
-  if (utility.categorySlug === 'image' || ['jpg-to-png', 'png-to-jpg', 'image-compressor'].includes(utility.slug)) {
+  // 1. QR / Barcode Workspace
+  if (utility.categorySlug === 'qr-barcode' || ['qr-code-generator', 'barcode-generator', 'qr-code-scanner'].includes(utility.slug)) {
+    return <QrWorkspace utility={utility} />;
+  }
+
+  // 2. Video Workspace
+  if (utility.categorySlug === 'video' || ['video-compressor', 'video-converter', 'video-to-gif', 'video-to-jpg', 'mp4-to-mp3', 'video-trimmer'].includes(utility.slug)) {
+    return <VideoWorkspace utility={utility} />;
+  }
+
+  // 3. Audio Workspace
+  if (utility.categorySlug === 'audio' || ['audio-compressor', 'audio-converter', 'audio-cutter'].includes(utility.slug)) {
+    return <AudioWorkspace utility={utility} />;
+  }
+
+  // 4. Image Workspace
+  if (
+    utility.categorySlug === 'image' ||
+    ['jpg-to-png', 'png-to-jpg', 'image-compressor', 'image-to-pdf', 'image-resizer', 'image-cropper', 'webp-to-jpg', 'jpg-to-webp', 'png-to-webp'].includes(utility.slug)
+  ) {
     return <ImageWorkspace utility={utility} />;
   }
 
-  if (utility.categorySlug === 'pdf' || ['pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg'].includes(utility.slug)) {
+  // 5. PDF Workspace
+  if (
+    utility.categorySlug === 'pdf' ||
+    ['pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg', 'pdf-to-png', 'pdf-to-text', 'pdf-page-extractor', 'pdf-rotator', 'pdf-reorder-pages', 'pdf-watermark', 'pdf-metadata-remover'].includes(utility.slug)
+  ) {
     return <PdfWorkspace utility={utility} />;
   }
 
+  // 6. Text Workspace
   if (['text-cleaner', 'case-converter'].includes(utility.slug)) {
     return <TextWorkspace utility={utility} />;
   }
 
+  // 7. AI Workspace
   if (utility.categorySlug === 'ai' || ['ai-humanizer', 'ai-paraphraser', 'ai-grammar-checker'].includes(utility.slug)) {
     return <AiWorkspace utility={utility} />;
   }
 
-  // 2. Generic fallback workspace for reference utilities (json-formatter, word-counter, text-hash, ai-summarizer)
+  // 8. Generic fallback workspace for reference utilities (json-formatter, word-counter, text-hash, ai-summarizer)
   return <GenericToolWorkspace utility={utility} />;
 };
 
