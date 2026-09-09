@@ -11,6 +11,16 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    const internalApi = process.env.INTERNAL_API_URL || 'http://backend:4000/api/v1';
+    const cleanUrl = internalApi.replace(/\/+$/, '');
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${cleanUrl}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
