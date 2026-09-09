@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisAdCacheService } from './redis-ad-cache.service';
 import { TrackingTokenService } from './tracking-token.service';
@@ -11,6 +11,13 @@ import {
 } from '@ad-utility/shared';
 import { PlacementCode, CampaignStatus } from '@prisma/client';
 import { ExternalAdNetworkService } from '../providers/external-ad-network.service';
+
+export const FALLBACK_BANNER_IMAGE = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=200&fit=crop&q=80';
+
+export function formatGlobalFallbackHtml(mediaUrl?: string): string {
+  const bannerUrl = mediaUrl || FALLBACK_BANNER_IMAGE;
+  return `<div style="width:100%;max-width:728px;margin:0 auto;position:relative;overflow:hidden;border-radius:8px;border:1px solid #1e293b;background:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;"><img src="${bannerUrl}" alt="⚡ Global Platform Sponsor • Fast Utilities" style="width:100%;max-height:100px;object-fit:cover;display:block;" /><div style="position:absolute;bottom:6px;left:10px;background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#38bdf8;border:1px solid rgba(56,189,248,0.25);display:flex;align-items:center;gap:4px;">⚡ Global Platform Sponsor &bull; Fast Utilities</div></div>`;
+}
 
 export interface SelectedCandidate {
   ruleId: string;
@@ -35,7 +42,7 @@ export interface SelectedCandidate {
 }
 
 @Injectable()
-export class AdSelectorService {
+export class AdSelectorService implements OnModuleInit {
   private readonly logger = new Logger(AdSelectorService.name);
 
   constructor(
@@ -44,6 +51,28 @@ export class AdSelectorService {
     private readonly trackingTokenService: TrackingTokenService,
     private readonly externalAdNetwork: ExternalAdNetworkService,
   ) {}
+
+  async onModuleInit() {
+    try {
+      const bannerHtml = formatGlobalFallbackHtml();
+      await this.prisma.adCreative.updateMany({
+        where: {
+          OR: [
+            { isGlobalFallback: true },
+            { customHtml: { contains: 'Global Platform Sponsor' } },
+            { name: { contains: 'Global Fallback' } },
+          ],
+        },
+        data: {
+          customHtml: bannerHtml,
+          mediaUrl: FALLBACK_BANNER_IMAGE,
+        },
+      });
+      this.logger.log('Fallback ad creatives successfully synced with image banner');
+    } catch (err: any) {
+      this.logger.warn(`Could not sync fallback ad creatives: ${err.message}`);
+    }
+  }
 
   /**
    * Primary Ad Selection Execution
@@ -303,6 +332,14 @@ export class AdSelectorService {
           deviceType: device,
         });
 
+        let customHtml = chosen.creative.customHtml || undefined;
+        let mediaUrl = chosen.creative.mediaUrl || FALLBACK_BANNER_IMAGE;
+
+        // Upgrade text fallback creative to rich image banner
+        if (!customHtml || customHtml.includes('Global Platform Sponsor') || chosen.creative.type === CreativeType.HTML) {
+          customHtml = formatGlobalFallbackHtml(mediaUrl);
+        }
+
         return {
           hasAd: true,
           placement: chosen.placementCode,
@@ -313,12 +350,12 @@ export class AdSelectorService {
             creativeId: chosen.creative.id,
             campaignId: chosen.campaignId,
             type: chosen.creative.type,
-            mediaUrl: chosen.creative.mediaUrl || undefined,
+            mediaUrl,
             targetUrl: chosen.creative.targetUrl || undefined,
-            width: chosen.creative.width || undefined,
-            height: chosen.creative.height || undefined,
-            altText: chosen.creative.altText || undefined,
-            customHtml: chosen.creative.customHtml || undefined,
+            width: chosen.creative.width || 728,
+            height: chosen.creative.height || 90,
+            altText: chosen.creative.altText || 'Global Platform Sponsor • Fast Utilities',
+            customHtml,
             trackingToken,
             monetizationSource: 'HOUSE_FALLBACK',
           },
@@ -355,6 +392,13 @@ export class AdSelectorService {
           deviceType: device,
         });
 
+        let customHtml = globalFallbackCreative.customHtml || undefined;
+        let mediaUrl = globalFallbackCreative.mediaUrl || FALLBACK_BANNER_IMAGE;
+
+        if (!customHtml || customHtml.includes('Global Platform Sponsor') || globalFallbackCreative.type === CreativeType.HTML) {
+          customHtml = formatGlobalFallbackHtml(mediaUrl);
+        }
+
         return {
           hasAd: true,
           placement: rule.placement.code as AdPlacement,
@@ -365,12 +409,12 @@ export class AdSelectorService {
             creativeId: globalFallbackCreative.id,
             campaignId: rule.campaignId,
             type: globalFallbackCreative.type as CreativeType,
-            mediaUrl: globalFallbackCreative.mediaUrl || undefined,
+            mediaUrl,
             targetUrl: globalFallbackCreative.targetUrl || undefined,
-            width: globalFallbackCreative.width || undefined,
-            height: globalFallbackCreative.height || undefined,
-            altText: globalFallbackCreative.altText || undefined,
-            customHtml: globalFallbackCreative.customHtml || undefined,
+            width: globalFallbackCreative.width || 728,
+            height: globalFallbackCreative.height || 90,
+            altText: globalFallbackCreative.altText || 'Global Platform Sponsor • Fast Utilities',
+            customHtml,
             trackingToken,
             monetizationSource: 'HOUSE_FALLBACK',
           },

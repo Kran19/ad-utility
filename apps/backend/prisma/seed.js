@@ -524,8 +524,12 @@ async function main() {
         {
             name: 'Platform Global Fallback Sponsor',
             type: client_1.CreativeType.HTML,
-            customHtml: '<div style="background:#0f172a;color:#38bdf8;padding:16px;text-align:center;font-weight:bold;border-radius:8px;border:1px solid #1e293b;">⚡ Global Platform Sponsor &bull; Fast Utilities</div>',
+            mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=200&fit=crop&q=80',
+            customHtml: '<div style="width:100%;max-width:728px;margin:0 auto;position:relative;overflow:hidden;border-radius:8px;border:1px solid #1e293b;background:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;"><img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=200&fit=crop&q=80" alt="⚡ Global Platform Sponsor • Fast Utilities" style="width:100%;max-height:100px;object-fit:cover;display:block;" /><div style="position:absolute;bottom:6px;left:10px;background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#38bdf8;border:1px solid rgba(56,189,248,0.25);display:flex;align-items:center;gap:4px;">⚡ Global Platform Sponsor &bull; Fast Utilities</div></div>',
             targetUrl: 'https://example.com/platform-sponsor',
+            width: 728,
+            height: 90,
+            altText: 'Global Platform Sponsor • Fast Utilities',
             isGlobalFallback: true,
         },
     ];
