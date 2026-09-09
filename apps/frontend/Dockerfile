@@ -13,6 +13,7 @@ RUN pnpm install
 
 COPY packages/shared ./packages/shared
 COPY apps/frontend ./apps/frontend
+RUN mkdir -p ./apps/frontend/public
 
 RUN pnpm --filter @ad-utility/shared build
 RUN pnpm --filter @ad-utility/frontend build
