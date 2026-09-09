@@ -336,7 +336,7 @@ export class AdSelectorService implements OnModuleInit {
         let mediaUrl = chosen.creative.mediaUrl || FALLBACK_BANNER_IMAGE;
 
         // Upgrade text fallback creative to rich image banner
-        if (!customHtml || customHtml.includes('Global Platform Sponsor') || chosen.creative.type === CreativeType.HTML) {
+        if (!customHtml || customHtml.includes('Global Platform Sponsor') || chosen.creative.type === 'HTML') {
           customHtml = formatGlobalFallbackHtml(mediaUrl);
         }
 
@@ -395,7 +395,7 @@ export class AdSelectorService implements OnModuleInit {
         let customHtml = globalFallbackCreative.customHtml || undefined;
         let mediaUrl = globalFallbackCreative.mediaUrl || FALLBACK_BANNER_IMAGE;
 
-        if (!customHtml || customHtml.includes('Global Platform Sponsor') || globalFallbackCreative.type === CreativeType.HTML) {
+        if (!customHtml || customHtml.includes('Global Platform Sponsor') || globalFallbackCreative.type === 'HTML') {
           customHtml = formatGlobalFallbackHtml(mediaUrl);
         }
 
