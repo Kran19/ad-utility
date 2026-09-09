@@ -114,7 +114,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
     link.href = qrDataUrl;
     link.download = `qrcode_${Date.now()}.png`;
     link.click();
-    trackResultDownload(utility.slug, 'image/png');
+    trackResultDownload(utility.slug, { format: 'image/png' });
   };
 
   const handleCopy = () => {

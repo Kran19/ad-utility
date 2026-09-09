@@ -127,7 +127,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
     link.href = resultData.dataUrl;
     link.download = resultData.filename;
     link.click();
-    trackResultDownload(utility.slug, utility.slug === 'mp4-to-mp3' ? 'audio/mp3' : 'video/mp4');
+    trackResultDownload(utility.slug, { mimeType: utility.slug === 'mp4-to-mp3' ? 'audio/mp3' : 'video/mp4' });
   };
 
   return (

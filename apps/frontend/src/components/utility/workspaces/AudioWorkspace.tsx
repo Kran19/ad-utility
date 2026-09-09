@@ -114,7 +114,7 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
     link.href = resultData.dataUrl;
     link.download = resultData.filename;
     link.click();
-    trackResultDownload(utility.slug, 'audio/mp3');
+    trackResultDownload(utility.slug, { mimeType: 'audio/mp3' });
   };
 
   return (
