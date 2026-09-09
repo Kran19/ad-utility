@@ -6,11 +6,16 @@ import {
   ServiceUnavailableException,
   RequestTimeoutException,
   ForbiddenException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiGatewayService } from '../ai/services/ai-gateway.service';
 import { UtilitiesCacheService } from './services/utilities-cache.service';
 import { EntitlementService } from '../billing/services/entitlement.service';
+import {
+  DEFAULT_CATALOG_CATEGORIES,
+  DEFAULT_CATALOG_UTILITIES,
+} from './services/catalog-definitions';
 import {
   UtilityRegistry,
   defaultUtilityRegistry,
@@ -44,7 +49,7 @@ const DEFAULT_RELATED_MAP: Record<string, string[]> = {
 };
 
 @Injectable()
-export class UtilitiesService {
+export class UtilitiesService implements OnModuleInit {
   private readonly logger = new Logger(UtilitiesService.name);
   private readonly registry: UtilityRegistry;
 
@@ -56,6 +61,86 @@ export class UtilitiesService {
   ) {
     this.registry = defaultUtilityRegistry;
     registerServerAdapters(this.registry, this.aiGateway);
+  }
+
+  async onModuleInit(): Promise<void> {
+    try {
+      this.logger.log('Starting automated utility catalog synchronization...');
+      for (const cat of DEFAULT_CATALOG_CATEGORIES) {
+        await this.prisma.utilityCategory.upsert({
+          where: { slug: cat.slug },
+          update: {
+            name: cat.name,
+            description: cat.description,
+            icon: cat.icon,
+            displayOrder: cat.displayOrder,
+          },
+          create: {
+            slug: cat.slug,
+            name: cat.name,
+            description: cat.description,
+            icon: cat.icon,
+            displayOrder: cat.displayOrder,
+          },
+        });
+      }
+
+      const categories = await this.prisma.utilityCategory.findMany();
+      const catMap = new Map(categories.map((c) => [c.slug, c.id]));
+
+      for (const u of DEFAULT_CATALOG_UTILITIES) {
+        const categoryId = catMap.get(u.categorySlug);
+        if (!categoryId) {
+          this.logger.warn(`Category slug "${u.categorySlug}" not found for utility "${u.slug}"`);
+          continue;
+        }
+
+        await this.prisma.utility.upsert({
+          where: { slug: u.slug },
+          update: {
+            name: u.name,
+            description: u.description,
+            categoryId,
+            implementationMode: u.implementationMode as any,
+            status: u.status as any,
+            isFeatured: u.isFeatured,
+            displayOrder: u.displayOrder,
+            seoTitle: u.seoTitle,
+            seoDescription: u.seoDescription,
+            faqContent: u.faqContent as any,
+            relatedSlugs: u.relatedSlugs,
+          },
+          create: {
+            slug: u.slug,
+            name: u.name,
+            description: u.description,
+            categoryId,
+            implementationMode: u.implementationMode as any,
+            status: u.status as any,
+            isFeatured: u.isFeatured,
+            displayOrder: u.displayOrder,
+            seoTitle: u.seoTitle,
+            seoDescription: u.seoDescription,
+            faqContent: u.faqContent as any,
+            relatedSlugs: u.relatedSlugs,
+          },
+        });
+      }
+
+      try {
+        await this.cache.del('categories:list');
+        await this.cache.del('list:all');
+        for (const cat of DEFAULT_CATALOG_CATEGORIES) {
+          await this.cache.del(`list:${cat.slug}`);
+        }
+      } catch (cacheErr: any) {
+        this.logger.warn(`Could not clear Redis cache during catalog sync: ${cacheErr?.message}`);
+      }
+
+      this.logger.log('Utility catalog auto-synced successfully (all categories and utilities active).');
+    } catch (err: any) {
+      this.logger.error(`Automated utility catalog synchronization error: ${err?.message}`, err?.stack);
+    }
   }
 
   /**
