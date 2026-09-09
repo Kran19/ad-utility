@@ -21,6 +21,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const [pageRanges, setPageRanges] = useState<string>('1-3');
   const [pdfToJpgPage, setPdfToJpgPage] = useState<'all' | number>('all');
   const [scale, setScale] = useState<number>(1.5);
+  const [compressionLevel, setCompressionLevel] = useState<'extreme' | 'recommended' | 'low'>('extreme');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -127,6 +128,8 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
         } else if (isPdfToJpg) {
           payload.page = pdfToJpgPage;
           payload.scale = scale;
+        } else if (isCompress) {
+          payload.compressionLevel = compressionLevel;
         }
       }
 
@@ -301,6 +304,66 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           )}
 
           {/* Specific tool options */}
+          {isCompress && (
+            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-gray-300 uppercase">
+                  Compression Level
+                </label>
+                <span className="text-[11px] text-emerald-400 font-medium">Target: KB or ~1MB</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: 'extreme',
+                    name: 'Extreme Compression',
+                    desc: 'Shrinks 25MB down to KB / ~1MB (Maximum reduction)',
+                    badge: 'Smallest Size',
+                    badgeColor: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60',
+                  },
+                  {
+                    id: 'recommended',
+                    name: 'Balanced',
+                    desc: 'High compression with standard screen clarity',
+                    badge: 'Standard',
+                    badgeColor: 'bg-blue-950/80 text-blue-400 border-blue-800/60',
+                  },
+                  {
+                    id: 'low',
+                    name: 'Crisp Quality',
+                    desc: 'Light compression preserving high-DPI detail',
+                    badge: 'High Quality',
+                    badgeColor: 'bg-purple-950/80 text-purple-400 border-purple-800/60',
+                  },
+                ].map((lvl) => {
+                  const isSelected = compressionLevel === lvl.id;
+                  return (
+                    <button
+                      key={lvl.id}
+                      type="button"
+                      onClick={() => setCompressionLevel(lvl.id as any)}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? 'bg-blue-600/10 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/30'
+                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-semibold ${isSelected ? 'text-blue-400' : 'text-gray-300'}`}>
+                          {lvl.name}
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${lvl.badgeColor}`}>
+                          {lvl.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 leading-snug">{lvl.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {isSplit && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
               <label htmlFor="page-ranges" className="block text-xs font-semibold text-gray-300 uppercase">

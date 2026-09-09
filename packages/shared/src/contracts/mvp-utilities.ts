@@ -76,11 +76,15 @@ export interface ImageCompressorOutput {
 // 2. PDF UTILITIES
 // ==========================================
 
+export type PdfCompressionLevel = 'extreme' | 'recommended' | 'low';
+
 export interface PdfCompressorInput {
   /** Base64-encoded PDF data or data URL */
   fileData: string;
   /** Original filename */
   filename?: string;
+  /** Compression level: 'extreme' (target KB/1MB), 'recommended' (balanced), 'low' (high quality) */
+  compressionLevel?: PdfCompressionLevel;
 }
 
 export interface PdfCompressorOutput {

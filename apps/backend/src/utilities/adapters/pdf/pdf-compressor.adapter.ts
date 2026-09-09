@@ -4,9 +4,11 @@ import {
   UtilityResourceLimits,
   PdfCompressorInput,
   PdfCompressorOutput,
+  PdfCompressionLevel,
 } from '@ad-utility/shared';
 import { PDFDocument, PDFName, PDFNumber, PDFRawStream } from 'pdf-lib';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import * as zlib from 'zlib';
 import {
   parseBase64Payload,
   bufferToDataUrl,
@@ -22,7 +24,7 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
     maxFileSizeBytes: 25 * 1024 * 1024, // 25MB
-    maxExecutionTimeMs: 25000,
+    maxExecutionTimeMs: 30000,
     allowedMimeTypes: ['application/pdf'],
   };
 
@@ -30,14 +32,20 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
     if (!input || typeof input !== 'object') {
       throw new Error('Input must be an object with "fileData"');
     }
-    const { fileData, filename } = input as any;
+    const { fileData, filename, compressionLevel } = input as any;
     if (typeof fileData !== 'string' || fileData.trim().length === 0) {
       throw new Error('Property "fileData" is required (base64 or data URL)');
+    }
+
+    let validLevel: PdfCompressionLevel = 'extreme';
+    if (compressionLevel === 'recommended' || compressionLevel === 'low' || compressionLevel === 'extreme') {
+      validLevel = compressionLevel;
     }
 
     return {
       fileData,
       filename: sanitizeFilename(filename, 'compressed', 'pdf'),
+      compressionLevel: validLevel,
     };
   }
 
@@ -64,11 +72,27 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
       throw new Error('PDF contains zero pages');
     }
 
+    // Compression tuning: extreme defaults to aggressive reduction (KB to ~1MB)
+    const level = input.compressionLevel || 'extreme';
+    let maxDim = 1024;
+    let quality = 35;
+
+    if (level === 'recommended') {
+      maxDim = 1280;
+      quality = 50;
+    } else if (level === 'low') {
+      maxDim = 1600;
+      quality = 70;
+    }
+
     // Inspect and compress embedded image streams across the document
     try {
       for (const [ref, obj] of doc.context.enumerateIndirectObjects()) {
         if (obj && (obj as any).dict && (obj as any).dict.get(PDFName.of('Subtype'))?.toString() === '/Image') {
-          const filter = (obj as any).dict.get(PDFName.of('Filter'))?.toString();
+          const dict = (obj as any).dict;
+          const filter = dict.get(PDFName.of('Filter'))?.toString();
+
+          // 1. JPEG image streams (/Filter /DCTDecode)
           if (filter === '/DCTDecode') {
             try {
               const rawJpeg = Buffer.from((obj as any).getContents());
@@ -76,8 +100,6 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
               if (rawJpeg.length >= 2 && rawJpeg[0] === 0xff && rawJpeg[1] === 0xd8) {
                 const loadedImg = await loadImage(rawJpeg);
 
-                // Cap oversized embedded images to 1600px max dimension to eliminate multi-megabyte bloated slides
-                const maxDim = 1600;
                 let targetW = loadedImg.width;
                 let targetH = loadedImg.height;
                 if (targetW > maxDim || targetH > maxDim) {
@@ -90,18 +112,78 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(loadedImg, 0, 0, targetW, targetH);
 
-                // Re-encode at 65% quality (excellent visual quality, dramatic byte reduction)
-                const compressedJpeg = await canvas.encode('jpeg', 65);
+                const compressedJpeg = await canvas.encode('jpeg', quality);
 
                 if (compressedJpeg.length < rawJpeg.length) {
-                  (obj as any).dict.set(PDFName.of('Width'), PDFNumber.of(targetW));
-                  (obj as any).dict.set(PDFName.of('Height'), PDFNumber.of(targetH));
-                  const newStream = PDFRawStream.of((obj as any).dict, compressedJpeg);
+                  dict.set(PDFName.of('Width'), PDFNumber.of(targetW));
+                  dict.set(PDFName.of('Height'), PDFNumber.of(targetH));
+                  const newStream = PDFRawStream.of(dict, compressedJpeg);
                   doc.context.assign(ref, newStream);
                 }
               }
             } catch {
               // Non-critical: skip individual stream on decode anomaly
+            }
+          }
+          // 2. FlateDecode or uncompressed streams (often large PNG or raw bitmaps)
+          else if (filter === '/FlateDecode' || !filter) {
+            try {
+              let uncompressedData: Buffer | null = null;
+              if (filter === '/FlateDecode') {
+                const rawContents = Buffer.from((obj as any).getContents());
+                try {
+                  uncompressedData = zlib.inflateSync(rawContents);
+                } catch {
+                  try {
+                    uncompressedData = zlib.unzipSync(rawContents);
+                  } catch {
+                    uncompressedData = null;
+                  }
+                }
+              } else {
+                uncompressedData = Buffer.from((obj as any).getContents());
+              }
+
+              if (uncompressedData && uncompressedData.length >= 2) {
+                // If it contains an encoded image format (e.g. JPEG, PNG)
+                const isJpeg = uncompressedData[0] === 0xff && uncompressedData[1] === 0xd8;
+                const isPng =
+                  uncompressedData.length >= 8 &&
+                  uncompressedData[0] === 0x89 &&
+                  uncompressedData[1] === 0x50 &&
+                  uncompressedData[2] === 0x4e &&
+                  uncompressedData[3] === 0x47;
+
+                if (isJpeg || isPng) {
+                  const loadedImg = await loadImage(uncompressedData);
+                  let targetW = loadedImg.width;
+                  let targetH = loadedImg.height;
+                  if (targetW > maxDim || targetH > maxDim) {
+                    const ratio = Math.min(maxDim / targetW, maxDim / targetH);
+                    targetW = Math.max(1, Math.round(targetW * ratio));
+                    targetH = Math.max(1, Math.round(targetH * ratio));
+                  }
+
+                  const canvas = createCanvas(targetW, targetH);
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(loadedImg, 0, 0, targetW, targetH);
+
+                  const compressedJpeg = await canvas.encode('jpeg', quality);
+                  const prevLen = (obj as any).getContents().length;
+                  if (compressedJpeg.length < prevLen) {
+                    dict.set(PDFName.of('Filter'), PDFName.of('DCTDecode'));
+                    dict.delete(PDFName.of('DecodeParms'));
+                    dict.set(PDFName.of('ColorSpace'), PDFName.of('DeviceRGB'));
+                    dict.set(PDFName.of('BitsPerComponent'), PDFNumber.of(8));
+                    dict.set(PDFName.of('Width'), PDFNumber.of(targetW));
+                    dict.set(PDFName.of('Height'), PDFNumber.of(targetH));
+                    const newStream = PDFRawStream.of(dict, compressedJpeg);
+                    doc.context.assign(ref, newStream);
+                  }
+                }
+              }
+            } catch {
+              // Non-critical: skip individual stream
             }
           }
         }
