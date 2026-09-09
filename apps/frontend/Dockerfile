@@ -40,6 +40,8 @@ COPY --from=builder /app/apps/frontend/next.config.mjs ./apps/frontend/
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
 COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
 
+RUN chown -R node:node /app
+
 USER node
 
 EXPOSE 3000
