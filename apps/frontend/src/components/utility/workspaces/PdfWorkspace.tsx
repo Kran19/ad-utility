@@ -17,29 +17,18 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   // Multi file state (for merge)
   const [mergeFiles, setMergeFiles] = useState<Array<{ file: File; base64: string }>>([]);
 
+  // Tool type flags
+  const isMerge = utility.slug === 'pdf-merge';
+  const isSplit = utility.slug === 'pdf-split';
+  const isPdfToJpg = utility.slug === 'pdf-to-jpg';
+  const isCompress = utility.slug === 'pdf-compressor';
+
   // Configuration state
   const [pageRanges, setPageRanges] = useState<string>('1-3');
   const [pdfToJpgPage, setPdfToJpgPage] = useState<'all' | number>('all');
   const [scale, setScale] = useState<number>(1.5);
   const [profile, setProfile] = useState<'EXTREME' | 'BALANCED' | 'VISUALLY_LOSSLESS'>('EXTREME');
   const [compressStep, setCompressStep] = useState<string>('Analyzing PDF...');
-
-  useEffect(() => {
-    if (!isLoading || !isCompress) return;
-    const steps = [
-      'Analyzing PDF structure & embedded XObjects...',
-      'Optimizing raster streams & slide artwork...',
-      'Evaluating adaptive compression passes (Target: ≤1 MB)...',
-      'Measuring bytes & verifying smallest valid PDF...',
-    ];
-    let idx = 0;
-    setCompressStep(steps[0]);
-    const timer = setInterval(() => {
-      idx = (idx + 1) % steps.length;
-      setCompressStep(steps[idx]);
-    }, 1800);
-    return () => clearInterval(timer);
-  }, [isLoading, isCompress]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -59,10 +48,22 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isMerge = utility.slug === 'pdf-merge';
-  const isSplit = utility.slug === 'pdf-split';
-  const isPdfToJpg = utility.slug === 'pdf-to-jpg';
-  const isCompress = utility.slug === 'pdf-compressor';
+  useEffect(() => {
+    if (!isLoading || !isCompress) return;
+    const steps = [
+      'Analyzing PDF structure & embedded XObjects...',
+      'Optimizing raster streams & slide artwork...',
+      'Evaluating adaptive compression passes (Target: ≤1 MB)...',
+      'Measuring bytes & verifying smallest valid PDF...',
+    ];
+    let idx = 0;
+    setCompressStep(steps[0]);
+    const timer = setInterval(() => {
+      idx = (idx + 1) % steps.length;
+      setCompressStep(steps[idx]);
+    }, 1800);
+    return () => clearInterval(timer);
+  }, [isLoading, isCompress]);
 
   const readFileAsBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
