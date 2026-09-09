@@ -25,9 +25,12 @@ FROM node:22-alpine AS runner
 
 RUN apk add --no-cache openssl wget
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PATH="/app/node_modules/.bin:/app/apps/backend/node_modules/.bin:${PATH}"
 
 COPY package.json pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/
