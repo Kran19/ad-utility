@@ -1,5 +1,16 @@
 import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsInt, IsArray } from 'class-validator';
 import { UtilityExecutionMode, UtilityStatus } from '@prisma/client';
+import { AdminPaginationQueryDto } from './admin-query.dto';
+
+export class AdminListUtilitiesQueryDto extends AdminPaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsEnum(UtilityStatus)
+  status?: UtilityStatus;
+}
 
 export class AdminCreateUtilityDto {
   @IsString()

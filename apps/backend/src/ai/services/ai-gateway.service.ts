@@ -15,6 +15,8 @@ import {
   AiMessage,
   DEFAULT_SUPPORTED_AI_MODELS,
   DEFAULT_AI_MODEL,
+  AiProviderHealthDto,
+  AiProviderHealthStatus,
 } from '@ad-utility/shared';
 import { AiRequestStatus } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
@@ -28,6 +30,8 @@ export class AiGatewayService {
   private readonly allowedModels: Set<string>;
   private readonly dailyBudgetUsd: number;
   private readonly requestTimeoutMs: number = 20000;
+  private lastErrorTimestamp: string | null = null;
+  private lastErrorMessage: string | null = null;
 
   constructor(
     private readonly config: ConfigService,
@@ -73,6 +77,68 @@ export class AiGatewayService {
   }
 
   /**
+   * AI Provider Health Reporting (Phase 25)
+   * Evaluates configuration, budget status, and provider readiness without leaking secrets.
+   * CONFIGURED: Credentials are present (OpenAI).
+   * NOT_CONFIGURED: Credentials missing or provider not configured.
+   * HEALTHY: Deterministic mock mode active or live-verified.
+   */
+  async getProviderHealth(): Promise<AiProviderHealthDto> {
+    const isMock = this.providerMode === 'mock';
+    const hasKey = Boolean(this.openAiApiKey && this.openAiApiKey.length > 0);
+
+    let status: AiProviderHealthStatus;
+    let isConfigured: boolean;
+
+    if (isMock) {
+      status = 'HEALTHY';
+      isConfigured = true;
+    } else if (!hasKey) {
+      status = 'NOT_CONFIGURED';
+      isConfigured = false;
+    } else {
+      // Credentials are present; marked CONFIGURED (not HEALTHY until live-verified)
+      status = 'CONFIGURED';
+      isConfigured = true;
+    }
+
+    // Compute today's spending and budget status
+    const now = new Date();
+    const startOfDayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    let todaySpendUsd = 0;
+    try {
+      const dailySpend = await this.prisma.aiRequest.aggregate({
+        _sum: { estimatedCostUsd: true },
+        where: {
+          timestamp: { gte: startOfDayUtc },
+          status: AiRequestStatus.SUCCESS,
+        },
+      });
+      todaySpendUsd = parseFloat((dailySpend._sum.estimatedCostUsd || 0).toFixed(4));
+    } catch {
+      todaySpendUsd = 0;
+    }
+
+    const budgetStatus: 'OK' | 'EXCEEDED' = todaySpendUsd >= this.dailyBudgetUsd ? 'EXCEEDED' : 'OK';
+
+    return {
+      provider: isMock ? 'mock' : 'openai',
+      providerMode: this.providerMode,
+      status,
+      isConfigured,
+      defaultModel: this.defaultModel,
+      allowedModels: Array.from(this.allowedModels),
+      dailyBudgetUsd: this.dailyBudgetUsd,
+      todaySpendUsd,
+      budgetStatus,
+      requestTimeoutMs: this.requestTimeoutMs,
+      rateLimitPerMinute: 15,
+      lastErrorTimestamp: this.lastErrorTimestamp,
+      lastErrorMessage: this.lastErrorMessage,
+    };
+  }
+
+  /**
    * Centralized AI Generation Execution
    */
   async generateText(
@@ -82,7 +148,7 @@ export class AiGatewayService {
     const requestId = randomUUID();
     const startTime = Date.now();
     const ipHash = ip ? createHash('sha256').update(ip).digest('hex').substring(0, 32) : undefined;
-    const clientIdentifier = ipHash || dto.sessionId || 'anonymous_user';
+    const clientIdentifier = dto.sessionId ? `sess_${dto.sessionId}` : (ipHash || 'anonymous_user');
 
     // 1. Validate Input Prompt
     if (!dto.prompt || typeof dto.prompt !== 'string' || dto.prompt.trim().length === 0) {
@@ -171,7 +237,11 @@ export class AiGatewayService {
       }
     } catch (err: any) {
       status = AiRequestStatus.FAILED;
-      errorMessage = err.message || 'Unknown AI error';
+      const rawError = err.message || 'Unknown AI error';
+      // Sanitize raw error string to prevent secret or token leakage
+      errorMessage = rawError.replace(/sk-[a-zA-Z0-9_\-]+/g, 'sk-***').replace(/Bearer\s+[a-zA-Z0-9_\-]+/gi, 'Bearer ***');
+      this.lastErrorTimestamp = new Date().toISOString();
+      this.lastErrorMessage = errorMessage.substring(0, 200);
       this.logger.error(`AI Gateway execution failed for ${dto.utilitySlug}: ${errorMessage}`);
 
       await this.logAiRequestTelemetry({
@@ -394,7 +464,8 @@ export class AiGatewayService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenAI API returned HTTP ${response.status}: ${errorText}`);
+        const sanitizedError = errorText.replace(/sk-[a-zA-Z0-9_\-]+/g, 'sk-***').replace(/Bearer\s+[a-zA-Z0-9_\-]+/gi, 'Bearer ***');
+        throw new Error(`OpenAI API returned HTTP ${response.status}: ${sanitizedError}`);
       }
 
       const json = await response.json();

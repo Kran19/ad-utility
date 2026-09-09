@@ -60,6 +60,18 @@ describe('Phase 8: Admin Control Panel & RBAC Management Verification', () => {
     await prisma.utility.deleteMany({
       where: { slug: { startsWith: 'test-tool-' } },
     });
+    await prisma.adSchedule.deleteMany({
+      where: { campaign: { name: 'Phase 8 Verification Campaign' } },
+    });
+    await prisma.adTargetingRule.deleteMany({
+      where: { campaign: { name: 'Phase 8 Verification Campaign' } },
+    });
+    await prisma.adCampaign.deleteMany({
+      where: { name: 'Phase 8 Verification Campaign' },
+    });
+    await prisma.adCreative.deleteMany({
+      where: { name: 'Test Image Banner' },
+    });
     await app.close();
   });
 

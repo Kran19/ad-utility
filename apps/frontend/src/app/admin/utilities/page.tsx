@@ -1,15 +1,42 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { adminApiFetch } from '../../../lib/admin-api';
 
+interface UtilityAdCounts {
+  desktop: number;
+  tablet: number;
+  mobile: number;
+  total: number;
+}
+
+interface UtilityItem {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  category?: { id: string; name: string; slug: string };
+  implementationMode: string;
+  status: 'ACTIVE' | 'DISABLED' | 'DRAFT';
+  isFeatured: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  adCounts?: UtilityAdCounts;
+}
+
 export default function AdminUtilitiesPage() {
-  const [utilities, setUtilities] = useState<any[]>([]);
+  const [utilities, setUtilities] = useState<UtilityItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingUtility, setEditingUtility] = useState<UtilityItem | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const [newUtility, setNewUtility] = useState({
     slug: '',
     name: '',
@@ -24,6 +51,7 @@ export default function AdminUtilitiesPage() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     let path = '/admin/utilities?page=1&pageSize=50';
     if (search) path += `&search=${encodeURIComponent(search)}`;
     if (statusFilter) path += `&status=${encodeURIComponent(statusFilter)}`;
@@ -35,7 +63,10 @@ export default function AdminUtilitiesPage() {
 
     if (uRes.success && uRes.data) {
       setUtilities(uRes.data.items || []);
+    } else if (!uRes.success) {
+      setError(uRes.error || 'Failed to load utilities');
     }
+
     if (cRes.success && cRes.data) {
       setCategories(cRes.data || []);
       if (cRes.data.length > 0 && !newUtility.categoryId) {
@@ -76,10 +107,13 @@ export default function AdminUtilitiesPage() {
   };
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
+    // Single binary toggle ACTIVE <-> DISABLED. DRAFT can be published to ACTIVE.
     let nextStatus = 'ACTIVE';
-    if (currentStatus === 'ACTIVE') nextStatus = 'DRAFT';
-    else if (currentStatus === 'DRAFT') nextStatus = 'DISABLED';
-    else nextStatus = 'ACTIVE';
+    if (currentStatus === 'ACTIVE') {
+      nextStatus = 'DISABLED';
+    } else {
+      nextStatus = 'ACTIVE';
+    }
 
     const res = await adminApiFetch(`/admin/utilities/${id}`, {
       method: 'PATCH',
@@ -100,19 +134,54 @@ export default function AdminUtilitiesPage() {
     }
   };
 
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUtility) return;
+    setSavingEdit(true);
+
+    const res = await adminApiFetch(`/admin/utilities/${editingUtility.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: editingUtility.name,
+        description: editingUtility.description,
+        categoryId: editingUtility.categoryId,
+        status: editingUtility.status,
+        isFeatured: editingUtility.isFeatured,
+        seoTitle: editingUtility.seoTitle,
+        seoDescription: editingUtility.seoDescription,
+      }),
+    });
+
+    setSavingEdit(false);
+    if (res.success) {
+      setEditingUtility(null);
+      loadData();
+    } else {
+      alert(res.error || 'Failed to update utility');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Utility Registry Management</h1>
-          <p className="text-xs text-slate-400 mt-1">Manage database metadata, categories, SEO tags, and publication statuses</p>
+          <p className="text-xs text-slate-400 mt-1">Manage database metadata, categories, ad allocations, SEO tags, and publication statuses</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 self-start sm:self-auto"
-        >
-          <span>+</span> Register Utility
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/ad-manager"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-1.5"
+          >
+            <span>🎛️</span> Ad Operations Matrix
+          </Link>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 self-start sm:self-auto"
+          >
+            <span>+</span> Register Utility
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -130,9 +199,9 @@ export default function AdminUtilitiesPage() {
           className="w-full sm:w-48 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
         >
           <option value="">All Statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="DRAFT">Draft</option>
-          <option value="DISABLED">Disabled</option>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="DISABLED">DISABLED</option>
+          <option value="DRAFT">DRAFT</option>
         </select>
       </div>
 
@@ -140,6 +209,17 @@ export default function AdminUtilitiesPage() {
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
         {loading ? (
           <div className="py-20 text-center text-xs text-slate-400">Loading utilities...</div>
+        ) : error ? (
+          <div className="py-16 text-center text-xs text-rose-400 px-4">
+            <p className="font-semibold text-rose-300 mb-1">Failed to load utilities</p>
+            <p className="text-slate-400 mb-4">{error}</p>
+            <button
+              onClick={loadData}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs transition-colors border border-slate-700"
+            >
+              Retry
+            </button>
+          </div>
         ) : utilities.length === 0 ? (
           <div className="py-20 text-center text-xs text-slate-400">No utilities found.</div>
         ) : (
@@ -150,61 +230,260 @@ export default function AdminUtilitiesPage() {
                   <th className="px-4 py-3">Tool Name & Slug</th>
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3">Execution Mode</th>
+                  <th className="px-4 py-3">Ads Assigned</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Featured</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {utilities.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-white">{u.name}</div>
-                      <div className="text-[11px] text-indigo-400 font-mono">/{u.slug}</div>
-                    </td>
-                    <td className="px-4 py-3">{u.category?.name}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-slate-400">{u.implementationMode}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleToggleStatus(u.id, u.status)}
-                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-mono cursor-pointer transition-colors ${
-                          u.status === 'ACTIVE'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                            : u.status === 'DRAFT'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
-                        }`}
-                      >
-                        {u.status} ⟳
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleToggleFeatured(u.id, u.isFeatured)}
-                        className={`text-xs ${u.isFeatured ? 'text-amber-400' : 'text-slate-600'}`}
-                      >
-                        {u.isFeatured ? '★ Featured' : '☆ Standard'}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <a
-                        href={`/${u.slug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] transition-colors"
-                      >
-                        View Page &rarr;
-                      </a>
-                    </td>
-                  </tr>
-                ))}
+                {utilities.map((u) => {
+                  const adCounts = u.adCounts;
+                  const hasAds = adCounts && adCounts.total > 0;
+                  return (
+                    <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setEditingUtility(u)}
+                          className="text-left font-semibold text-white hover:text-indigo-400 transition-colors cursor-pointer group flex items-center gap-1.5"
+                        >
+                          <span>{u.name}</span>
+                          <span className="text-[10px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
+                        </button>
+                        <div className="text-[11px] text-indigo-400 font-mono">/{u.slug}</div>
+                      </td>
+                      <td className="px-4 py-3">{u.category?.name || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-slate-400">{u.implementationMode}</td>
+                      
+                      {/* Ads Column */}
+                      <td className="px-4 py-3">
+                        {hasAds ? (
+                          <Link
+                            href={`/admin/ad-manager?utility=${u.slug}`}
+                            className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 transition-colors bg-indigo-950/40 border border-indigo-800/40 px-2 py-1 rounded-md"
+                            title="Manage ads for this utility"
+                          >
+                            <span className="font-medium">
+                              Desktop {adCounts.desktop} · Mobile {adCounts.mobile}
+                              {adCounts.tablet > 0 ? ` · Tablet ${adCounts.tablet}` : ''}
+                            </span>
+                            <span className="text-[10px] text-indigo-400">&rarr;</span>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/admin/ad-manager?utility=${u.slug}`}
+                            className="text-slate-500 hover:text-slate-300 text-xs italic transition-colors"
+                            title="Assign an ad"
+                          >
+                            No ads configured &rarr;
+                          </Link>
+                        )}
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleToggleStatus(u.id, u.status)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono cursor-pointer transition-colors ${
+                            u.status === 'ACTIVE'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                              : u.status === 'DISABLED'
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                          }`}
+                          title={`Click to toggle ${u.status === 'ACTIVE' ? 'to DISABLED' : 'to ACTIVE'}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'ACTIVE' ? 'bg-emerald-400' : u.status === 'DISABLED' ? 'bg-rose-400' : 'bg-amber-400'}`}></span>
+                          {u.status} ⟳
+                        </button>
+                      </td>
+
+                      {/* Featured Column */}
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleToggleFeatured(u.id, u.isFeatured)}
+                          className={`text-xs ${u.isFeatured ? 'text-amber-400' : 'text-slate-600'}`}
+                        >
+                          {u.isFeatured ? '★ Featured' : '☆ Standard'}
+                        </button>
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="px-4 py-3 text-right space-x-2">
+                        <button
+                          onClick={() => setEditingUtility(u)}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] transition-colors border border-slate-700"
+                        >
+                          Edit
+                        </button>
+                        <a
+                          href={`/${u.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] transition-colors inline-block"
+                        >
+                          View &rarr;
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Modal */}
+      {/* Edit Utility Drawer/Modal */}
+      {editingUtility && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-white">Edit Utility Details</h2>
+                <p className="text-xs text-slate-400">Update metadata, publication status, and SEO tags</p>
+              </div>
+              <button
+                onClick={() => setEditingUtility(null)}
+                className="text-slate-400 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400">Slug (Read-only)</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingUtility.slug}
+                    className="w-full mt-1 px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-lg text-xs text-slate-400 font-mono cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-400">Execution Mode (Read-only)</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingUtility.implementationMode}
+                    className="w-full mt-1 px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-lg text-xs text-slate-400 font-mono cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300">Tool Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingUtility.name}
+                  onChange={(e) => setEditingUtility({ ...editingUtility, name: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300">Category</label>
+                  <select
+                    value={editingUtility.categoryId}
+                    onChange={(e) => setEditingUtility({ ...editingUtility, categoryId: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-300">Status</label>
+                  <select
+                    value={editingUtility.status}
+                    onChange={(e) => setEditingUtility({ ...editingUtility, status: e.target.value as any })}
+                    className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="DISABLED">DISABLED</option>
+                    <option value="DRAFT">DRAFT</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300">Description</label>
+                <textarea
+                  rows={2}
+                  required
+                  value={editingUtility.description}
+                  onChange={(e) => setEditingUtility({ ...editingUtility, description: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300">SEO Title</label>
+                <input
+                  type="text"
+                  value={editingUtility.seoTitle || ''}
+                  onChange={(e) => setEditingUtility({ ...editingUtility, seoTitle: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300">SEO Description</label>
+                <textarea
+                  rows={2}
+                  value={editingUtility.seoDescription || ''}
+                  onChange={(e) => setEditingUtility({ ...editingUtility, seoDescription: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editFeatured"
+                  checked={editingUtility.isFeatured}
+                  onChange={(e) => setEditingUtility({ ...editingUtility, isFeatured: e.target.checked })}
+                  className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="editFeatured" className="text-xs text-slate-300">
+                  Feature on homepage
+                </label>
+              </div>
+
+              <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                <Link
+                  href={`/admin/ad-manager?utility=${editingUtility.slug}`}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                >
+                  <span>🎛️</span> Manage Ads for {editingUtility.name} &rarr;
+                </Link>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingUtility(null)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit}
+                    className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium"
+                  >
+                    {savingEdit ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Register Utility */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">

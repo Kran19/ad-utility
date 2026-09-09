@@ -21,6 +21,7 @@ import {
   AiGenerateRequestDto,
   AiGenerateResponseDto,
   AiUsageSummaryDto,
+  AiProviderHealthDto,
 } from '@ad-utility/shared';
 import { RoleType } from '@prisma/client';
 
@@ -46,6 +47,22 @@ export class AiController {
 
     const data = await this.aiGatewayService.generateText(body, ip);
 
+    return {
+      success: true,
+      data,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Public()
+  @Get('health')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get AI Gateway provider health and configuration status' })
+  @ApiResponse({ status: 200, description: 'AI provider health status' })
+  async getProviderHealth(): Promise<ApiEnvelope<AiProviderHealthDto>> {
+    const data = await this.aiGatewayService.getProviderHealth();
     return {
       success: true,
       data,
@@ -89,6 +106,7 @@ export class AiController {
     const totalCostUsd = aggregate._sum.estimatedCostUsd || 0;
     const todaySpendUsd = todayAggregate._sum.estimatedCostUsd || 0;
     const successRate = totalRequests > 0 ? parseFloat(((successRequests / totalRequests) * 100).toFixed(1)) : 100;
+    const providerHealth = await this.aiGatewayService.getProviderHealth();
 
     return {
       success: true,
@@ -96,10 +114,13 @@ export class AiController {
         totalRequests,
         totalTokens,
         totalCostUsd: parseFloat(totalCostUsd.toFixed(4)),
+        costStatus: 'ESTIMATED',
         successRate,
         providerMode: this.aiGatewayService.getProviderMode(),
         dailyBudgetUsd: this.aiGatewayService.getDailyBudgetUsd(),
         todaySpendUsd: parseFloat(todaySpendUsd.toFixed(4)),
+        budgetStatus: providerHealth.budgetStatus,
+        providerHealth,
       },
       meta: {
         timestamp: new Date().toISOString(),

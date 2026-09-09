@@ -7,6 +7,7 @@ import {
   AdminUpdateUtilityDto,
   AdminCreateCategoryDto,
   AdminUpdateCategoryDto,
+  AdminListUtilitiesQueryDto,
 } from '../dto/admin-utilities.dto';
 import { PaginatedResult, JwtPayload } from '@ad-utility/shared';
 import { Prisma } from '@prisma/client';
@@ -21,9 +22,9 @@ export class AdminUtilitiesService {
     private readonly cache: UtilitiesCacheService,
   ) {}
 
-  async listUtilities(query: AdminPaginationQueryDto & { categoryId?: string; status?: string }): Promise<PaginatedResult<any>> {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+  async listUtilities(query: AdminListUtilitiesQueryDto): Promise<PaginatedResult<any>> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UtilityWhereInput = {};
@@ -48,8 +49,60 @@ export class AdminUtilitiesService {
       }),
     ]);
 
+    // Load active targeting rules to compute ad counts per utility without double counting
+    const activeRules = await this.prisma.adTargetingRule.findMany({
+      where: {
+        isActive: true,
+        campaign: { status: 'ACTIVE' },
+      },
+      select: {
+        id: true,
+        deviceTypes: true,
+        utilitySlugs: true,
+        categorySlugs: true,
+      },
+    });
+
+    const enrichedItems = items.map((u) => {
+      const uSlug = u.slug.toLowerCase();
+      const cSlug = u.category?.slug?.toLowerCase();
+
+      const applicableRules = activeRules.filter((r) => {
+        const hasExactUtility =
+          r.utilitySlugs && r.utilitySlugs.map((s) => s.toLowerCase()).includes(uSlug);
+        const hasCategory =
+          Boolean(
+            cSlug &&
+            r.categorySlugs &&
+            r.categorySlugs.map((s) => s.toLowerCase()).includes(cSlug) &&
+            (!r.utilitySlugs || r.utilitySlugs.length === 0),
+          );
+        return hasExactUtility || hasCategory;
+      });
+
+      const desktopRules = applicableRules.filter(
+        (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('DESKTOP' as any),
+      );
+      const tabletRules = applicableRules.filter(
+        (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('TABLET' as any),
+      );
+      const mobileRules = applicableRules.filter(
+        (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('MOBILE' as any),
+      );
+
+      return {
+        ...u,
+        adCounts: {
+          desktop: desktopRules.length,
+          tablet: tabletRules.length,
+          mobile: mobileRules.length,
+          total: applicableRules.length,
+        },
+      };
+    });
+
     return {
-      items,
+      items: enrichedItems,
       total,
       page,
       pageSize,

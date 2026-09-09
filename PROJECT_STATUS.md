@@ -3,12 +3,12 @@
 ## System Overview
 - **Project Name**: Single-Domain Utility + Centralized Ad Platform
 - **Architecture**: Next.js (Frontend App Router), NestJS (Backend REST API), PostgreSQL (Prisma ORM), Redis, Docker Containerization
-- **Current Phase**: Phase 22 — SEO Content Intelligence, Programmatic Landing Pages & Organic Growth Engine (COMPLETED & FROZEN)
-- **Status**: PHASE_22_VERIFIED / SEO_ORGANIC_GROWTH_COMPLETED
+- **Current Phase**: Phase 26 — Payments, Subscriptions & Premium Monetization (COMPLETED & VERIFIED)
+- **Status**: PHASE_26_VERIFIED / BILLING_MONETIZATION_ACTIVE
 
 ---
 
-## Progress Overview (23-Phase Roadmap)
+## Progress Overview (26-Phase Roadmap)
 
 | Phase | Description | Status | Completion Date |
 | :--- | :--- | :--- | :--- |
@@ -36,27 +36,33 @@
 | Phase 20 | Revenue Attribution, Ad Optimization & Business Intelligence | COMPLETED | 2026-09-08 |
 | Phase 21 | Advanced Growth, Retention & User Journey Intelligence | COMPLETED | 2026-09-08 |
 | Phase 22 | SEO Content Intelligence, Programmatic Landing Pages & Organic Growth Engine | COMPLETED | 2026-09-08 |
+| Phase 23 | Privacy-Safe Personalization & Conversion Optimization | COMPLETED | 2026-09-09 |
+| Phase 24 | External Ad Network Integration & Real Monetization Activation | COMPLETED | 2026-09-09 |
+| Phase 25 | Real OpenAI Provider Activation & Production AI | COMPLETED | 2026-09-09 |
+| Enhancement | Admin Control Panel: Utility & Ad Operations Enhancement | COMPLETED | 2026-09-09 |
+| Phase 26 | Payments, Subscriptions & Premium Monetization | COMPLETED | 2026-09-09 |
 
 ---
 
 ## Active Work
-- **Phase 22 SEO Content Intelligence, Programmatic Landing Pages & Organic Growth Engine** fully implemented, tested, and verified:
-  - First-Party Organic Classification: Interpretation of search referrers and UTM mediums with zero third-party tracking scripts.
-  - Deterministic SEO Opportunity Score (0–100): Calculated from task conversion strength (35%), demand signal (25%), on-page health gap (20%), and internal linking gap (20%).
-  - Technical Page Health Audit: Automated inspection of metadata completeness, canonical consistency, structured data (JSON-LD), and breadcrumbs.
-  - Reciprocal & Internal Linking Engine: Deterministic semantic link recommendations to expand user pathways and crawler indexation.
-  - Category Coverage Matrix: Monitoring content completeness across active utilities and category landing pages.
-  - Sitemap & Discoverability Verification: Automated audit of XML sitemap inclusion for all active utilities and categories.
-  - Admin Analytics Control Panel: Dedicated **SEO & Organic Growth** tab providing interactive gauges, KPI cards, and opportunity feeds.
-  - Caching & Resilience: Redis 60s fail-open caching under `admin:seo:intelligence:${periodDays}`.
-  - Builds & Tests: Shared package PASS, Backend build PASS, Frontend build PASS (all 19 routes generated), E2E test suite PASS.
+- **Phase 26 Payments, Subscriptions & Premium Monetization** fully implemented, tested, and verified:
+  - Decoupled Billing Architecture: Dedicated `billing` module and `@Global()` `EntitlementService` ensure core execution and ad selection stay payment-free.
+  - Payment Provider Abstraction: `PaymentProvider` interface with deterministic `MockPaymentProvider` (default) and `StripePaymentProvider`.
+  - Authoritative Lifecycle State Machine: `FREE`, `CHECKOUT_PENDING`, `ACTIVE`, `PAST_DUE`, `CANCELED`, `EXPIRED`.
+  - Idempotency & Webhook Sanitization: `BillingEvent` model ensures idempotency via unique `providerEventId` and redacts sensitive payload attributes.
+  - Plan Models: Configurable `FREE` and `PREMIUM` tiers with daily AI request and file conversion limits.
+  - Ad Experience by Plan: Preserves core `AdSelectorService` while delivering an ad-free experience for Premium users.
+  - Revenue Truth Standard: Reports `actualRevenueTotal = null` and `revenueAvailable = false` (labeled `MOCK`) in the absence of authoritative provider financial feeds.
+  - Frontend Interfaces: Public `/pricing`, user account `/account/billing`, and Admin `/admin/billing` (Overview, Plans, Subscriptions, Entitlements, Events).
+  - Complete Test Suite: 27 test suites passing (412/412 tests).
+  - Builds: Shared, backend, and Next.js frontend compile cleanly without errors.
 
 ## Blocked Items
 - None.
 
-## Known Issues / Technical Debt
-- Transitive vulnerabilities in Next.js 14.2.18 / PostCSS pinned for React 18 compatibility, fully documented in dependency security audits.
+## Known Issues / Operational Notes
+- Live payment transactions require configuring production payment gateway credentials (`REAL PAYMENT PROVIDER VERIFICATION NOT RUN — CREDENTIALS NOT CONFIGURED`). Active baseline remains `PAYMENT_PROVIDER=mock`.
+- `AI_PROVIDER=mock` remains active baseline. Real OpenAI activation remains deferred.
 
 ## Next Recommended Action
-- Maintain operational monitoring and prepare for production deployment of Phase 22 features.
-- Phase 21 is frozen and completed. Ready for subsequent milestone planning.
+- Phase 26 is complete, verified, and frozen. Await user instructions for subsequent milestones.

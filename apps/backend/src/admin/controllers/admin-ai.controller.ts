@@ -17,4 +17,11 @@ export class AdminAiController {
     const data = await this.aiService.getOverview(period);
     return { success: true, data, timestamp: new Date().toISOString() };
   }
+
+  @Get('provider/health')
+  @RequirePermissions('ai:read')
+  async getProviderHealth(): Promise<ApiResponse<any>> {
+    const data = await this.aiService.getProviderHealth();
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
 }

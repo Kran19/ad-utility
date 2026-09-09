@@ -62,14 +62,42 @@ export interface AiGenerateResponseDto {
 }
 
 /**
+ * AI Provider Health Statuses
+ */
+export type AiProviderHealthStatus = 'NOT_CONFIGURED' | 'CONFIGURED' | 'HEALTHY' | 'DEGRADED' | 'UNAVAILABLE';
+
+/**
+ * AI Provider Health DTO
+ */
+export interface AiProviderHealthDto {
+  provider: AiProvider;
+  providerMode: string;
+  status: AiProviderHealthStatus;
+  isConfigured: boolean;
+  defaultModel: string;
+  allowedModels: string[];
+  dailyBudgetUsd: number;
+  todaySpendUsd: number;
+  budgetStatus: 'OK' | 'EXCEEDED';
+  requestTimeoutMs: number;
+  rateLimitPerMinute: number;
+  lastErrorTimestamp?: string | null;
+  lastErrorMessage?: string | null;
+}
+
+/**
  * AI Usage Summary Telemetry DTO
  */
 export interface AiUsageSummaryDto {
   totalRequests: number;
   totalTokens: number;
   totalCostUsd: number;
+  costStatus?: 'ESTIMATED' | 'ACTUAL';
   successRate: number;
   providerMode?: string;
   dailyBudgetUsd?: number;
   todaySpendUsd?: number;
+  budgetStatus?: 'OK' | 'EXCEEDED';
+  providerHealth?: AiProviderHealthDto;
 }
+

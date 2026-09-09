@@ -10,6 +10,7 @@ import {
   CreativeType,
 } from '@ad-utility/shared';
 import { PlacementCode, CampaignStatus } from '@prisma/client';
+import { ExternalAdNetworkService } from '../providers/external-ad-network.service';
 
 export interface SelectedCandidate {
   ruleId: string;
@@ -41,6 +42,7 @@ export class AdSelectorService {
     private readonly prisma: PrismaService,
     private readonly redisCache: RedisAdCacheService,
     private readonly trackingTokenService: TrackingTokenService,
+    private readonly externalAdNetwork: ExternalAdNetworkService,
   ) {}
 
   /**
@@ -184,7 +186,7 @@ export class AdSelectorService {
         });
       }
 
-      // 3. Evaluate multi-tier precedence: Tier 1 > Tier 2 > Tier 3 > Tier 4
+      // 3. Evaluate Tier A (Internal Campaign Candidates: Exact Utility > Category > Global Placement)
       const tier1 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_1_EXACT_UTILITY');
       const tier2 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_2_CATEGORY');
       const tier3 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_3_GLOBAL_PLACEMENT');
@@ -197,7 +199,7 @@ export class AdSelectorService {
             ? tier2
             : tier3.length > 0
               ? tier3
-              : tier4;
+              : [];
 
       if (selectedPool.length > 0) {
         // 4. Priority selection (highest priority first)
@@ -222,6 +224,7 @@ export class AdSelectorService {
           placement: chosen.placementCode,
           fallbackTier: chosen.fallbackTier,
           sessionId,
+          monetizationSource: 'INTERNAL',
           creative: {
             creativeId: chosen.creative.id,
             campaignId: chosen.campaignId,
@@ -233,11 +236,96 @@ export class AdSelectorService {
             altText: chosen.creative.altText || undefined,
             customHtml: chosen.creative.customHtml || undefined,
             trackingToken,
+            monetizationSource: 'INTERNAL',
           },
         };
       }
 
-      // 7. Check Global Fallback Creatives without explicit targeting rule
+      // Tier B: External Ad Provider
+      // Evaluated only when no internal campaign targeting rules match
+      const externalAd = await this.externalAdNetwork.requestAd(request, {
+        device,
+        country,
+        sessionId,
+      });
+
+      if (externalAd) {
+        const providerName = this.externalAdNetwork.getProviderName();
+        const trackingToken = this.trackingTokenService.generateToken({
+          creativeId: externalAd.providerAdId,
+          campaignId: `ext_campaign_${externalAd.providerAdId}`,
+          placementId: `ext_placement_${request.placement}`,
+          placementCode: request.placement,
+          utilitySlug: request.utilitySlug,
+          deviceType: device,
+          provider: providerName,
+          providerAdId: externalAd.providerAdId,
+          externalTargetUrl: externalAd.targetUrl,
+        });
+
+        return {
+          hasAd: true,
+          placement: request.placement,
+          fallbackTier: 'TIER_EXTERNAL_PROVIDER',
+          sessionId,
+          provider: providerName,
+          providerRequestId: `req_${Date.now()}`,
+          monetizationSource: 'EXTERNAL_NETWORK',
+          creative: {
+            creativeId: externalAd.providerAdId,
+            campaignId: `ext_campaign_${externalAd.providerAdId}`,
+            type: externalAd.creativeType,
+            mediaUrl: externalAd.mediaUrl,
+            targetUrl: externalAd.targetUrl,
+            width: externalAd.width,
+            height: externalAd.height,
+            altText: externalAd.altText,
+            customHtml: externalAd.customHtml,
+            trackingToken,
+            provider: providerName,
+            providerAdId: externalAd.providerAdId,
+            monetizationSource: 'EXTERNAL_NETWORK',
+            revenueEligible: externalAd.revenueEligible,
+            externalMetadata: externalAd.externalMetadata,
+          },
+        };
+      }
+
+      // Tier C: House / Global Fallback Creatives
+      if (tier4.length > 0) {
+        const chosen = this.weightedRandomSelect(tier4);
+        const trackingToken = this.trackingTokenService.generateToken({
+          creativeId: chosen.creativeId,
+          campaignId: chosen.campaignId,
+          placementId: chosen.placementId,
+          placementCode: chosen.placementCode,
+          utilitySlug: request.utilitySlug,
+          deviceType: device,
+        });
+
+        return {
+          hasAd: true,
+          placement: chosen.placementCode,
+          fallbackTier: 'TIER_4_GLOBAL_FALLBACK',
+          sessionId,
+          monetizationSource: 'HOUSE_FALLBACK',
+          creative: {
+            creativeId: chosen.creative.id,
+            campaignId: chosen.campaignId,
+            type: chosen.creative.type,
+            mediaUrl: chosen.creative.mediaUrl || undefined,
+            targetUrl: chosen.creative.targetUrl || undefined,
+            width: chosen.creative.width || undefined,
+            height: chosen.creative.height || undefined,
+            altText: chosen.creative.altText || undefined,
+            customHtml: chosen.creative.customHtml || undefined,
+            trackingToken,
+            monetizationSource: 'HOUSE_FALLBACK',
+          },
+        };
+      }
+
+      // If not in targeting rules, check unmapped global fallback creatives
       const globalFallbackCreative = await this.prisma.adCreative.findFirst({
         where: {
           isGlobalFallback: true,
@@ -272,6 +360,7 @@ export class AdSelectorService {
           placement: rule.placement.code as AdPlacement,
           fallbackTier: 'TIER_4_GLOBAL_FALLBACK',
           sessionId,
+          monetizationSource: 'HOUSE_FALLBACK',
           creative: {
             creativeId: globalFallbackCreative.id,
             campaignId: rule.campaignId,
@@ -283,11 +372,12 @@ export class AdSelectorService {
             altText: globalFallbackCreative.altText || undefined,
             customHtml: globalFallbackCreative.customHtml || undefined,
             trackingToken,
+            monetizationSource: 'HOUSE_FALLBACK',
           },
         };
       }
 
-      // 8. No Ad matched
+      // Tier D: No Ad matched
       return {
         hasAd: false,
         placement: request.placement,

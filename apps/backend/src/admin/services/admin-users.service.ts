@@ -15,8 +15,8 @@ export class AdminUsersService {
   ) {}
 
   async listUsers(query: AdminPaginationQueryDto): Promise<PaginatedResult<AdminUserDto>> {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.UserWhereInput = {};

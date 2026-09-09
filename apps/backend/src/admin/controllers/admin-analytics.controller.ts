@@ -8,6 +8,8 @@ import { MonetizationIntelligenceService } from '../services/monetization-intell
 import { BusinessIntelligenceService } from '../services/business-intelligence.service';
 import { JourneyIntelligenceService } from '../services/journey-intelligence.service';
 import { SeoIntelligenceService } from '../services/seo-intelligence.service';
+import { ConversionIntelligenceService } from '../../personalization/services/conversion-intelligence.service';
+import { PersonalizationRuleService } from '../../personalization/services/personalization-rule.service';
 import {
   ApiResponse,
   GrowthIntelligenceDto,
@@ -23,6 +25,9 @@ import {
   SeoPageHealthDto,
   SeoInternalLinkOpportunityDto,
   SeoContentCoverageDto,
+  PersonalizationIntelligenceDto,
+  ConversionOpportunityDto,
+  PersonalizationRuleDto,
 } from '@ad-utility/shared';
 
 @Controller('admin/analytics')
@@ -35,6 +40,8 @@ export class AdminAnalyticsController {
     private readonly businessIntelligenceService: BusinessIntelligenceService,
     private readonly journeyIntelligenceService: JourneyIntelligenceService,
     private readonly seoIntelligenceService: SeoIntelligenceService,
+    private readonly conversionIntelligenceService: ConversionIntelligenceService,
+    private readonly personalizationRuleService: PersonalizationRuleService,
   ) {}
 
   @Get('overview')
@@ -159,6 +166,47 @@ export class AdminAnalyticsController {
   async getExperiments(): Promise<ApiResponse<ExperimentDto[]>> {
     const data = this.growthService.getRegisteredExperiments();
     return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  @Get('personalization')
+  @RequirePermissions('analytics:read')
+  async getPersonalizationIntelligence(
+    @Query('days') days?: string,
+  ): Promise<ApiResponse<PersonalizationIntelligenceDto>> {
+    const period = days ? parseInt(days, 10) || 30 : 30;
+    const data = await this.conversionIntelligenceService.getPersonalizationIntelligence(period);
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  @Get('personalization/opportunities')
+  @RequirePermissions('analytics:read')
+  async getPersonalizationOpportunities(
+    @Query('days') days?: string,
+  ): Promise<ApiResponse<ConversionOpportunityDto[]>> {
+    const period = days ? parseInt(days, 10) || 30 : 30;
+    const data = await this.conversionIntelligenceService.getPersonalizationIntelligence(period);
+    return { success: true, data: data.opportunities, timestamp: new Date().toISOString() };
+  }
+
+  @Get('personalization/rules')
+  @RequirePermissions('analytics:read')
+  getPersonalizationRules(): ApiResponse<PersonalizationRuleDto[]> {
+    const data = this.personalizationRuleService.getActiveRules();
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  @Get('personalization/experiments')
+  @RequirePermissions('analytics:read')
+  getPersonalizationExperiments(): ApiResponse<{ activeExperimentsCount: number; experiments: ExperimentDto[] }> {
+    const experiments = this.growthService.getRegisteredExperiments();
+    return {
+      success: true,
+      data: {
+        activeExperimentsCount: experiments.length,
+        experiments,
+      },
+      timestamp: new Date().toISOString(),
+    };
   }
 }
 

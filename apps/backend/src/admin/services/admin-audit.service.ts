@@ -11,8 +11,8 @@ export class AdminAuditService {
   async listAuditLogs(
     query: AdminPaginationQueryDto & { entityType?: string; action?: string; actorEmail?: string },
   ): Promise<PaginatedResult<AdminAuditLogDto>> {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.AuditLogWhereInput = {};

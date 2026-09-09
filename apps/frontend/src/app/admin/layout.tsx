@@ -36,6 +36,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: 'Dashboard', href: '/admin', icon: '📊', requiredPermission: null },
+    { label: 'Ad Manager', href: '/admin/ad-manager', icon: '🎛️', requiredPermission: 'campaigns:read' },
     { label: 'Campaigns', href: '/admin/campaigns', icon: '🎯', requiredPermission: 'campaigns:read' },
     { label: 'Creatives', href: '/admin/creatives', icon: '🖼️', requiredPermission: 'creatives:read' },
     { label: 'Placements', href: '/admin/placements', icon: '📍', requiredPermission: 'placements:read' },
@@ -45,6 +46,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     { label: 'Users & RBAC', href: '/admin/users', icon: '👥', requiredPermission: 'users:manage' },
     { label: 'Analytics', href: '/admin/analytics', icon: '📈', requiredPermission: 'analytics:read' },
     { label: 'AI Usage', href: '/admin/ai-usage', icon: '🤖', requiredPermission: 'ai:read' },
+    { label: 'Billing', href: '/admin/billing', icon: '💳', requiredPermission: 'billing:read' },
     { label: 'Settings', href: '/admin/settings', icon: '⚙️', requiredPermission: 'settings:read' },
     { label: 'Audit Logs', href: '/admin/audit-logs', icon: '📜', requiredPermission: 'audit:read' },
   ];

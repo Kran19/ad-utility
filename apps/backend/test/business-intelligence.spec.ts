@@ -30,6 +30,11 @@ describe('Phase 20 — Revenue Attribution, Ad Optimization & Business Intellige
     biService = moduleRef.get<BusinessIntelligenceService>(BusinessIntelligenceService);
     redisCache = moduleRef.get<RedisAdCacheService>(RedisAdCacheService);
 
+    // Clean up any stale revenue records from preceding test suites
+    await prisma.adRevenueRecord.deleteMany({}).catch(() => {});
+    await redisCache?.invalidateCache('bi:*').catch(() => {});
+    await redisCache?.invalidateCache('monetization:*').catch(() => {});
+
     // Obtain Admin JWT for authenticated endpoint tests
     const loginRes = await authService.login({
       email: 'admin@adplatform.local',

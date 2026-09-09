@@ -42,6 +42,56 @@ export default function AdminAiUsagePage() {
         <div className="py-20 text-center text-xs text-slate-400">Loading AI telemetry...</div>
       ) : (
         <div className="space-y-6">
+          {/* Provider Status & Governance Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold text-white">AI Provider Engine</div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${
+                  data?.providerMode === 'OPENAI'
+                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60'
+                    : 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
+                }`}>
+                  {data?.providerMode || 'MOCK'}
+                </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${
+                  data?.providerHealth?.status === 'HEALTHY'
+                    ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-800/40'
+                    : data?.providerHealth?.status === 'CONFIGURED'
+                    ? 'bg-blue-900/40 text-blue-400 border border-blue-800/40'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}>
+                  {data?.providerHealth?.status || 'NOT_CONFIGURED'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Budget Status:</span>
+                <span className={`font-semibold font-mono ${data?.budgetStatus === 'EXCEEDED' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {data?.budgetStatus === 'EXCEEDED' ? 'LIMIT REACHED' : 'HEALTHY (OK)'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+              <div>
+                <div className="text-slate-400 text-[11px]">Active Default Model</div>
+                <div className="font-mono text-indigo-300 font-semibold mt-0.5">{data?.providerHealth?.defaultModel || 'gpt-4o-mini'}</div>
+              </div>
+              <div>
+                <div className="text-slate-400 text-[11px]">Daily Spending Budget</div>
+                <div className="font-mono text-slate-200 mt-0.5">${(data?.dailyBudgetUsd || 5.0).toFixed(2)} USD</div>
+              </div>
+              <div>
+                <div className="text-slate-400 text-[11px]">Today Spend (UTC)</div>
+                <div className="font-mono text-emerald-400 font-bold mt-0.5">${(data?.todaySpendUsd || 0).toFixed(4)} USD</div>
+              </div>
+              <div>
+                <div className="text-slate-400 text-[11px]">Request Reliability</div>
+                <div className="font-mono text-cyan-300 mt-0.5">{data?.successfulRequests || 0} OK / {data?.failedRequests || 0} ERR</div>
+              </div>
+            </div>
+          </div>
+
           {/* Summary KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md">
@@ -53,7 +103,7 @@ export default function AdminAiUsagePage() {
               <div className="text-xl font-bold text-indigo-400 font-mono mt-1">{(data?.totalTokens || 0).toLocaleString()}</div>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md">
-              <div className="text-xs text-slate-400">Estimated Cost (USD)</div>
+              <div className="text-xs text-slate-400">Cost <span className="text-[10px] text-amber-400 font-sans font-medium">(ESTIMATED)</span></div>
               <div className="text-xl font-bold text-emerald-400 font-mono mt-1">${data?.totalCostUsd || 0}</div>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md">

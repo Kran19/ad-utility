@@ -20,6 +20,7 @@ import {
   AdminUpdateUtilityDto,
   AdminCreateCategoryDto,
   AdminUpdateCategoryDto,
+  AdminListUtilitiesQueryDto,
 } from '../dto/admin-utilities.dto';
 import { ApiResponse, JwtPayload } from '@ad-utility/shared';
 import { Request } from 'express';
@@ -32,7 +33,7 @@ export class AdminUtilitiesController {
   @Get()
   @RequirePermissions('utilities:read')
   async listUtilities(
-    @Query() query: AdminPaginationQueryDto & { categoryId?: string; status?: string },
+    @Query() query: AdminListUtilitiesQueryDto,
   ): Promise<ApiResponse<any>> {
     const data = await this.utilitiesService.listUtilities(query);
     return { success: true, data, timestamp: new Date().toISOString() };

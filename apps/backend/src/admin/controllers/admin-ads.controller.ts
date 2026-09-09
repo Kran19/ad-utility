@@ -26,15 +26,32 @@ import {
   AdminUpdateTargetingRuleDto,
   AdminCreateScheduleDto,
   AdminUpdateScheduleDto,
+  AdminAdPreviewRequestDto,
+  AdminAdMatrixQueryDto,
+  AdminListTargetingRulesQueryDto,
 } from '../dto/admin-ads.dto';
-import { ApiResponse, JwtPayload } from '@ad-utility/shared';
+import {
+  ApiResponse,
+  JwtPayload,
+  ProviderHealthDto,
+  MonetizationSyncRequestDto,
+  MonetizationSyncResponseDto,
+} from '@ad-utility/shared';
 import { CampaignStatus, CreativeType } from '@prisma/client';
 import { Request } from 'express';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ExternalAdNetworkService } from '../../ads/providers/external-ad-network.service';
+import { AdRevenueSyncService } from '../../ads/providers/ad-revenue-sync.service';
 
 @Controller('admin/ads')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class AdminAdsController {
-  constructor(private readonly adsService: AdminAdsService) {}
+  constructor(
+    private readonly adsService: AdminAdsService,
+    private readonly prisma: PrismaService,
+    private readonly adNetworkService: ExternalAdNetworkService,
+    private readonly revenueSyncService: AdRevenueSyncService,
+  ) {}
 
   // -------------------------------------------------------------
   // CAMPAIGNS
@@ -172,12 +189,33 @@ export class AdminAdsController {
   }
 
   // -------------------------------------------------------------
+  // AD OPERATIONS & PREVIEW
+  // -------------------------------------------------------------
+  @Get('manager/matrix')
+  @RequirePermissions('campaigns:read')
+  async getAdMatrix(
+    @Query() query: AdminAdMatrixQueryDto,
+  ): Promise<ApiResponse<any>> {
+    const data = await this.adsService.getAdMatrix(query);
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  @Post('preview')
+  @RequirePermissions('campaigns:read')
+  async previewAd(
+    @Body() dto: AdminAdPreviewRequestDto,
+  ): Promise<ApiResponse<any>> {
+    const data = await this.adsService.previewAd(dto);
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  // -------------------------------------------------------------
   // TARGETING RULES
   // -------------------------------------------------------------
   @Get('targeting')
   @RequirePermissions('targeting:manage')
   async listTargetingRules(
-    @Query() query: { campaignId?: string; placementId?: string },
+    @Query() query: AdminListTargetingRulesQueryDto,
   ): Promise<ApiResponse<any>> {
     const data = await this.adsService.listTargetingRules(query);
     return { success: true, data, timestamp: new Date().toISOString() };
@@ -265,5 +303,39 @@ export class AdminAdsController {
     const ip = req.ip || (req.headers['x-forwarded-for'] as string);
     const data = await this.adsService.deleteSchedule(id, user, ip);
     return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  // -------------------------------------------------------------
+  // PHASE 24: EXTERNAL PROVIDER & REVENUE
+  // -------------------------------------------------------------
+  @Get('provider/health')
+  @RequirePermissions('campaigns:read')
+  async getProviderHealth(): Promise<ApiResponse<ProviderHealthDto>> {
+    const data = await this.adNetworkService.healthCheck();
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  @Post('provider/sync')
+  @RequirePermissions('campaigns:update')
+  async syncRevenue(
+    @Body() dto: MonetizationSyncRequestDto,
+  ): Promise<ApiResponse<MonetizationSyncResponseDto>> {
+    const data = await this.revenueSyncService.syncRevenue(dto);
+    return { success: true, data, timestamp: new Date().toISOString() };
+  }
+
+  @Get('revenue')
+  @RequirePermissions('campaigns:read')
+  async getRevenueRecords(
+    @Query('days') days?: string,
+  ): Promise<ApiResponse<any>> {
+    const period = days ? Math.max(1, Math.min(parseInt(days, 10) || 30, 365)) : 30;
+    const cutoff = new Date(Date.now() - period * 24 * 60 * 60 * 1000);
+    const records = await this.prisma.adRevenueRecord.findMany({
+      where: { date: { gte: cutoff } },
+      orderBy: { date: 'desc' },
+      take: 100,
+    });
+    return { success: true, data: records, timestamp: new Date().toISOString() };
   }
 }

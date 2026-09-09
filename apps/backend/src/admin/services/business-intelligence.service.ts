@@ -87,6 +87,8 @@ export class BusinessIntelligenceService {
     const adScore = Math.min(30, (overallCtr / 2.0) * 30);
     const businessValueProxy = Math.max(0, Math.min(100, Math.round(convScore + dlScore + adScore)));
 
+    const hasActualRevenue = monetizationData.actualRevenueStatus === 'ACTUAL' && monetizationData.actualRevenueTotal !== null;
+
     const kpis: BusinessKpisDto = {
       totalPageViews,
       totalToolStarts,
@@ -100,7 +102,9 @@ export class BusinessIntelligenceService {
       activeUtilitiesCount,
       activeCampaignsCount,
       activeExperimentsCount,
-      revenueAvailable: false, // Strict truthful reporting: no fabricated currency
+      revenueAvailable: hasActualRevenue,
+      actualRevenueTotal: hasActualRevenue ? monetizationData.actualRevenueTotal : null,
+      actualRevenueCurrency: hasActualRevenue ? (monetizationData.actualRevenueCurrency || 'USD') : undefined,
       businessValueProxy,
     };
 

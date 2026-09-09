@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from '../src/app.module';
 import { UtilitiesService } from '../src/utilities/utilities.service';
+import { UtilitiesCacheService } from '../src/utilities/services/utilities-cache.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
   UtilityRegistry,
@@ -38,6 +39,18 @@ describe('Phase 4: Utility Engine, Hybrid Registry & Execution Verification', ()
 
     utilitiesService = moduleFixture.get<UtilitiesService>(UtilitiesService);
     prisma = moduleFixture.get<PrismaService>(PrismaService);
+
+    await prisma.utility.updateMany({
+      where: { slug: 'draft-tool' },
+      data: { status: 'DRAFT' },
+    });
+    await prisma.utility.updateMany({
+      where: { slug: 'disabled-tool' },
+      data: { status: 'DISABLED' },
+    });
+
+    const cache = moduleFixture.get<UtilitiesCacheService>(UtilitiesCacheService);
+    await cache.invalidatePrefix('');
   });
 
   afterAll(async () => {

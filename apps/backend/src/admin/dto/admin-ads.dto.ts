@@ -10,6 +10,7 @@ import {
   Min,
   Max,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 import { CampaignStatus, CreativeType, PlacementCode, DeviceType } from '@prisma/client';
 
@@ -238,6 +239,10 @@ export class AdminCreateTargetingRuleDto {
 export class AdminUpdateTargetingRuleDto {
   @IsOptional()
   @IsString()
+  placementId?: string;
+
+  @IsOptional()
+  @IsString()
   creativeId?: string;
 
   @IsOptional()
@@ -261,8 +266,9 @@ export class AdminUpdateTargetingRuleDto {
   countries?: string[];
 
   @IsOptional()
+  @ValidateIf((_, val) => val !== null)
   @IsInt()
-  priorityOverride?: number;
+  priorityOverride?: number | null;
 
   @IsOptional()
   @IsInt()
@@ -324,4 +330,68 @@ export class AdminUpdateScheduleDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+}
+
+export class AdminAdPreviewRequestDto {
+  @IsString()
+  @IsNotEmpty()
+  utilitySlug!: string;
+
+  @IsEnum(DeviceType)
+  device!: DeviceType;
+
+  @IsEnum(PlacementCode)
+  placement!: PlacementCode;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
+}
+
+export class AdminAdMatrixQueryDto {
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsEnum(DeviceType)
+  device?: DeviceType;
+
+  @IsOptional()
+  @IsString()
+  placementId?: string;
+
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string; // 'ACTIVE' | 'DISABLED'
+}
+
+export class AdminListTargetingRulesQueryDto {
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
+  @IsOptional()
+  @IsString()
+  placementId?: string;
+
+  @IsOptional()
+  @IsString()
+  utilitySlug?: string;
+
+  @IsOptional()
+  @IsEnum(DeviceType)
+  deviceType?: DeviceType;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

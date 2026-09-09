@@ -11,6 +11,9 @@ export interface DecodedTrackingToken {
   utilitySlug?: string;
   deviceType?: DeviceType;
   timestamp: number;
+  provider?: string;
+  providerAdId?: string;
+  externalTargetUrl?: string;
 }
 
 @Injectable()

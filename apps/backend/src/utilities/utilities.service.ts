@@ -5,10 +5,12 @@ import {
   BadRequestException,
   ServiceUnavailableException,
   RequestTimeoutException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiGatewayService } from '../ai/services/ai-gateway.service';
 import { UtilitiesCacheService } from './services/utilities-cache.service';
+import { EntitlementService } from '../billing/services/entitlement.service';
 import {
   UtilityRegistry,
   defaultUtilityRegistry,
@@ -50,6 +52,7 @@ export class UtilitiesService {
     private readonly prisma: PrismaService,
     private readonly aiGateway: AiGatewayService,
     private readonly cache: UtilitiesCacheService,
+    private readonly entitlementService?: EntitlementService,
   ) {
     this.registry = defaultUtilityRegistry;
     registerServerAdapters(this.registry, this.aiGateway);
@@ -327,6 +330,7 @@ export class UtilitiesService {
     userAgent?: string,
     sessionToken?: string,
     providedRequestId?: string,
+    userId?: string,
   ): Promise<UtilityExecutionResponseDto> {
     const normalizedSlug = slug.toLowerCase().trim();
     const requestId =
@@ -334,6 +338,29 @@ export class UtilitiesService {
         ? providedRequestId.trim()
         : randomUUID();
     const startTime = Date.now();
+
+    // 0. Entitlement Check (Decoupled Billing & Entitlements)
+    if (this.entitlementService) {
+      const entitlement = await this.entitlementService.canUseUtility(normalizedSlug, userId);
+      if (!entitlement.allowed) {
+        throw new ForbiddenException({
+          code: 'ENTITLEMENT_REQUIRED',
+          message: entitlement.reason || 'This utility requires an active Premium subscription.',
+          upgradeUrl: entitlement.upgradeUrl || '/pricing',
+        });
+      }
+
+      if (userId) {
+        const usage = await this.entitlementService.checkAndIncrementUsage(userId, 'dailyConversions');
+        if (!usage.allowed) {
+          throw new ForbiddenException({
+            code: 'USAGE_LIMIT_EXCEEDED',
+            message: 'Daily conversion limit exceeded for your current plan.',
+            upgradeUrl: '/pricing',
+          });
+        }
+      }
+    }
 
     // 1. Resolve database metadata & check active status
     const utility = await this.prisma.utility.findUnique({

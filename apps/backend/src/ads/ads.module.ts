@@ -5,6 +5,9 @@ import { AdSelectorService } from './services/ad-selector.service';
 import { DeviceDetectorService } from './services/device-detector.service';
 import { TrackingTokenService } from './services/tracking-token.service';
 import { RedisAdCacheService } from './services/redis-ad-cache.service';
+import { MockExternalAdProviderService } from './providers/mock-external-ad-provider.service';
+import { ExternalAdNetworkService } from './providers/external-ad-network.service';
+import { AdRevenueSyncService } from './providers/ad-revenue-sync.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 
@@ -17,7 +20,17 @@ import { AuthModule } from '../auth/auth.module';
     DeviceDetectorService,
     TrackingTokenService,
     RedisAdCacheService,
+    MockExternalAdProviderService,
+    ExternalAdNetworkService,
+    AdRevenueSyncService,
   ],
-  exports: [AdDeliveryService, RedisAdCacheService],
+  exports: [
+    AdDeliveryService,
+    AdSelectorService,
+    RedisAdCacheService,
+    ExternalAdNetworkService,
+    AdRevenueSyncService,
+    MockExternalAdProviderService,
+  ],
 })
 export class AdsModule {}

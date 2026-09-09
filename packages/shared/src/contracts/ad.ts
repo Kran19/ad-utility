@@ -24,7 +24,10 @@ export interface AdSlotRequestDto {
   device?: DeviceType;
   country?: string;
   sessionId?: string;
+  userId?: string;
 }
+
+export type MonetizationSource = 'INTERNAL' | 'EXTERNAL_NETWORK' | 'HOUSE_FALLBACK';
 
 /**
  * Public Creative Payload returned in Ad Slot response
@@ -40,6 +43,11 @@ export interface AdCreativePayload {
   altText?: string;
   customHtml?: string;
   trackingToken: string;
+  provider?: string;
+  providerAdId?: string;
+  monetizationSource?: MonetizationSource;
+  revenueEligible?: boolean;
+  externalMetadata?: Record<string, any>;
 }
 
 /**
@@ -51,6 +59,10 @@ export interface AdSlotResponseDto {
   creative?: AdCreativePayload;
   fallbackTier?: string;
   sessionId?: string;
+  provider?: string;
+  providerRequestId?: string;
+  monetizationSource?: MonetizationSource;
+  reason?: string;
 }
 
 /**
@@ -190,6 +202,14 @@ export interface MonetizationIntelligenceDto {
   recommendations: MonetizationRecommendationDto[];
   experimentMonetization: ExperimentMonetizationDto[];
   formatBreakdown: Array<{ type: CreativeType; impressions: number; clicks: number; ctr: number }>;
+  actualRevenueTotal?: number | null;
+  actualRevenueStatus?: 'ACTUAL' | 'UNAVAILABLE';
+  actualRevenueCurrency?: string;
+  revenueByPlacement?: Record<string, number>;
+  revenueByUtility?: Record<string, number>;
+  revenueByDevice?: Record<string, number>;
+  revenueByProvider?: Record<string, number>;
+  providerHealth?: ProviderHealthDto;
 }
 
 /**
@@ -212,6 +232,8 @@ export interface BusinessKpisDto {
   activeCampaignsCount: number;
   activeExperimentsCount: number;
   revenueAvailable: boolean;
+  actualRevenueTotal?: number | null;
+  actualRevenueCurrency?: string;
   businessValueProxy: number;
 }
 
@@ -299,5 +321,59 @@ export interface BusinessIntelligenceDto {
   crossDimensionalYields: CrossDimensionalYieldDto[];
   opportunities: OptimizationOpportunityDto[];
 }
+
+/**
+ * ==========================================
+ * PHASE 24: EXTERNAL AD NETWORK & REAL MONETIZATION
+ * ==========================================
+ */
+
+export interface ProviderHealthDto {
+  status: 'CONFIGURED' | 'NOT_CONFIGURED';
+  health: 'HEALTHY' | 'DEGRADED' | 'UNAVAILABLE';
+  provider: string;
+  lastSuccessfulRequest: string | null;
+  lastSuccessfulSync: string | null;
+  lastErrorTimestamp: string | null;
+  lastErrorMessage: string | null;
+  errorCount: number;
+  totalRequests: number;
+  fallbackRate: number;
+}
+
+export interface AdRevenueRecordDto {
+  id: string;
+  provider: string;
+  providerReportId?: string | null;
+  date: string;
+  placement?: string | null;
+  utilitySlug?: string | null;
+  categorySlug?: string | null;
+  deviceType?: DeviceType | null;
+  impressions: number;
+  clicks: number;
+  revenue: number;
+  currency: string;
+  source: string;
+  status: 'ACTUAL' | 'ACTUAL_ZERO' | 'UNAVAILABLE';
+  importedAt: string;
+}
+
+export interface MonetizationSyncRequestDto {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface MonetizationSyncResponseDto {
+  startDate: string;
+  endDate: string;
+  recordsIngested: number;
+  duplicatesSkipped: number;
+  totalRevenue: number;
+  currency: string;
+  status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+  importedAt: string;
+}
+
 
 

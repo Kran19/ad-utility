@@ -8,6 +8,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Completed Phase 26 (Payments, Subscriptions & Premium Monetization):
+  - Shared Billing & Monetization Contracts: Added `PlanDto`, `SubscriptionDto`, `PaymentProviderHealthDto`, `AdminBillingOverviewDto`, `UserBillingOverviewDto`, `PlanEntitlements`, `PlanUsageLimits`, and `CreateCheckoutSessionDto` to `@ad-utility/shared`.
+  - Provider Abstraction & Safe Governance: Implemented pluggable `PaymentProvider` interface with deterministic `MockPaymentProvider` (default) and `StripePaymentProvider`. Strict explicit provider selection (`PAYMENT_PROVIDER=mock|stripe`) prevents accidental silent mock fallbacks if Stripe credentials are misconfigured, throwing safe `PaymentProviderConfigException`.
+  - Entitlement & Atomic Usage Limiting Service: Implemented `EntitlementService` resolving authoritative plan entitlements, checking utility access (`canUseUtility`), ad status (`shouldShowAds`), and executing atomic `$transaction` usage increments on `UserUsage` (`[userId, featureKey, date]`). Guest executions remain privacy-safe and unmetered at the account level.
+  - Core Engine Decoupling: Zero billing/payment logic in `UtilityRegistry`, `AdSelectorService`, or `AiGatewayService`. `AdDeliveryService` short-circuits ad delivery for Premium users with `{ hasAd: false, reason: 'PREMIUM_AD_FREE' }` without firing impression telemetry. `UtilitiesService` enforces utility access tiers and usage counters before execution.
+  - Database Schema & State Machine: Added `Plan`, `Subscription`, `BillingEvent`, and `UserUsage` models in Prisma with PostgreSQL-backed enums (`SubscriptionStatus`: `ACTIVE`, `TRIALING`, `PAST_DUE`, `CANCELED`, `EXPIRED`, `INCOMPLETE`, `PAUSED`). Added `tier` column to `Utility`.
+  - Webhook Idempotency & Data Protection: Authoritative webhook handler deduplicates events via `providerEventId` and sanitizes payloads to strip credit cards, CVVs, tokens, and secret keys before persistence.
+  - Public Pricing & Account Portal: Implemented responsive `/pricing` page with plan feature comparison, checkout flow, and pending webhook verification banner. Added `/account/billing` displaying active plan, usage meters, portal management, and cancellation flow.
+  - Admin Billing Management Console: Created `/admin/billing` featuring KPI overview (subscribers, MRR/ARR when available), Provider Health status card, Plans management table, Subscriptions list, Entitlements matrix, and Webhook audit events.
+  - Strict Financial Truth Policy: Unverified or mock subscription revenue is never fabricated; reports `actualRevenueTotal = null`, `revenueAvailable = false`, and labels metrics `MOCK` when financial provider data is absent.
+  - Automated Billing Test Suite: Added `apps/backend/test/billing-subscriptions.spec.ts` (27 comprehensive assertions). Total backend test suite verified: **412 passing tests across 27 suites (100% pass rate)**.
+  - Builds & Verification: Shared package, backend, and Next.js frontend compile cleanly without errors. Live Docker containers smoke-tested and verified.
+  - Documentation: `docs/billing-subscriptions.md`, `docs/decisions/ADR-026-billing-subscriptions.md`, `PHASE_26_VERIFICATION_REPORT.md`.
+- Completed Admin Control Panel — Utility & Ad Operations Enhancement:
+  - Ad Operations Matrix Console: Implemented `/admin/ad-manager` providing comprehensive utility-centric ad allocation views with Desktop, Tablet, Mobile, and non-double-counted distinct Total counts across all 18 catalog utilities.
+  - Dynamic Placement Inventory: Avoided hardcoded frontend slot names by dynamically loading registered placement codes (`HEADER_BANNER`, `TOP_CONTENT`, `AFTER_TOOL`, etc.) directly from `GET /api/v1/admin/ads/placements`.
+  - Authoritative Live Ad Previewer: Integrated live simulation calling production `AdSelectorService.selectAd` with visual creative rendering (dimensions, format, CTA, headline) and plain-English explainable fallback tier verdicts (`Exact Utility Match`, `Category Match`, `Global Placement Fallback`, `House Ad`, `No Ad`).
+  - Utility Registry Enhancements: Added "Ads Assigned" device breakdown column with direct Ad Manager deep-links, single-click binary publication toggle (`ACTIVE <-> DISABLED`), and Edit Utility Details drawer modal enforcing read-only invariants for `slug` and `implementationMode`.
+  - Server-Side Assignment Deduplication: Validated and blocked duplicate targeting rules on `POST /api/v1/admin/ads/targeting` across identical campaign, placement, creative, device, and utility tuples.
+  - Automated Testing: Added `apps/backend/test/admin-ad-operations.spec.ts` (11 passing tests). Full repository test suite verified: **383 passing tests across 26 test suites (100% pass rate)**.
+  - Production Builds: Shared package, NestJS backend, and Next.js frontend compile cleanly without errors. Live Docker containers smoke-tested successfully.
+  - Documentation: `docs/admin-operations.md`, `docs/decisions/ADR-026-admin-ad-operations.md`, `ADMIN_AD_OPERATIONS_VERIFICATION_REPORT.md`.
+- Completed Phase 25 (Real OpenAI Provider Activation & Production AI):
+  - Centralized Provider Architecture: Routed all AI operations through `AiGatewayService` with dual-mode support (`mock` and `openai`), preserving single gateway pattern without bypass paths.
+  - Strict Backend Credential Isolation: `OPENAI_API_KEY` kept exclusively in backend configuration. Error logging and exception filters sanitize keys using regex redaction (`sk-***`, `Bearer ***`).
+  - Model Governance & Limits: Enforced strict model allowlist (`gpt-4o-mini`, `gpt-4o`, `gpt-3.5-turbo`, `mock-ai`), 50,000 character prompt length limit, and 4,096 completion tokens cap.
+  - Rate Limiting & Spend Guard: Sliding-window in-memory rate limiting (15 req/min per identifier) and automated hard daily budget ceiling ($10.00/day) returning HTTP 429 when exceeded.
+  - Ephemeral Data Privacy: Zero persistence of user prompts or model completions in database tables or analytics telemetry.
+  - AI Provider Health Reporting: Added `GET /api/v1/ai/health` (public) and `GET /api/v1/admin/ai/provider/health` (admin RBAC) exposing provider mode, status (`HEALTHY`, `NOT_CONFIGURED`, etc.), budget status, and error metadata.
+  - Admin AI Control Panel: Added "AI Provider Status & Governance" card to `/admin/ai-usage` displaying provider mode badge, configuration status, daily budget meter, and transparent `(ESTIMATED)` cost labeling.
+  - Automated Testing: Added `apps/backend/test/openai-production.spec.ts` covering 24 comprehensive scenarios. Total repository test suite verified: **372 passing tests across 25 suites (100% pass rate)**.
+  - Builds & Verification: Shared package, backend, and Next.js frontend compile cleanly. Live Docker container endpoints smoke-tested successfully.
+  - Documentation: `docs/ai-production.md`, `docs/decisions/ADR-025-real-openai-provider.md`, `PHASE_25_VERIFICATION_REPORT.md`.
+- Completed Phase 24 (External Ad Network Integration & Real Monetization Activation):
+  - Pluggable External Ad Network Abstraction: Added `ExternalAdProvider` interface and deterministic `MockExternalAdProviderService` for safe testing and runtime extensibility.
+  - 4-Tier Selection Hierarchy in `AdSelectorService`: Tier A (internal campaigns) -> Tier B (external ad network) -> Tier C (house fallback) -> Tier D (clean no-ad).
+  - Bounded Latency & Fail-Open Resilience: Implemented strict 200ms timeout budget with automatic fail-open to house ads upon timeout, provider error, or no-fill response.
+  - Logical Telemetry Separation: First-party `AD_IMPRESSION` and `AD_CLICK` analytics recorded without double counting, decoupled from third-party provider metrics.
+  - Financial Data Truth Policy: Enforced authoritative ingestion into new `AdRevenueRecord` model with compound unique key `[provider, providerReportId]` deduplication; strictly distinguish `ACTUAL`, `ACTUAL_ZERO`, and `UNAVAILABLE`.
+  - Admin Monetization & Control Panel: Added provider health check, manual revenue reconciliation sync, and verified revenue KPI views to Admin Analytics UI guarded by permission-based RBAC.
+  - Automated Testing: Added `apps/backend/test/external-ad-monetization.spec.ts` covering 22 comprehensive verification scenarios. Total test suite expanded to **348 passing tests across 24 suites (100% pass rate)**.
+  - Builds: Shared package, backend, and Next.js frontend compile clean without errors.
+  - Documentation: `docs/external-ad-monetization.md`, `docs/decisions/ADR-024-external-ad-monetization.md`, `PHASE_24_VERIFICATION_REPORT.md`.
+- Completed Phase 23 (Privacy-Safe Personalization & Conversion Optimization):
+  - Anonymous ephemeral current-session personalization with zero user profiling or cross-session tracking.
+  - Contextual utility recommendations and conversion optimization.
+  - Personalization intelligence service and test suite (18 assertions, 326 total passing tests).
 - Completed Phase 22 (SEO Content Intelligence, Programmatic Landing Pages & Organic Growth Engine):
   - Shared SEO Contracts: Added `SeoOpportunityDto`, `SeoPageHealthDto`, `SeoLandingPageDto`, `SeoInternalLinkOpportunityDto`, `OrganicAcquisitionDto`, `SeoUtilityPerformanceDto`, `SeoCategoryPerformanceDto`, `SeoContentCoverageDto`, `SeoHealthDto`, `SeoRecommendationDto`, and `SeoIntelligenceDto` to `@ad-utility/shared`.
   - First-Party Organic Classification: Classified search referrers and UTM parameters with zero third-party cookies or tracker scripts.

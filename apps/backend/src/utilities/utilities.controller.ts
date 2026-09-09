@@ -128,6 +128,7 @@ export class UtilitiesController {
 
     // Support both wrapped payload { input: ... } and direct body
     const rawInput = body && typeof body === 'object' && 'input' in body ? body.input : body;
+    const userId = (req as any).user?.id || (req as any).user?.sub;
 
     const result = await this.utilitiesService.executeUtility(
       slug,
@@ -136,6 +137,7 @@ export class UtilitiesController {
       userAgent,
       sessionToken,
       requestId,
+      userId,
     );
 
     return {

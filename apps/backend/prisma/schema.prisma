@@ -69,6 +69,16 @@ enum AiRequestStatus {
   RATE_LIMITED
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  INCOMPLETE
+  PAUSED
+}
+
 // ==========================================
 // DOMAIN 1: AUTH & RBAC
 // ==========================================
@@ -85,6 +95,8 @@ model User {
   updatedAt    DateTime   @updatedAt
   userRoles    UserRole[]
   auditLogs    AuditLog[]
+  subscriptions Subscription[]
+  userUsages    UserUsage[]
 
   @@map("users")
 }
@@ -186,6 +198,7 @@ model Utility {
   relatedSlugs       String[]             @default([])
   config             Json?                @default("{}")
   version            String               @default("1.0.0")
+  tier               String               @default("ALL")
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   category           UtilityCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -408,3 +421,111 @@ model Setting {
   @@index([category])
   @@map("settings")
 }
+
+// ==========================================
+// DOMAIN 7: EXTERNAL AD REVENUE & MONETIZATION
+// ==========================================
+
+model AdRevenueRecord {
+  id               String      @id @default(uuid())
+  provider         String
+  providerReportId String?
+  date             DateTime
+  placement        String?
+  utilitySlug      String?
+  categorySlug     String?
+  deviceType       DeviceType?
+  impressions      Int         @default(0)
+  clicks           Int         @default(0)
+  revenue          Float
+  currency         String      @default("USD")
+  source           String      @default("PROVIDER_API")
+  status           String      @default("ACTUAL")
+  importedAt       DateTime    @default(now())
+
+  @@unique([provider, providerReportId])
+  @@index([date])
+  @@index([provider, date])
+  @@index([utilitySlug, date])
+  @@index([placement, date])
+  @@map("ad_revenue_records")
+}
+
+// ==========================================
+// DOMAIN 8: BILLING, SUBSCRIPTIONS & ENTITLEMENTS
+// ==========================================
+
+model Plan {
+  id              String         @id @default(uuid())
+  code            String         @unique
+  name            String
+  description     String?
+  active          Boolean        @default(true)
+  displayOrder    Int            @default(0)
+  billingInterval String?        // "MONTHLY" | "YEARLY" | null
+  priceCents      Int            @default(0)
+  currency        String         @default("USD")
+  providerPriceId String?
+  entitlements    Json           @default("{}")
+  usageLimits     Json           @default("{}")
+  metadata        Json?          @default("{}")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  subscriptions   Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  userId                 String
+  planId                 String
+  provider               String             @default("mock")
+  providerCustomerId     String?
+  providerSubscriptionId String?            @unique
+  status                 SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  canceledAt             DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                   Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([status])
+  @@index([provider, providerSubscriptionId])
+  @@map("subscriptions")
+}
+
+model BillingEvent {
+  id              String   @id @default(uuid())
+  provider        String
+  providerEventId String   @unique
+  eventType       String
+  payload         Json
+  status          String   @default("PROCESSED")
+  errorMessage    String?
+  processedAt     DateTime @default(now())
+
+  @@index([provider, eventType])
+  @@map("billing_events")
+}
+
+model UserUsage {
+  id          String   @id @default(uuid())
+  userId      String
+  featureKey  String
+  usageCount  Int      @default(0)
+  date        String   // "YYYY-MM-DD"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, featureKey, date])
+  @@index([userId, date])
+  @@map("user_usages")
+}
+
+

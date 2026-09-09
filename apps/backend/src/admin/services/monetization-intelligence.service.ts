@@ -14,6 +14,8 @@ import {
   DeviceType,
 } from '@ad-utility/shared';
 
+import { ExternalAdNetworkService } from '../../ads/providers/external-ad-network.service';
+
 @Injectable()
 export class MonetizationIntelligenceService {
   private readonly logger = new Logger(MonetizationIntelligenceService.name);
@@ -21,6 +23,7 @@ export class MonetizationIntelligenceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redisCache: RedisAdCacheService,
+    private readonly externalAdNetwork: ExternalAdNetworkService,
   ) {}
 
   /**
@@ -60,6 +63,8 @@ export class MonetizationIntelligenceService {
       activeCampaigns,
       utilities,
       experimentExposures,
+      revenueRecords,
+      providerHealth,
     ] = await Promise.all([
       // Total impressions
       this.prisma.adImpression.count({
@@ -140,6 +145,14 @@ export class MonetizationIntelligenceService {
         },
         take: 2000,
       }),
+      // Authoritative Ad Revenue Records
+      this.prisma.adRevenueRecord.findMany({
+        where: {
+          date: { gte: cutoff },
+        },
+      }),
+      // Provider Health Telemetry
+      this.externalAdNetwork.healthCheck(),
     ]);
 
     // 3. Aggregate Overall Metrics
@@ -387,6 +400,43 @@ export class MonetizationIntelligenceService {
       topUtilityByEngagement: topUtility ? { utilitySlug: topUtility.utilitySlug, name: topUtility.name, adEngagementRate: topUtility.adEngagementRate } : undefined,
     };
 
+    // 12. Authoritative Revenue Aggregations (Financial Data Truth Policy)
+    let actualRevenueTotal: number | null = null;
+    let actualRevenueStatus: 'ACTUAL' | 'UNAVAILABLE' = 'UNAVAILABLE';
+    const revenueByPlacement: Record<string, number> = {};
+    const revenueByUtility: Record<string, number> = {};
+    const revenueByDevice: Record<string, number> = {};
+    const revenueByProvider: Record<string, number> = {};
+
+    if (revenueRecords && revenueRecords.length > 0) {
+      let sum = 0;
+      for (const r of revenueRecords) {
+        sum += r.revenue;
+        if (r.placement) {
+          revenueByPlacement[r.placement] = Number(
+            ((revenueByPlacement[r.placement] || 0) + r.revenue).toFixed(2),
+          );
+        }
+        if (r.utilitySlug) {
+          revenueByUtility[r.utilitySlug] = Number(
+            ((revenueByUtility[r.utilitySlug] || 0) + r.revenue).toFixed(2),
+          );
+        }
+        if (r.deviceType) {
+          revenueByDevice[r.deviceType] = Number(
+            ((revenueByDevice[r.deviceType] || 0) + r.revenue).toFixed(2),
+          );
+        }
+        if (r.provider) {
+          revenueByProvider[r.provider] = Number(
+            ((revenueByProvider[r.provider] || 0) + r.revenue).toFixed(2),
+          );
+        }
+      }
+      actualRevenueTotal = Number(sum.toFixed(2));
+      actualRevenueStatus = 'ACTUAL';
+    }
+
     const result: MonetizationIntelligenceDto = {
       periodDays,
       summary,
@@ -397,6 +447,14 @@ export class MonetizationIntelligenceService {
       recommendations,
       experimentMonetization,
       formatBreakdown,
+      actualRevenueTotal,
+      actualRevenueStatus,
+      actualRevenueCurrency: 'USD',
+      revenueByPlacement,
+      revenueByUtility,
+      revenueByDevice,
+      revenueByProvider,
+      providerHealth,
     };
 
     // Cache with short TTL (60s)

@@ -25,9 +25,11 @@ import { AdminAuditController } from './controllers/admin-audit.controller';
 
 import { UtilitiesModule } from '../utilities/utilities.module';
 import { AdsModule } from '../ads/ads.module';
+import { PersonalizationModule } from '../personalization/personalization.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
-  imports: [PrismaModule, UtilitiesModule, AdsModule],
+  imports: [PrismaModule, UtilitiesModule, AdsModule, PersonalizationModule, AiModule],
   controllers: [
     AdminDashboardController,
     AdminUsersController,

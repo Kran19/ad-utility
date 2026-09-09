@@ -12,11 +12,15 @@ import {
   AdminUpdateTargetingRuleDto,
   AdminCreateScheduleDto,
   AdminUpdateScheduleDto,
+  AdminAdPreviewRequestDto,
+  AdminAdMatrixQueryDto,
+  AdminListTargetingRulesQueryDto,
 } from '../dto/admin-ads.dto';
 import { PaginatedResult, JwtPayload } from '@ad-utility/shared';
 import { CampaignStatus, CreativeType, Prisma } from '@prisma/client';
 
 import { RedisAdCacheService } from '../../ads/services/redis-ad-cache.service';
+import { AdSelectorService } from '../../ads/services/ad-selector.service';
 
 @Injectable()
 export class AdminAdsService {
@@ -24,14 +28,15 @@ export class AdminAdsService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly redisCache: RedisAdCacheService,
+    private readonly adSelectorService: AdSelectorService,
   ) {}
 
   // -------------------------------------------------------------
   // CAMPAIGNS
   // -------------------------------------------------------------
   async listCampaigns(query: AdminPaginationQueryDto & { status?: CampaignStatus }): Promise<PaginatedResult<any>> {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.AdCampaignWhereInput = {};
@@ -210,8 +215,8 @@ export class AdminAdsService {
   }
 
   async listCreatives(query: AdminPaginationQueryDto & { type?: CreativeType }): Promise<PaginatedResult<any>> {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.AdCreativeWhereInput = {};
@@ -414,15 +419,20 @@ export class AdminAdsService {
   // -------------------------------------------------------------
   // TARGETING RULES
   // -------------------------------------------------------------
-  async listTargetingRules(query: { campaignId?: string; placementId?: string }) {
+  async listTargetingRules(query: AdminListTargetingRulesQueryDto) {
     const where: Prisma.AdTargetingRuleWhereInput = {};
     if (query.campaignId) where.campaignId = query.campaignId;
     if (query.placementId) where.placementId = query.placementId;
+    if (query.utilitySlug) where.utilitySlugs = { has: query.utilitySlug.toLowerCase() };
+    if (query.deviceType) where.deviceTypes = { has: query.deviceType as any };
+    if (query.isActive !== undefined) where.isActive = query.isActive;
 
     return this.prisma.adTargetingRule.findMany({
       where,
       include: {
-        campaign: true,
+        campaign: {
+          include: { schedules: true },
+        },
         placement: true,
         creative: true,
       },
@@ -431,6 +441,31 @@ export class AdminAdsService {
   }
 
   async createTargetingRule(dto: AdminCreateTargetingRuleDto, currentUser: JwtPayload, ip?: string) {
+    // Validate duplicate assignment
+    const existingRules = await this.prisma.adTargetingRule.findMany({
+      where: {
+        campaignId: dto.campaignId,
+        placementId: dto.placementId,
+        creativeId: dto.creativeId,
+      },
+    });
+
+    const hasDuplicate = existingRules.some((r) => {
+      const sameDevices =
+        r.deviceTypes.length === (dto.deviceTypes || []).length &&
+        r.deviceTypes.every((d) => (dto.deviceTypes || []).includes(d as any));
+      const sameUtilities =
+        r.utilitySlugs.length === (dto.utilitySlugs || []).length &&
+        r.utilitySlugs.every((u) => (dto.utilitySlugs || []).map((s) => s.toLowerCase()).includes(u.toLowerCase()));
+      return sameDevices && sameUtilities;
+    });
+
+    if (hasDuplicate) {
+      throw new BadRequestException(
+        'An identical ad targeting assignment already exists for this campaign, placement, creative, device, and utility combination.',
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const rule = await tx.adTargetingRule.create({
         data: {
@@ -476,6 +511,7 @@ export class AdminAdsService {
       const updated = await tx.adTargetingRule.update({
         where: { id },
         data: {
+          placementId: dto.placementId,
           creativeId: dto.creativeId,
           deviceTypes: dto.deviceTypes,
           utilitySlugs: dto.utilitySlugs,
@@ -529,6 +565,169 @@ export class AdminAdsService {
       await this.redisCache.invalidateCache('cache:adslot:*');
       return { deleted: true };
     });
+  }
+
+  // -------------------------------------------------------------
+  // AD MANAGER OPERATIONS
+  // -------------------------------------------------------------
+  async getAdMatrix(query: AdminAdMatrixQueryDto) {
+    const whereUtility: Prisma.UtilityWhereInput = {};
+    if (query.search) {
+      whereUtility.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { slug: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+    if (query.categoryId) {
+      whereUtility.categoryId = query.categoryId;
+    }
+
+    const utilities = await this.prisma.utility.findMany({
+      where: whereUtility,
+      include: { category: true },
+      orderBy: { displayOrder: 'asc' },
+    });
+
+    const whereRule: Prisma.AdTargetingRuleWhereInput = {};
+    if (query.campaignId) whereRule.campaignId = query.campaignId;
+    if (query.placementId) whereRule.placementId = query.placementId;
+    if (query.status === 'ACTIVE') whereRule.isActive = true;
+    if (query.status === 'DISABLED') whereRule.isActive = false;
+
+    const rules = await this.prisma.adTargetingRule.findMany({
+      where: whereRule,
+      include: {
+        campaign: true,
+        placement: true,
+        creative: true,
+      },
+    });
+
+    const matrix = utilities.map((u) => {
+      const uSlug = u.slug.toLowerCase();
+      const cSlug = u.category?.slug.toLowerCase();
+
+      const applicableRules = rules.filter((r) => {
+        const hasExactUtility = r.utilitySlugs && r.utilitySlugs.map((s) => s.toLowerCase()).includes(uSlug);
+        const hasCategory =
+          cSlug &&
+          r.categorySlugs &&
+          r.categorySlugs.map((s) => s.toLowerCase()).includes(cSlug) &&
+          (!r.utilitySlugs || r.utilitySlugs.length === 0);
+        return hasExactUtility || hasCategory;
+      });
+
+      const desktopRules = applicableRules.filter(
+        (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('DESKTOP'),
+      );
+      const tabletRules = applicableRules.filter(
+        (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('TABLET'),
+      );
+      const mobileRules = applicableRules.filter(
+        (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('MOBILE'),
+      );
+
+      return {
+        id: u.id,
+        slug: u.slug,
+        name: u.name,
+        category: u.category ? { id: u.category.id, name: u.category.name, slug: u.category.slug } : null,
+        status: u.status,
+        desktop: desktopRules.length,
+        tablet: tabletRules.length,
+        mobile: mobileRules.length,
+        total: applicableRules.length,
+        activeAssignments: applicableRules.filter((r) => r.isActive).length,
+      };
+    });
+
+    return {
+      items: query.device
+        ? matrix.filter((item) => (item as any)[query.device!.toLowerCase()] > 0)
+        : matrix,
+      total: utilities.length,
+    };
+  }
+
+  async previewAd(dto: AdminAdPreviewRequestDto) {
+    const utility = await this.prisma.utility.findUnique({
+      where: { slug: dto.utilitySlug.toLowerCase() },
+      include: { category: true },
+    });
+    if (!utility) {
+      throw new NotFoundException(`Utility with slug "${dto.utilitySlug}" not found`);
+    }
+
+    const selectionResult = await this.adSelectorService.selectAd(
+      {
+        placement: dto.placement as any,
+        utilitySlug: utility.slug,
+        categorySlug: utility.category?.slug,
+      },
+      dto.device as any,
+      dto.country,
+      'admin_preview_session',
+    );
+
+    const tierMap: Record<string, { code: string; label: string; description: string }> = {
+      TIER_1_EXACT_UTILITY: {
+        code: 'EXACT_UTILITY',
+        label: 'Exact Utility Match',
+        description: `Direct match: An active campaign rule is targeted specifically to "${utility.name}".`,
+      },
+      TIER_2_CATEGORY: {
+        code: 'CATEGORY',
+        label: 'Category Match',
+        description: `Category fallback: No exact rule found for "${utility.slug}". Selected rule targeted to category "${utility.category?.name}".`,
+      },
+      TIER_3_GLOBAL_PLACEMENT: {
+        code: 'GLOBAL_PLACEMENT',
+        label: 'Global Placement Fallback',
+        description: `Placement fallback: Matched a global campaign targeted to placement slot across all utilities.`,
+      },
+      TIER_4_GLOBAL_FALLBACK: {
+        code: 'HOUSE_FALLBACK',
+        label: 'House Ad / Global Fallback',
+        description: `House ad: No internal campaign rules matched. Served house/global fallback creative.`,
+      },
+      TIER_5_NO_AD: {
+        code: 'NO_AD',
+        label: 'No Ad',
+        description: `No active creative or campaign is configured for ${dto.device} on this placement.`,
+      },
+    };
+
+    const selection = tierMap[selectionResult.fallbackTier] || {
+      code: selectionResult.fallbackTier,
+      label: selectionResult.fallbackTier,
+      description: 'Evaluated via production AdSelectorService.',
+    };
+
+    let campaignName: string | undefined;
+    if (selectionResult.creative?.campaignId) {
+      const camp = await this.prisma.adCampaign.findUnique({
+        where: { id: selectionResult.creative.campaignId },
+        select: { name: true },
+      });
+      campaignName = camp?.name;
+    }
+
+    const selectedAd = selectionResult.creative
+      ? {
+          campaignName: campaignName || (selectionResult.provider ? `External: ${selectionResult.provider}` : 'Internal Campaign'),
+          creative: selectionResult.creative,
+        }
+      : null;
+
+    return {
+      hasAd: selectionResult.hasAd,
+      explanation: selection,
+      selectionTier: selectionResult.fallbackTier,
+      placement: selectionResult.placement,
+      selectedAd,
+      utility: { slug: utility.slug, name: utility.name, category: utility.category?.name },
+      device: dto.device,
+    };
   }
 
   // -------------------------------------------------------------

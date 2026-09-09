@@ -4,6 +4,7 @@ import { DeviceDetectorService } from './device-detector.service';
 import { AdSelectorService } from './ad-selector.service';
 import { TrackingTokenService } from './tracking-token.service';
 import { RedisAdCacheService } from './redis-ad-cache.service';
+import { ExternalAdNetworkService } from '../providers/external-ad-network.service';
 import {
   AdSlotRequestDto,
   AdSlotResponseDto,
@@ -12,6 +13,7 @@ import {
   AdClickResponseDto,
 } from '@ad-utility/shared';
 import { createHash } from 'crypto';
+import { EntitlementService } from '../../billing/services/entitlement.service';
 
 @Injectable()
 export class AdDeliveryService {
@@ -23,6 +25,8 @@ export class AdDeliveryService {
     private readonly adSelector: AdSelectorService,
     private readonly trackingToken: TrackingTokenService,
     private readonly redisCache: RedisAdCacheService,
+    private readonly externalAdNetwork: ExternalAdNetworkService,
+    private readonly entitlementService: EntitlementService,
   ) {}
 
   /**
@@ -33,7 +37,20 @@ export class AdDeliveryService {
     userAgent?: string,
     ip?: string,
     countryHint?: string,
+    userId?: string,
   ): Promise<AdSlotResponseDto> {
+    const resolvedUserId = userId || request.userId;
+    if (resolvedUserId) {
+      const showAds = await this.entitlementService.shouldShowAds(resolvedUserId);
+      if (!showAds) {
+        return {
+          hasAd: false,
+          placement: request.placement,
+          reason: 'PREMIUM_AD_FREE',
+        };
+      }
+    }
+
     const device = this.deviceDetector.resolveDevice(request.device, userAgent);
     const country = request.country || countryHint;
     const sessionId = request.sessionId || this.generateSessionId(ip, userAgent);
@@ -58,7 +75,35 @@ export class AdDeliveryService {
 
       const deviceType = dto.device || decoded.deviceType || 'DESKTOP';
 
-      // 1. Asynchronously persist impression in PostgreSQL (non-blocking)
+      if (decoded.provider) {
+        // First-party impression event for external provider ad
+        this.prisma.analyticsEvent
+          .create({
+            data: {
+              eventType: 'AD_IMPRESSION',
+              placementCode: decoded.placementCode,
+              utilitySlug: dto.utilitySlug || decoded.utilitySlug,
+              sessionToken: dto.sessionId,
+              metadata: {
+                provider: decoded.provider,
+                providerAdId: decoded.providerAdId,
+                monetizationSource: 'EXTERNAL_NETWORK',
+                deviceType,
+                country: dto.country,
+              },
+            },
+          })
+          .catch((err) => {
+            this.logger.warn(`Failed to persist external ad impression event: ${err.message}`);
+          });
+
+        // Notify external ad network asynchronously
+        this.externalAdNetwork.recordImpression(dto.trackingToken).catch(() => {});
+
+        return { success: true, recorded: true };
+      }
+
+      // 1. Asynchronously persist internal impression in PostgreSQL (non-blocking)
       this.prisma.adImpression
         .create({
           data: {
@@ -99,6 +144,47 @@ export class AdDeliveryService {
     ip?: string,
   ): Promise<AdClickResponseDto> {
     const decoded = this.trackingToken.verifyToken(dto.trackingToken);
+    const deviceType = dto.device || decoded.deviceType || 'DESKTOP';
+
+    if (decoded.provider) {
+      if (!decoded.externalTargetUrl) {
+        throw new NotFoundException('External ad destination target URL not found');
+      }
+
+      const targetUrl = decoded.externalTargetUrl.trim();
+      if (
+        targetUrl.toLowerCase().startsWith('javascript:') ||
+        targetUrl.toLowerCase().startsWith('data:')
+      ) {
+        throw new BadRequestException('Invalid or dangerous target URL scheme');
+      }
+
+      // Record first-party click event for external provider ad
+      this.prisma.analyticsEvent
+        .create({
+          data: {
+            eventType: 'AD_CLICK',
+            placementCode: decoded.placementCode,
+            utilitySlug: dto.utilitySlug || decoded.utilitySlug,
+            sessionToken: dto.sessionId,
+            metadata: {
+              provider: decoded.provider,
+              providerAdId: decoded.providerAdId,
+              monetizationSource: 'EXTERNAL_NETWORK',
+              deviceType,
+              country: dto.country,
+            },
+          },
+        })
+        .catch((err) => {
+          this.logger.warn(`Failed to persist external ad click event: ${err.message}`);
+        });
+
+      // Notify external provider asynchronously
+      this.externalAdNetwork.recordClick(dto.trackingToken).catch(() => {});
+
+      return { destinationUrl: targetUrl };
+    }
 
     // 1. Query creative to get authoritative destination URL
     const creative = await this.prisma.adCreative.findUnique({
@@ -120,7 +206,6 @@ export class AdDeliveryService {
     }
 
     const ipHash = ip ? createHash('sha256').update(ip).digest('hex').substring(0, 32) : undefined;
-    const deviceType = dto.device || decoded.deviceType || 'DESKTOP';
 
     // 3. Asynchronously record click event
     this.prisma.adClick

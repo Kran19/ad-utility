@@ -8,6 +8,8 @@ import { AdsModule } from './ads/ads.module';
 import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AdminModule } from './admin/admin.module';
+import { PersonalizationModule } from './personalization/personalization.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { AdminModule } from './admin/admin.module';
     AnalyticsModule,
     AdminModule,
     HealthModule,
+    PersonalizationModule,
+    BillingModule,
   ],
 })
 export class AppModule {}

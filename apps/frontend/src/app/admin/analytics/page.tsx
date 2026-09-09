@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminApiFetch } from '../../../lib/admin-api';
 
-type TabKey = 'bi' | 'journey' | 'seo' | 'funnel' | 'acquisition' | 'utilities' | 'monetization' | 'experiments' | 'telemetry';
+type TabKey = 'personalization' | 'bi' | 'journey' | 'seo' | 'funnel' | 'acquisition' | 'utilities' | 'monetization' | 'experiments' | 'telemetry';
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<any>(null);
@@ -12,20 +12,48 @@ export default function AdminAnalyticsPage() {
   const [biData, setBiData] = useState<any>(null);
   const [journeyData, setJourneyData] = useState<any>(null);
   const [seoData, setSeoData] = useState<any>(null);
+  const [personalizationData, setPersonalizationData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState('30');
-  const [activeTab, setActiveTab] = useState<TabKey>('bi');
+  const [activeTab, setActiveTab] = useState<TabKey>('personalization');
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleSyncRevenue = async () => {
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await adminApiFetch('/admin/ads/provider/sync', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (res.success && res.data) {
+        setSyncMessage(`Sync complete: ${res.data.recordsIngested} ingested, ${res.data.duplicatesSkipped} skipped ($${res.data.totalRevenue})`);
+        const updated = await adminApiFetch(`/admin/analytics/monetization?days=${days}`);
+        if (updated.success && updated.data) {
+          setMonetizationData(updated.data);
+        }
+      } else {
+        setSyncMessage(res.error || 'Failed to synchronize revenue');
+      }
+    } catch {
+      setSyncMessage('Error triggering sync');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [growthRes, overviewRes, monetizationRes, biRes, journeyRes, seoRes] = await Promise.all([
+      const [growthRes, overviewRes, monetizationRes, biRes, journeyRes, seoRes, persRes] = await Promise.all([
         adminApiFetch(`/admin/analytics/growth?days=${days}`),
         adminApiFetch(`/admin/analytics/overview?days=${days}`),
         adminApiFetch(`/admin/analytics/monetization?days=${days}`),
         adminApiFetch(`/admin/analytics/business-intelligence?days=${days}`),
         adminApiFetch(`/admin/analytics/journey?days=${days}`),
         adminApiFetch(`/admin/analytics/seo?days=${days}`),
+        adminApiFetch(`/admin/analytics/personalization?days=${days}`),
       ]);
 
       if (growthRes.success && growthRes.data) {
@@ -45,6 +73,9 @@ export default function AdminAnalyticsPage() {
       }
       if (seoRes.success && seoRes.data) {
         setSeoData(seoRes.data);
+      }
+      if (persRes.success && persRes.data) {
+        setPersonalizationData(persRes.data);
       }
       setLoading(false);
     }
@@ -82,6 +113,17 @@ export default function AdminAnalyticsPage() {
   const seoContentCoverage = seo?.contentCoverage || [];
   const seoSitemap = seo?.sitemap;
 
+  const pers = personalizationData;
+  const persReadiness = pers?.readinessScore ?? 80;
+  const persOverview = pers?.conversionOverview;
+  const persOpps = pers?.opportunities || [];
+  const persCta = pers?.ctaPerformance || [];
+  const persRelated = pers?.relatedUtilityPerformance || [];
+  const persDevice = pers?.devicePerformance || [];
+  const persAcquisition = pers?.acquisitionPerformance || [];
+  const persRules = pers?.activeRules || [];
+  const persExpCount = pers?.experimentPrecedenceCount ?? 0;
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -108,6 +150,16 @@ export default function AdminAnalyticsPage() {
 
       {/* Section Tabs */}
       <div className="flex border-b border-slate-800 gap-2 overflow-x-auto text-xs">
+        <button
+          onClick={() => setActiveTab('personalization')}
+          className={`px-4 py-2.5 font-medium border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'personalization'
+              ? 'border-indigo-500 text-indigo-400 font-semibold'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Personalization & Conversion
+        </button>
         <button
           onClick={() => setActiveTab('bi')}
           className={`px-4 py-2.5 font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -202,10 +254,348 @@ export default function AdminAnalyticsPage() {
 
       {loading ? (
         <div className="py-20 text-center text-xs text-slate-400 animate-pulse">
-          Aggregating Business Intelligence, Journey & Retention telemetry...
+          Aggregating Business Intelligence, Personalization & Journey telemetry...
         </div>
       ) : (
         <div className="space-y-8">
+          {/* TAB: PRIVACY-SAFE PERSONALIZATION & CONVERSION OPTIMIZATION */}
+          {activeTab === 'personalization' && (
+            <div className="space-y-6">
+              {/* Executive Overview Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Personalization Readiness Score Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-bold text-white uppercase tracking-wider">Personalization Readiness</h2>
+                      <p className="text-[11px] text-slate-400">Deterministic context & rule activation index</p>
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                        persReadiness >= 80
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                          : persReadiness >= 60
+                          ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+                          : 'bg-amber-950 text-amber-300 border border-amber-800'
+                      }`}
+                    >
+                      {persReadiness >= 80 ? 'HIGH READINESS' : persReadiness >= 60 ? 'OPTIMIZING' : 'INITIALIZING'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-4xl font-black text-white">{persReadiness}</span>
+                    <span className="text-xs text-slate-400 font-mono">/ 100 Index</span>
+                  </div>
+
+                  <div className="space-y-2 pt-2 text-xs border-t border-slate-800/80">
+                    <div className="flex justify-between text-slate-400">
+                      <span>Active Deterministic Rules:</span>
+                      <strong className="text-white font-mono">{persRules.length} rules</strong>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Experiment Precedence Exposures:</span>
+                      <strong className="text-cyan-400 font-mono">{persExpCount} exposures</strong>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Privacy Paradigm:</span>
+                      <span className="text-emerald-400 font-semibold">Zero User Profiling</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Conversion Funnel Overview Card */}
+                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4 flex flex-col justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-white tracking-wide uppercase">Observed Conversion Funnel</h2>
+                    <p className="text-xs text-slate-400">Aggregated first-party progression across tools</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">1. Page Views</span>
+                      <div className="text-xl font-black text-white">{persOverview?.totalViews?.toLocaleString() ?? 0}</div>
+                      <span className="text-[10px] text-slate-500">Landing impressions</span>
+                    </div>
+                    <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-bold text-blue-400 uppercase">2. Tool Starts</span>
+                      <div className="text-xl font-black text-blue-400">{persOverview?.totalStarts?.toLocaleString() ?? 0}</div>
+                      <span className="text-[10px] text-slate-400">{((persOverview?.overallStartRate ?? 0) * 100).toFixed(1)}% start rate</span>
+                    </div>
+                    <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase">3. Completions</span>
+                      <div className="text-xl font-black text-emerald-400">{persOverview?.totalCompletions?.toLocaleString() ?? 0}</div>
+                      <span className="text-[10px] text-slate-400">{((persOverview?.overallCompletionRate ?? 0) * 100).toFixed(1)}% comp rate</span>
+                    </div>
+                    <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-bold text-purple-400 uppercase">4. Downloads</span>
+                      <div className="text-xl font-black text-purple-400">{persOverview?.totalDownloads?.toLocaleString() ?? 0}</div>
+                      <span className="text-[10px] text-slate-400">{((persOverview?.overallDownloadRate ?? 0) * 100).toFixed(1)}% dl rate</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/40 border border-slate-800/60 rounded-lg p-2.5 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+                    <span>Funnel Throughput: <strong className="text-white">{((persOverview?.totalViews ?? 0) > 0 ? (((persOverview?.totalDownloads ?? 0) / (persOverview?.totalViews ?? 1)) * 100).toFixed(2) : '0.00')}%</strong> end-to-end</span>
+                    <span className="text-[11px] text-slate-500 font-mono">Fail-Open Cached (60s TTL)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Diagnostic Conversion Opportunities Queue */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-wide uppercase">Conversion Opportunity Queue</h3>
+                    <p className="text-xs text-slate-400">Deterministic friction diagnosis & actionable personalization recommendations</p>
+                  </div>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {persOpps.length} Prioritized Opportunities
+                  </span>
+                </div>
+
+                {persOpps.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-500 bg-slate-950/40 rounded-lg border border-slate-800">
+                    No conversion friction detected. Platform funnels are operating within healthy parameters.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {persOpps.map((opp: any) => (
+                      <div
+                        key={opp.id}
+                        className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-4 space-y-3 hover:border-slate-700 transition-colors"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                opp.priority === 'HIGH'
+                                  ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                  : 'bg-amber-950 text-amber-300 border border-amber-800'
+                              }`}
+                            >
+                              {opp.priority} PRIORITY
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800/60">
+                              {opp.type.replace(/_/g, ' ')}
+                            </span>
+                            <h4 className="text-sm font-bold text-white">{opp.title}</h4>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-slate-400">Opportunity Score:</span>
+                            <strong className="text-white font-mono bg-slate-800 px-2 py-0.5 rounded">{opp.score}/100</strong>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs bg-slate-900/60 p-3 rounded border border-slate-800/40">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">WHAT:</span>
+                            <p className="text-slate-300 mt-0.5">{opp.what}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">WHY:</span>
+                            <p className="text-slate-300 mt-0.5">{opp.why}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase">ACTION:</span>
+                            <p className="text-emerald-300 font-medium mt-0.5">{opp.action}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-4 text-[11px] text-slate-400 pt-1">
+                          <span>Views: <strong className="text-white">{opp.supportingMetrics?.views}</strong></span>
+                          <span>Starts: <strong className="text-blue-400">{opp.supportingMetrics?.starts}</strong> ({((opp.supportingMetrics?.startRate ?? 0) * 100).toFixed(1)}%)</span>
+                          <span>Completions: <strong className="text-emerald-400">{opp.supportingMetrics?.completions}</strong> ({((opp.supportingMetrics?.completionRate ?? 0) * 100).toFixed(1)}%)</span>
+                          <span>Downloads: <strong className="text-purple-400">{opp.supportingMetrics?.downloads}</strong> ({((opp.supportingMetrics?.downloadRate ?? 0) * 100).toFixed(1)}%)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Surface Performance & Related Utilities Matrix */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* CTA Surface Performance */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">CTA Surface Performance</h3>
+                    <p className="text-[11px] text-slate-500">Observed impressions and conversion throughput by surface</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                        <tr>
+                          <th className="px-3 py-2">Surface</th>
+                          <th className="px-3 py-2">Variant</th>
+                          <th className="px-3 py-2">Impressions</th>
+                          <th className="px-3 py-2">Conversions</th>
+                          <th className="px-3 py-2">CTR / Conv %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                        {persCta.map((c: any) => (
+                          <tr key={c.surface} className="hover:bg-slate-800/30">
+                            <td className="px-3 py-2 font-bold text-white">{c.surface}</td>
+                            <td className="px-3 py-2 text-indigo-400">{c.variantId}</td>
+                            <td className="px-3 py-2 text-slate-200">{c.impressions?.toLocaleString() ?? 0}</td>
+                            <td className="px-3 py-2 text-emerald-400">{c.conversions?.toLocaleString() ?? 0}</td>
+                            <td className="px-3 py-2 font-bold text-cyan-400">{((c.ctr ?? 0) * 100).toFixed(1)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Related Utility Cross-Conversion */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Related Utility Progression Matrix</h3>
+                    <p className="text-[11px] text-slate-500">Reciprocal tool transitions and downstream completions</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                        <tr>
+                          <th className="px-3 py-2">Source &rarr; Target</th>
+                          <th className="px-3 py-2">Clicks</th>
+                          <th className="px-3 py-2">Completions</th>
+                          <th className="px-3 py-2">Transition Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                        {persRelated.map((r: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-800/30">
+                            <td className="px-3 py-2 text-slate-200">
+                              <span className="font-semibold text-indigo-300">{r.sourceSlug}</span>
+                              <span className="text-slate-500 mx-1.5">&rarr;</span>
+                              <span className="font-semibold text-emerald-300">{r.targetSlug}</span>
+                            </td>
+                            <td className="px-3 py-2 text-slate-200">{r.clicks}</td>
+                            <td className="px-3 py-2 text-emerald-400">{r.conversions}</td>
+                            <td className="px-3 py-2 font-bold text-cyan-400">{((r.conversionRate ?? 0) * 100).toFixed(1)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Device & Acquisition Conversion Breakdowns */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Device Performance Table */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Device Conversion Performance</h3>
+                    <p className="text-[11px] text-slate-500">Observed funnel throughput by coarse device class</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                        <tr>
+                          <th className="px-3 py-2">Device</th>
+                          <th className="px-3 py-2">Views</th>
+                          <th className="px-3 py-2">Starts</th>
+                          <th className="px-3 py-2">Start Rate</th>
+                          <th className="px-3 py-2">Completion Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                        {persDevice.map((d: any) => (
+                          <tr key={d.deviceType} className="hover:bg-slate-800/30">
+                            <td className="px-3 py-2 font-bold text-white capitalize">{d.deviceType}</td>
+                            <td className="px-3 py-2 text-slate-200">{d.views}</td>
+                            <td className="px-3 py-2 text-blue-400">{d.starts}</td>
+                            <td className="px-3 py-2 text-cyan-400">{((d.startRate ?? 0) * 100).toFixed(1)}%</td>
+                            <td className="px-3 py-2 font-bold text-emerald-400">{((d.completionRate ?? 0) * 100).toFixed(1)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Acquisition Channel Breakdown */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Acquisition Channel Conversion</h3>
+                    <p className="text-[11px] text-slate-500">First-party attribution channel conversion rates</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                        <tr>
+                          <th className="px-3 py-2">Channel</th>
+                          <th className="px-3 py-2">Views</th>
+                          <th className="px-3 py-2">Starts</th>
+                          <th className="px-3 py-2">Start Rate</th>
+                          <th className="px-3 py-2">Completion Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                        {persAcquisition.map((a: any) => (
+                          <tr key={a.channel} className="hover:bg-slate-800/30">
+                            <td className="px-3 py-2 font-bold text-white capitalize">{a.channel}</td>
+                            <td className="px-3 py-2 text-slate-200">{a.views}</td>
+                            <td className="px-3 py-2 text-blue-400">{a.starts}</td>
+                            <td className="px-3 py-2 text-cyan-400">{((a.startRate ?? 0) * 100).toFixed(1)}%</td>
+                            <td className="px-3 py-2 font-bold text-emerald-400">{((a.completionRate ?? 0) * 100).toFixed(1)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Rules Configuration */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Personalization Rules</h3>
+                    <p className="text-[11px] text-slate-500">Deterministic, priority-ordered rules (evaluated top-to-bottom)</p>
+                  </div>
+                  <span className="text-xs text-indigo-400 font-mono font-semibold">
+                    Experiment Precedence Active
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                      <tr>
+                        <th className="px-3 py-2">Priority</th>
+                        <th className="px-3 py-2">Rule Name</th>
+                        <th className="px-3 py-2">Surface</th>
+                        <th className="px-3 py-2">Conditions</th>
+                        <th className="px-3 py-2">Target Variant</th>
+                        <th className="px-3 py-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                      {persRules.map((rule: any) => (
+                        <tr key={rule.id} className="hover:bg-slate-800/30">
+                          <td className="px-3 py-2 font-black text-indigo-400">P{rule.priority}</td>
+                          <td className="px-3 py-2 font-bold text-white">{rule.name}</td>
+                          <td className="px-3 py-2 text-cyan-300">{rule.surface}</td>
+                          <td className="px-3 py-2 text-slate-400 text-[10px] max-w-[200px] truncate" title={JSON.stringify(rule.conditions)}>
+                            {JSON.stringify(rule.conditions)}
+                          </td>
+                          <td className="px-3 py-2 text-emerald-400">{rule.targetVariantId}</td>
+                          <td className="px-3 py-2">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800/50">
+                              ACTIVE
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 0: EXECUTIVE BUSINESS INTELLIGENCE & HEALTH */}
           {activeTab === 'bi' && (
             <div className="space-y-6">
@@ -1373,28 +1763,138 @@ export default function AdminAnalyticsPage() {
           {/* TAB 4: AD MONETIZATION */}
           {activeTab === 'monetization' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Impressions</span>
-                  <div className="text-2xl font-black text-white">{monetization?.summary?.totalImpressions ?? monetization?.totalImpressions ?? 0}</div>
-                  <div className="text-[11px] text-slate-500">Recorded viewable ad deliveries</div>
+              {/* Real Monetization & Provider Health Header Card */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-white tracking-wide uppercase">Real Monetization & Ad Network</h2>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        monetization?.providerHealth?.health === 'HEALTHY'
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                          : monetization?.providerHealth?.health === 'DEGRADED'
+                          ? 'bg-amber-950 text-amber-400 border border-amber-800'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}>
+                        Provider: {monetization?.providerHealth?.provider || 'MOCK'} ({monetization?.providerHealth?.status || 'CONFIGURED'})
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Authoritative external revenue reports & first-party delivery telemetry</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSyncRevenue}
+                      disabled={syncing}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors"
+                    >
+                      {syncing ? 'Syncing...' : 'Sync Provider Revenue'}
+                    </button>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-1">
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Total Clicks</span>
-                  <div className="text-2xl font-black text-cyan-400">{monetization?.summary?.totalClicks ?? monetization?.totalClicks ?? 0}</div>
-                  <div className="text-[11px] text-slate-400">Authoritative click interactions</div>
+
+                {syncMessage && (
+                  <div className="px-3 py-2 bg-slate-800/80 border border-slate-700 rounded-lg text-xs text-slate-200">
+                    {syncMessage}
+                  </div>
+                )}
+
+                {/* Financial Truth & Revenue KPI Matrix */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-4 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Verified Revenue</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                        monetization?.actualRevenueStatus === 'ACTUAL'
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}>
+                        {monetization?.actualRevenueStatus === 'ACTUAL' ? 'ACTUAL' : 'UNAVAILABLE'}
+                      </span>
+                    </div>
+                    <div className="text-2xl font-black text-emerald-400">
+                      {monetization?.actualRevenueStatus === 'ACTUAL' && monetization?.actualRevenueTotal !== null
+                        ? `$${monetization.actualRevenueTotal.toFixed(2)}`
+                        : 'Unavailable'}
+                    </div>
+                    <div className="text-[11px] text-slate-500">Authoritative provider report</div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-4 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Impressions</span>
+                    <div className="text-2xl font-black text-white">{monetization?.summary?.totalImpressions ?? monetization?.totalImpressions ?? 0}</div>
+                    <div className="text-[11px] text-slate-500">First-party delivery events</div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-4 space-y-1">
+                    <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Total Clicks</span>
+                    <div className="text-2xl font-black text-cyan-400">{monetization?.summary?.totalClicks ?? monetization?.totalClicks ?? 0}</div>
+                    <div className="text-[11px] text-slate-400">Authoritative click interactions</div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-4 space-y-1">
+                    <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Provider Fallback Rate</span>
+                    <div className="text-2xl font-black text-purple-400">{monetization?.providerHealth?.fallbackRate ?? 0}%</div>
+                    <div className="text-[11px] text-slate-400">Fail-open execution resilience</div>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-1">
-                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Platform CTR</span>
-                  <div className="text-2xl font-black text-emerald-400">{monetization?.summary?.overallCtr ?? monetization?.overallCtr ?? 0}%</div>
-                  <div className="text-[11px] text-slate-400">Observed click-through rate</div>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-1">
-                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Active Inventory</span>
-                  <div className="text-2xl font-black text-indigo-400">{monetization?.summary?.activePlacementsCount ?? 8} Slots</div>
-                  <div className="text-[11px] text-slate-400">{monetization?.summary?.activeCreativesCount ?? 0} active creatives</div>
+
+                <div className="text-[10px] text-slate-500 italic">
+                  Financial Data Truth Policy: Revenue and eCPM are never fabricated or estimated. Verified revenue is ingested strictly from authoritative external provider reports.
                 </div>
               </div>
+
+              {/* Dimensional Revenue Breakdown (if actual revenue exists) */}
+              {monetization?.actualRevenueStatus === 'ACTUAL' && monetization?.actualRevenueTotal !== null && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Revenue by Placement */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-3">
+                    <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Revenue by Placement</h4>
+                    <div className="space-y-2 font-mono text-xs">
+                      {Object.entries(monetization?.revenueByPlacement || {}).map(([pl, rev]: [string, any]) => (
+                        <div key={pl} className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                          <span className="text-cyan-400">{pl}</span>
+                          <span className="text-emerald-400 font-bold">${rev.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {Object.keys(monetization?.revenueByPlacement || {}).length === 0 && (
+                        <div className="text-slate-500 text-xs italic">No placement breakdown available</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Revenue by Utility */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-3">
+                    <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Revenue by Utility</h4>
+                    <div className="space-y-2 font-mono text-xs">
+                      {Object.entries(monetization?.revenueByUtility || {}).map(([ut, rev]: [string, any]) => (
+                        <div key={ut} className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                          <span className="text-slate-300">/{ut}</span>
+                          <span className="text-emerald-400 font-bold">${rev.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {Object.keys(monetization?.revenueByUtility || {}).length === 0 && (
+                        <div className="text-slate-500 text-xs italic">No utility breakdown available</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Revenue by Device */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md space-y-3">
+                    <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Revenue by Device</h4>
+                    <div className="space-y-2 font-mono text-xs">
+                      {Object.entries(monetization?.revenueByDevice || {}).map(([dev, rev]: [string, any]) => (
+                        <div key={dev} className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                          <span className="text-indigo-400">{dev}</span>
+                          <span className="text-emerald-400 font-bold">${rev.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {Object.keys(monetization?.revenueByDevice || {}).length === 0 && (
+                        <div className="text-slate-500 text-xs italic">No device breakdown available</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Placement Yield Table */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">

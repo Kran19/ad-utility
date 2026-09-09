@@ -61,6 +61,8 @@ async function main() {
     { action: 'users:manage', description: 'Manage admin user accounts' },
     { action: 'roles:manage', description: 'Manage roles and permissions' },
     { action: 'audit:read', description: 'View audit logs' },
+    { action: 'billing:read', description: 'View billing overview and subscriptions' },
+    { action: 'billing:manage', description: 'Manage plans, subscriptions, and billing configuration' },
   ];
 
   const createdPermissions: Record<string, any> = {};
@@ -675,7 +677,78 @@ async function main() {
     });
   }
 
-  console.log('Database seed completed successfully with Phase 5 Ad campaigns and targeting rules.');
+  // 11. Seed Plans
+  const plans = [
+    {
+      code: 'FREE',
+      name: 'Free Plan',
+      description: 'Standard access with advertisements and basic usage limits',
+      active: true,
+      displayOrder: 1,
+      billingInterval: null,
+      priceCents: 0,
+      currency: 'USD',
+      providerPriceId: null,
+      entitlements: {
+        allowedUtilities: ['ALL'],
+        showAds: true,
+        features: ['standard-utilities', 'community-support'],
+      },
+      usageLimits: {
+        dailyAiRequests: 10,
+        dailyConversions: 50,
+      },
+      metadata: {
+        badge: 'Free Tier',
+      },
+    },
+    {
+      code: 'PREMIUM',
+      name: 'Premium Plan',
+      description: 'Ad-free experience, priority utility access, and high usage limits',
+      active: true,
+      displayOrder: 2,
+      billingInterval: 'MONTHLY',
+      priceCents: 999, // $9.99
+      currency: 'USD',
+      providerPriceId: 'price_premium_monthly_mock',
+      entitlements: {
+        allowedUtilities: ['ALL'],
+        showAds: false,
+        features: ['ad-free', 'priority-execution', 'high-limits', 'premium-support'],
+      },
+      usageLimits: {
+        dailyAiRequests: 200,
+        dailyConversions: 1000,
+      },
+      metadata: {
+        badge: 'Most Popular',
+      },
+    },
+  ];
+
+  for (const p of plans) {
+    await prisma.plan.upsert({
+      where: { code: p.code },
+      update: {
+        name: p.name,
+        description: p.description,
+        active: p.active,
+        displayOrder: p.displayOrder,
+        billingInterval: p.billingInterval,
+        priceCents: p.priceCents,
+        currency: p.currency,
+        providerPriceId: p.providerPriceId,
+        entitlements: p.entitlements,
+        usageLimits: p.usageLimits,
+        metadata: p.metadata,
+      },
+      create: p,
+    });
+  }
+  console.log('Plans seeded.');
+
+  console.log('Database seed completed successfully with Phase 26 Billing & Subscriptions.');
 }
 
 main()
