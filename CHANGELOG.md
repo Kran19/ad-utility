@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Completed PDF Compressor Real Size Reduction (Production Multi-Stage Pipeline):
+  - Multi-Stage Optimization Engine: Replaced simplistic structural save with an intelligent 4-stage pipeline: (1) structural metadata pruning (XMP XML, `/PieceInfo`, `/SpiderInfo`), (2) content-aware image classification and stream re-encoding, (3) soft mask (`/SMask`) proportional scaling preserving 100% alpha alignment, and (4) fresh object-stream compacted serialization.
+  - Content Classification: Differentiates continuous-tone photographic imagery from diagrams, text screenshots, and line art. Photographic images are re-encoded with profile-tuned JPEG quality; diagrams and screenshots preserve lossless Flate/PNG compression to prevent ringing artifacts around text.
+  - Three Calibrated Profiles: Added `VISUALLY_LOSSLESS` (default, 2048px, Q=82), `BALANCED` (recommended, 1440px, Q=68), and `EXTREME` (1080px, Q=52, targeting ≤1 MB when achievable).
+  - Stream Integrity & Verification: Directly updates `/Length`, `/Width`, `/Height`, `/Filter`, and reassigns `PDFRawStream` objects. Validates that serialized candidates are reloadable before returning.
+  - Strict Measurement Truth: Output size is always calculated from actual buffer bytes. If candidate is not smaller than input, returns the original valid file reporting `wasActuallyCompressed: false` and `savingsPercent: 0%` ("Already optimized").
+  - Frontend Workspace Enhancements: Updated `PdfWorkspace.tsx` with profile selection cards, transparent "Target: ≤1 MB when achievable" labeling, and detailed byte metrics (Original, Output, Saved bytes and percentage).
+  - Automated Regression Test Suite: Added `apps/backend/test/pdf-compressor-regression.spec.ts` testing 20MB compressible PDF fixtures, multi-page presentation decks, text-only documents, and already-optimized files.
+  - Documentation: Added `docs/PDF_COMPRESSION_VERIFICATION_REPORT.md` and updated `docs/mvp-utilities.md`.
 - Completed Phase 26 (Payments, Subscriptions & Premium Monetization):
   - Shared Billing & Monetization Contracts: Added `PlanDto`, `SubscriptionDto`, `PaymentProviderHealthDto`, `AdminBillingOverviewDto`, `UserBillingOverviewDto`, `PlanEntitlements`, `PlanUsageLimits`, and `CreateCheckoutSessionDto` to `@ad-utility/shared`.
   - Provider Abstraction & Safe Governance: Implemented pluggable `PaymentProvider` interface with deterministic `MockPaymentProvider` (default) and `StripePaymentProvider`. Strict explicit provider selection (`PAYMENT_PROVIDER=mock|stripe`) prevents accidental silent mock fallbacks if Stripe credentials are misconfigured, throwing safe `PaymentProviderConfigException`.

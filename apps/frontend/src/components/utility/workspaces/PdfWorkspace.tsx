@@ -21,7 +21,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const [pageRanges, setPageRanges] = useState<string>('1-3');
   const [pdfToJpgPage, setPdfToJpgPage] = useState<'all' | number>('all');
   const [scale, setScale] = useState<number>(1.5);
-  const [compressionLevel, setCompressionLevel] = useState<'extreme' | 'recommended' | 'low'>('extreme');
+  const [profile, setProfile] = useState<'VISUALLY_LOSSLESS' | 'BALANCED' | 'EXTREME'>('VISUALLY_LOSSLESS');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -31,6 +31,11 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
     sizeBytes: number;
     mimeType?: string;
     savingsPercent?: number;
+    savedBytes?: number;
+    originalSizeBytes?: number;
+    compressedSizeBytes?: number;
+    profile?: string;
+    wasActuallyCompressed?: boolean;
     pageCount?: number;
   } | null>(null);
 
@@ -129,7 +134,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           payload.page = pdfToJpgPage;
           payload.scale = scale;
         } else if (isCompress) {
-          payload.compressionLevel = compressionLevel;
+          payload.profile = profile;
         }
       }
 
@@ -149,8 +154,13 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
         dataUrl: output.dataUrl,
         filename: output.filename || 'processed.pdf',
         sizeBytes: output.sizeBytes || output.compressedSizeBytes || 0,
-        mimeType: output.mimeType,
+        originalSizeBytes: output.originalSizeBytes,
+        compressedSizeBytes: output.compressedSizeBytes,
+        savedBytes: output.savedBytes,
         savingsPercent: output.savingsPercent,
+        profile: output.profile,
+        wasActuallyCompressed: output.wasActuallyCompressed,
+        mimeType: output.mimeType,
         pageCount: output.pageCount || output.totalPageCount,
       });
 
@@ -307,41 +317,41 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           {isCompress && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-gray-300 uppercase">
-                  Compression Level
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  Compression Profile
                 </label>
-                <span className="text-[11px] text-emerald-400 font-medium">Target: KB or ~1MB</span>
+                <span className="text-[11px] text-gray-500">Target: ≤1 MB when achievable</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   {
-                    id: 'extreme',
-                    name: 'Extreme Compression',
-                    desc: 'Shrinks 25MB down to KB / ~1MB (Maximum reduction)',
-                    badge: 'Smallest Size',
+                    id: 'VISUALLY_LOSSLESS',
+                    name: 'Visually Lossless',
+                    desc: 'Highest fidelity • Minimal to zero perceptible difference',
+                    badge: 'Default • Crisp',
                     badgeColor: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60',
                   },
                   {
-                    id: 'recommended',
+                    id: 'BALANCED',
                     name: 'Balanced',
-                    desc: 'High compression with standard screen clarity',
-                    badge: 'Standard',
+                    desc: 'Strong compression • Clear layout & text readability',
+                    badge: 'Recommended',
                     badgeColor: 'bg-blue-950/80 text-blue-400 border-blue-800/60',
                   },
                   {
-                    id: 'low',
-                    name: 'Crisp Quality',
-                    desc: 'Light compression preserving high-DPI detail',
-                    badge: 'High Quality',
+                    id: 'EXTREME',
+                    name: 'Extreme',
+                    desc: 'Maximum practical reduction • Target ≤1 MB when achievable',
+                    badge: 'Smallest Size',
                     badgeColor: 'bg-purple-950/80 text-purple-400 border-purple-800/60',
                   },
                 ].map((lvl) => {
-                  const isSelected = compressionLevel === lvl.id;
+                  const isSelected = profile === lvl.id;
                   return (
                     <button
                       key={lvl.id}
                       type="button"
-                      onClick={() => setCompressionLevel(lvl.id as any)}
+                      onClick={() => setProfile(lvl.id as any)}
                       className={`p-3 rounded-lg border text-left transition-all ${
                         isSelected
                           ? 'bg-blue-600/10 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/30'
@@ -413,24 +423,47 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* Result Box */}
           {resultData && (
-            <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-900/40 border border-emerald-700/60 flex items-center justify-center text-emerald-400">
+                <div className="w-10 h-10 rounded-lg bg-emerald-900/40 border border-emerald-700/60 flex items-center justify-center text-emerald-400 shrink-0">
                   <Check className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">{resultData.filename}</p>
-                  <p className="text-xs text-gray-400">
-                    Output size: {formatBytes(resultData.sizeBytes)}
-                    {typeof resultData.savingsPercent === 'number' && ` • Saved ${resultData.savingsPercent}%`}
-                    {resultData.pageCount && ` • ${resultData.pageCount} pages`}
-                  </p>
+                  {isCompress && resultData.originalSizeBytes ? (
+                    <div className="text-xs text-gray-400 space-y-0.5 mt-0.5">
+                      <p>
+                        Original: <span className="text-gray-300 font-mono">{formatBytes(resultData.originalSizeBytes)}</span>
+                        {' '}&rarr; Output: <span className="text-emerald-400 font-bold font-mono">{formatBytes(resultData.compressedSizeBytes || resultData.sizeBytes)}</span>
+                        {resultData.wasActuallyCompressed && (
+                          <span className="text-emerald-400 ml-1.5 font-semibold">
+                            (Saved {formatBytes(resultData.savedBytes || 0)} • {resultData.savingsPercent}%)
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-gray-500 flex items-center gap-2">
+                        <span>Profile: <strong className="text-gray-400">{resultData.profile || profile}</strong></span>
+                        {resultData.pageCount && <span>• {resultData.pageCount} pages</span>}
+                        {!resultData.wasActuallyCompressed && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800/60 text-amber-400 font-medium">
+                            Already highly optimized
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">
+                      Output size: {formatBytes(resultData.sizeBytes)}
+                      {typeof resultData.savingsPercent === 'number' && ` • Saved ${resultData.savingsPercent}%`}
+                      {resultData.pageCount && ` • ${resultData.pageCount} pages`}
+                    </p>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleDownload}
-                className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2 shrink-0 self-end sm:self-auto"
               >
                 <Download className="w-4 h-4" /> Download
               </button>

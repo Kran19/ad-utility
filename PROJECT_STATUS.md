@@ -41,10 +41,16 @@
 | Phase 25 | Real OpenAI Provider Activation & Production AI | COMPLETED | 2026-09-09 |
 | Enhancement | Admin Control Panel: Utility & Ad Operations Enhancement | COMPLETED | 2026-09-09 |
 | Phase 26 | Payments, Subscriptions & Premium Monetization | COMPLETED | 2026-09-09 |
+| Enhancement | PDF Compressor: Real Size Reduction & Multi-Stage Pipeline | COMPLETED | 2026-09-09 |
 
 ---
 
 ## Active Work
+- **PDF Compressor Real Size Reduction**:
+  - Rebuilt `PdfCompressorAdapter` with multi-stage content classification, structural pruning, soft mask transparency scaling, and stream optimization.
+  - Added calibrated profiles: `VISUALLY_LOSSLESS` (default), `BALANCED`, and `EXTREME` (target ≤ 1MB when achievable).
+  - Enforced strict measurement truth: output size is always calculated from actual buffer bytes; returns original with 0% saved if already optimized.
+  - Added dedicated regression test suite (`apps/backend/test/pdf-compressor-regression.spec.ts`) asserting material byte reduction on real 20MB compressible PDF fixtures.
 - **Phase 26 Payments, Subscriptions & Premium Monetization** fully implemented, tested, and verified:
   - Decoupled Billing Architecture: Dedicated `billing` module and `@Global()` `EntitlementService` ensure core execution and ad selection stay payment-free.
   - Payment Provider Abstraction: `PaymentProvider` interface with deterministic `MockPaymentProvider` (default) and `StripePaymentProvider`.

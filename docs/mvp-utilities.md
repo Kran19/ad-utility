@@ -19,7 +19,7 @@ All utilities adhere strictly to:
 | 1 | JPG to PNG Converter | `jpg-to-png` | `image` | `SERVER` | `jpeg-js`, `pngjs` | Max 15MB, JPEG magic bytes | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
 | 2 | PNG to JPG Converter | `png-to-jpg` | `image` | `SERVER` | `pngjs`, `jpeg-js` | Max 15MB, PNG magic bytes, quality (1-100) | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
 | 3 | Image Compressor | `image-compressor` | `image` | `SERVER` | `jpeg-js`, `pngjs` | Max 15MB, JPEG/PNG | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
-| 4 | PDF Compressor | `pdf-compressor` | `pdf` | `SERVER` | `pdf-lib` (stream compression) | Max 25MB, PDF header | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
+| 4 | PDF Compressor | `pdf-compressor` | `pdf` | `SERVER` | `pdf-lib`, `@napi-rs/canvas`, `zlib` (multi-stage content optimizer) | Max 25MB, PDF header, profile (`VISUALLY_LOSSLESS`, `BALANCED`, `EXTREME`) | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
 | 5 | PDF Merge | `pdf-merge` | `pdf` | `SERVER` | `pdf-lib` (in-memory multi-doc) | 2–10 files, Max 50MB combined | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
 | 6 | PDF Split | `pdf-split` | `pdf` | `SERVER` | `pdf-lib`, `jszip` | Max 25MB, range parser (`1-3,5,8-10`) | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
 | 7 | PDF to JPG Converter | `pdf-to-jpg` | `pdf` | `SERVER` | `pdfjs-dist`, `@napi-rs/canvas`, `jszip` | Max 20MB, up to 20 pages | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR` |
@@ -28,6 +28,19 @@ All utilities adhere strictly to:
 | 10 | AI Humanizer | `ai-humanizer` | `ai` | `AI` | `AiGatewayService` | Max 50,000 chars, tone selection | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR`, `AI_REQUEST` |
 | 11 | AI Paraphraser | `ai-paraphraser` | `ai` | `AI` | `AiGatewayService` | Max 50,000 chars, style selection | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR`, `AI_REQUEST` |
 | 12 | AI Grammar Checker | `ai-grammar-checker` | `ai` | `AI` | `AiGatewayService` | Max 50,000 chars, structured JSON | `TOOL_START`, `TOOL_COMPLETE`, `TOOL_ERROR`, `AI_REQUEST` |
+
+---
+
+### PDF Compression Architecture & Quality Controls
+The PDF Compressor utilizes a multi-stage optimization pipeline:
+1. **Catalog & Structure Cleanup**: Prunes bloated unreferenced `/Metadata` XMP XML streams and editor history (`/PieceInfo`) while preserving all visible pages, forms, and outlines.
+2. **Content Classification**: Images are categorized prior to compression. Continuous-tone photographic images receive profile-tuned JPEG re-encoding. Line art, diagrams, and text screenshots preserve lossless Flate/PNG compression to prevent ringing artifacts around text.
+3. **Soft Mask Preservation**: Attached `/SMask` transparency channels are proportionally scaled alongside primary images, ensuring 100% alpha alignment.
+4. **Compression Profiles**:
+   - `VISUALLY_LOSSLESS` (Default): 2048px max dimension, Q=82 JPEG, lossless graphics.
+   - `BALANCED` (Recommended): 1440px max dimension, Q=68 JPEG.
+   - `EXTREME`: 1080px max dimension, Q=52 JPEG, targeting ≤1 MB when achievable.
+5. **Real Byte Measurement & Safety Fallback**: Output is validated and measured directly from buffer bytes. If a candidate is not smaller than the input, the engine returns the smaller valid representation reporting `wasActuallyCompressed = false` and `savingsPercent = 0%`. Arbitrary PDFs cannot mathematically be guaranteed to reach 1MB; actual sizes are always measured and reported.
 
 ---
 

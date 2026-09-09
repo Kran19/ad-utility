@@ -76,6 +76,7 @@ export interface ImageCompressorOutput {
 // 2. PDF UTILITIES
 // ==========================================
 
+export type PdfCompressionProfile = 'VISUALLY_LOSSLESS' | 'BALANCED' | 'EXTREME';
 export type PdfCompressionLevel = 'extreme' | 'recommended' | 'low';
 
 export interface PdfCompressorInput {
@@ -83,7 +84,9 @@ export interface PdfCompressorInput {
   fileData: string;
   /** Original filename */
   filename?: string;
-  /** Compression level: 'extreme' (target KB/1MB), 'recommended' (balanced), 'low' (high quality) */
+  /** Compression profile: VISUALLY_LOSSLESS (default, crisp), BALANCED (recommended), EXTREME (max practical reduction) */
+  profile?: PdfCompressionProfile;
+  /** Backwards compatibility alias for profile */
   compressionLevel?: PdfCompressionLevel;
 }
 
@@ -96,8 +99,16 @@ export interface PdfCompressorOutput {
   originalSizeBytes: number;
   /** Compressed byte size */
   compressedSizeBytes: number;
-  /** Percentage saved */
+  /** Absolute bytes saved */
+  savedBytes: number;
+  /** Percentage saved (0-100) */
   savingsPercent: number;
+  /** Compression ratio (original / compressed) */
+  compressionRatio: number;
+  /** Applied compression profile */
+  profile: PdfCompressionProfile;
+  /** True if output is materially smaller than input */
+  wasActuallyCompressed: boolean;
   /** Total page count */
   pageCount: number;
 }
