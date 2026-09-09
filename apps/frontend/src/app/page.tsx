@@ -30,12 +30,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = 'force-dynamic';
+
 async function fetchCategoriesWithUtilities(): Promise<CategoryPublicDto[]> {
   const apiUrl = getInternalApiUrl();
 
   try {
     const res = await fetch(`${apiUrl}/utilities/categories`, {
-      next: { revalidate: 3600 },
+      cache: 'no-store',
     });
     if (!res.ok) return [];
     const envelope: ApiEnvelope<CategoryPublicDto[]> = await res.json();

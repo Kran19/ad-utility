@@ -16,12 +16,14 @@ interface PageProps {
   };
 }
 
+export const dynamic = 'force-dynamic';
+
 async function fetchUtilityMetadata(slug: string): Promise<UtilityPublicDto | null> {
   const apiUrl = getInternalApiUrl();
 
   try {
     const res = await fetch(`${apiUrl}/utilities/${slug}`, {
-      next: { revalidate: 3600 },
+      cache: 'no-store',
     });
 
     if (!res.ok) {
