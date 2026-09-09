@@ -84,7 +84,7 @@ export interface PdfCompressorInput {
   fileData: string;
   /** Original filename */
   filename?: string;
-  /** Compression profile: VISUALLY_LOSSLESS (default, crisp), BALANCED (recommended), EXTREME (max practical reduction) */
+  /** Compression profile: EXTREME (default, target ≤1MB), BALANCED (recommended), VISUALLY_LOSSLESS (high fidelity) */
   profile?: PdfCompressionProfile;
   /** Backwards compatibility alias for profile */
   compressionLevel?: PdfCompressionLevel;

@@ -22,41 +22,44 @@ interface ImageClassification {
   hasAlpha: boolean;
 }
 
-interface ProfileSettings {
+interface ProfileCandidateSettings {
   maxDimension: number;
   jpegQuality: number;
-  downsamplePhotographicOnly: boolean;
-  allowLossyDiagrams: boolean;
+  forceJpeg: boolean;
 }
 
-const PROFILE_CONFIGS: Record<PdfCompressionProfile, ProfileSettings> = {
-  VISUALLY_LOSSLESS: {
-    maxDimension: 2048,
-    jpegQuality: 82,
-    downsamplePhotographicOnly: true,
-    allowLossyDiagrams: false,
-  },
-  BALANCED: {
-    maxDimension: 1440,
-    jpegQuality: 68,
-    downsamplePhotographicOnly: true,
-    allowLossyDiagrams: false,
-  },
-  EXTREME: {
-    maxDimension: 1080,
-    jpegQuality: 52,
-    downsamplePhotographicOnly: false,
-    allowLossyDiagrams: false, // Diagrams/text screenshots still preserved against JPEG ringing
-  },
-};
+const TARGET_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB (1,048,576 bytes)
+
+// Adaptive search ladder for EXTREME profile targeting <= 1 MB
+const EXTREME_SEARCH_LADDER: ProfileCandidateSettings[] = [
+  { maxDimension: 1600, jpegQuality: 65, forceJpeg: true },
+  { maxDimension: 1440, jpegQuality: 58, forceJpeg: true },
+  { maxDimension: 1280, jpegQuality: 52, forceJpeg: true },
+  { maxDimension: 1120, jpegQuality: 46, forceJpeg: true },
+  { maxDimension: 1024, jpegQuality: 40, forceJpeg: true },
+  { maxDimension: 900, jpegQuality: 35, forceJpeg: true },
+  { maxDimension: 800, jpegQuality: 32, forceJpeg: true },
+];
+
+// Search ladder for BALANCED profile
+const BALANCED_SEARCH_LADDER: ProfileCandidateSettings[] = [
+  { maxDimension: 1600, jpegQuality: 75, forceJpeg: false },
+  { maxDimension: 1440, jpegQuality: 68, forceJpeg: false },
+  { maxDimension: 1280, jpegQuality: 60, forceJpeg: false },
+];
+
+// Single pass for VISUALLY_LOSSLESS profile (high fidelity)
+const LOSSLESS_SEARCH_LADDER: ProfileCandidateSettings[] = [
+  { maxDimension: 2048, jpegQuality: 82, forceJpeg: false },
+];
 
 export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, PdfCompressorOutput> {
   private readonly logger = new Logger(PdfCompressorAdapter.name);
 
   readonly slug = 'pdf-compressor';
   readonly name = 'PDF Compressor';
-  readonly description = 'Multi-stage PDF optimizer with content classification and adaptive stream compression';
-  readonly version = '2.0.0';
+  readonly description = 'Adaptive multi-stage PDF optimizer targeting ≤1MB with real byte measurement';
+  readonly version = '2.1.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
     maxFileSizeBytes: 25 * 1024 * 1024, // 25MB
@@ -73,8 +76,8 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
       throw new Error('Property "fileData" is required (base64 or data URL)');
     }
 
-    // Resolve profile (support both modern profile and legacy compressionLevel)
-    let validProfile: PdfCompressionProfile = 'VISUALLY_LOSSLESS';
+    // Default to EXTREME (target <= 1MB) as requested by product requirement
+    let validProfile: PdfCompressionProfile = 'EXTREME';
     const candidateProfile = (profile || '').toUpperCase();
     if (
       candidateProfile === 'VISUALLY_LOSSLESS' ||
@@ -108,63 +111,101 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
 
     validatePdfMagicBytes(buffer);
 
-    const profile = input.profile || 'VISUALLY_LOSSLESS';
-    const settings = PROFILE_CONFIGS[profile] || PROFILE_CONFIGS.VISUALLY_LOSSLESS;
+    const profile = input.profile || 'EXTREME';
+    const ladder =
+      profile === 'EXTREME'
+        ? EXTREME_SEARCH_LADDER
+        : profile === 'BALANCED'
+          ? BALANCED_SEARCH_LADDER
+          : LOSSLESS_SEARCH_LADDER;
 
-    // Load source document
-    let doc: PDFDocument;
+    // Load initial source document to verify structure and page count
+    let initialDoc: PDFDocument;
     try {
-      doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+      initialDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
     } catch (err: any) {
       throw new Error(`Failed to parse PDF document: ${err.message}`);
     }
 
-    const pageCount = doc.getPageCount();
+    const pageCount = initialDoc.getPageCount();
     if (pageCount === 0) {
       throw new Error('PDF contains zero pages');
     }
 
-    // Stage 1: Structural catalog optimization
-    this.cleanStructuralMetadata(doc);
+    this.logger.log(
+      `[PDF COMPRESSOR] INPUT: ${originalSize} bytes (${(originalSize / (1024 * 1024)).toFixed(2)} MB), Pages: ${pageCount}, Profile: ${profile}, Target: ${profile === 'EXTREME' ? '<= 1 MB' : 'calibrated reduction'}`,
+    );
 
-    // Stage 2: Intelligent content-aware image optimization
-    const imageStats = await this.optimizeImageStreams(doc, settings);
+    let bestCandidate: Buffer | null = null;
+    let bestCandidateSize = originalSize;
+    let bestPass = 0;
 
-    // Stage 3: Fresh serialization with cross-reference object stream compaction
-    let candidateBytes: Buffer;
-    try {
-      const serializedUint8 = await doc.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-      });
-      candidateBytes = Buffer.from(serializedUint8);
-    } catch (saveErr: any) {
-      this.logger.warn(`Initial serialization failed: ${saveErr.message}; falling back to original`);
-      candidateBytes = buffer;
-    }
+    // Multi-pass candidate search
+    for (let passIdx = 0; passIdx < ladder.length; passIdx++) {
+      const candidateSettings = ladder[passIdx];
+      const isFirstPass = passIdx === 0;
 
-    // Stage 4: Candidate measurement and validation
-    let finalBuffer = buffer;
-    let wasActuallyCompressed = false;
-    let finalSize = originalSize;
-
-    // Verify candidate is well-formed and materially smaller
-    if (candidateBytes.length < originalSize) {
+      // Load fresh document for this candidate pass
+      let passDoc: PDFDocument;
       try {
-        // Validate candidate can be parsed cleanly
-        const verificationDoc = await PDFDocument.load(candidateBytes, { ignoreEncryption: true });
-        if (verificationDoc.getPageCount() === pageCount) {
-          finalBuffer = candidateBytes;
-          finalSize = candidateBytes.length;
-          wasActuallyCompressed = true;
+        passDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+      } catch (err: any) {
+        this.logger.warn(`Pass ${passIdx + 1} load failed: ${err.message}`);
+        continue;
+      }
+
+      // Stage 1: Structural catalog pruning
+      this.cleanStructuralMetadata(passDoc);
+
+      // Stage 2: Content-aware image stream optimization
+      const imageStats = await this.optimizeImageStreams(
+        passDoc,
+        candidateSettings,
+        isFirstPass,
+      );
+
+      // Stage 3: Fresh serialization with cross-reference object stream compaction
+      let candidateBuffer: Buffer;
+      try {
+        const serialized = await passDoc.save({ useObjectStreams: true, addDefaultPage: false });
+        candidateBuffer = Buffer.from(serialized);
+      } catch (saveErr: any) {
+        this.logger.warn(`Candidate pass ${passIdx + 1} serialization failed: ${saveErr.message}`);
+        continue;
+      }
+
+      const candidateSize = candidateBuffer.length;
+      this.logger.log(
+        `Pass ${passIdx + 1}/${ladder.length} [maxDim=${candidateSettings.maxDimension}, Q=${candidateSettings.jpegQuality}]: Output=${candidateSize} bytes (${(candidateSize / (1024 * 1024)).toFixed(2)} MB), Images=${imageStats.total}, Optimized=${imageStats.optimized}`,
+      );
+
+      // Verify candidate reloads cleanly and preserves page count
+      try {
+        const verifyDoc = await PDFDocument.load(candidateBuffer, { ignoreEncryption: true });
+        if (verifyDoc.getPageCount() === pageCount) {
+          if (candidateSize < bestCandidateSize) {
+            bestCandidate = candidateBuffer;
+            bestCandidateSize = candidateSize;
+            bestPass = passIdx + 1;
+          }
+
+          // In EXTREME mode, if candidate achieved <= 1 MB target, stop search immediately
+          if (profile === 'EXTREME' && candidateSize <= TARGET_SIZE_BYTES) {
+            this.logger.log(
+              `Target <= 1MB achieved at pass ${passIdx + 1}: ${candidateSize} bytes (${(candidateSize / 1024).toFixed(1)} KB)`,
+            );
+            break;
+          }
         }
       } catch (verifyErr: any) {
-        this.logger.warn(`Candidate PDF verification failed: ${verifyErr.message}; preserving original`);
-        finalBuffer = buffer;
-        finalSize = originalSize;
-        wasActuallyCompressed = false;
+        this.logger.warn(`Pass ${passIdx + 1} candidate verification failed: ${verifyErr.message}`);
       }
     }
+
+    // Safety fallback: Never return an output that is not smaller than original
+    const finalBuffer = bestCandidate && bestCandidateSize < originalSize ? bestCandidate : buffer;
+    const finalSize = finalBuffer.length;
+    const wasActuallyCompressed = finalSize < originalSize;
 
     const savedBytes = Math.max(0, originalSize - finalSize);
     const savingsPercent =
@@ -175,7 +216,7 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
       finalSize > 0 ? Math.round((originalSize / finalSize) * 100) / 100 : 1.0;
 
     this.logger.log(
-      `utility=pdf-compressor profile=${profile} inputBytes=${originalSize} outputBytes=${finalSize} savedBytes=${savedBytes} savingsPercent=${savingsPercent}% ratio=${compressionRatio} images=${imageStats.total} optimized=${imageStats.optimized}`,
+      `[PDF COMPRESSOR] RESULT: Profile=${profile} Input=${originalSize} bytes -> Output=${finalSize} bytes (${(finalSize / (1024 * 1024)).toFixed(2)} MB), Saved=${savedBytes} bytes (${savingsPercent}%), BestPass=${bestPass}/${ladder.length}`,
     );
 
     const outFilename = input.filename?.endsWith('.pdf')
@@ -206,7 +247,7 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
       catalog.delete(PDFName.of('PieceInfo'));
       catalog.delete(PDFName.of('SpiderInfo'));
     } catch {
-      // Non-critical: continue if catalog editing fails
+      // Non-critical
     }
   }
 
@@ -215,7 +256,8 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
    */
   private async optimizeImageStreams(
     doc: PDFDocument,
-    settings: ProfileSettings,
+    settings: ProfileCandidateSettings,
+    isDiagnosticPass: boolean,
   ): Promise<{ total: number; optimized: number }> {
     let totalImages = 0;
     let optimizedImages = 0;
@@ -226,27 +268,31 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
         if (!obj || !(obj as any).dict) continue;
 
         const dict = (obj as any).dict;
-        const subtype = dict.get(PDFName.of('Subtype'))?.toString();
+        const subtypeObj = doc.context.lookup(dict.get(PDFName.of('Subtype')));
+        const subtype = subtypeObj ? subtypeObj.toString() : '';
         if (subtype !== '/Image') continue;
 
         totalImages++;
 
         try {
-          const filter = dict.get(PDFName.of('Filter'))?.toString();
+          const filterObj = doc.context.lookup(dict.get(PDFName.of('Filter')));
+          const filterStr = filterObj ? filterObj.toString() : '';
           const rawContents = Buffer.from((obj as any).getContents());
 
-          // Unpack raw payload
           let decompressedBuffer: Buffer | null = null;
           let isDirectJpeg = false;
 
-          if (filter === '/DCTDecode') {
-            if (rawContents.length >= 2 && rawContents[0] === 0xff && rawContents[1] === 0xd8) {
-              decompressedBuffer = rawContents;
-              isDirectJpeg = true;
-            }
-          } else if (filter === '/FlateDecode' || !filter) {
+          // Check format signatures
+          if (rawContents.length >= 2 && rawContents[0] === 0xff && rawContents[1] === 0xd8) {
+            decompressedBuffer = rawContents;
+            isDirectJpeg = true;
+          } else if (rawContents.length >= 8 && rawContents[0] === 0x89 && rawContents[1] === 0x50) {
+            decompressedBuffer = rawContents;
+          } else if (filterStr.includes('FlateDecode') || !filterObj) {
             try {
-              decompressedBuffer = filter === '/FlateDecode' ? zlib.inflateSync(rawContents) : rawContents;
+              decompressedBuffer = filterStr.includes('FlateDecode')
+                ? zlib.inflateSync(rawContents)
+                : rawContents;
             } catch {
               try {
                 decompressedBuffer = zlib.unzipSync(rawContents);
@@ -258,24 +304,68 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
 
           if (!decompressedBuffer || decompressedBuffer.length === 0) continue;
 
-          // Decompression bomb safety: abort decode if dimensions exceed 40 megapixels
-          const declaredW = dict.get(PDFName.of('Width'))?.numberValue;
-          const declaredH = dict.get(PDFName.of('Height'))?.numberValue;
-          if (declaredW && declaredH && declaredW * declaredH > 40_000_000) {
-            continue;
+          let loadedImg: Image | null = null;
+
+          // Decode if container format (JPEG SOI or PNG magic)
+          if (
+            (decompressedBuffer.length >= 2 && decompressedBuffer[0] === 0xff && decompressedBuffer[1] === 0xd8) ||
+            (decompressedBuffer.length >= 8 && decompressedBuffer[0] === 0x89 && decompressedBuffer[1] === 0x50)
+          ) {
+            try {
+              loadedImg = await loadImage(decompressedBuffer);
+            } catch {
+              loadedImg = null;
+            }
           }
 
-          // Check if buffer contains image container or raw bitmap
-          let loadedImg: Image | null = null;
-          try {
-            if (
-              (decompressedBuffer.length >= 2 && decompressedBuffer[0] === 0xff && decompressedBuffer[1] === 0xd8) ||
-              (decompressedBuffer.length >= 8 && decompressedBuffer[0] === 0x89 && decompressedBuffer[1] === 0x50)
-            ) {
-              loadedImg = await loadImage(decompressedBuffer);
+          // If raw bitmap without container header, decode via dimensions and ColorSpace
+          if (!loadedImg) {
+            const wObj = doc.context.lookup(dict.get(PDFName.of('Width')));
+            const hObj = doc.context.lookup(dict.get(PDFName.of('Height')));
+            const w = (wObj as any)?.asNumber ? (wObj as any).asNumber() : Number(wObj?.toString());
+            const h = (hObj as any)?.asNumber ? (hObj as any).asNumber() : Number(hObj?.toString());
+
+            if (w > 0 && h > 0 && w * h <= 40_000_000) {
+              const csObj = doc.context.lookup(dict.get(PDFName.of('ColorSpace')));
+              const csStr = csObj ? csObj.toString() : '';
+
+              if (csStr.includes('DeviceRGB') && decompressedBuffer.length >= w * h * 3) {
+                const rawCanvas = createCanvas(w, h);
+                const rawCtx = rawCanvas.getContext('2d');
+                const imgData = rawCtx.createImageData(w, h);
+                let src = 0;
+                let dst = 0;
+                for (let p = 0; p < w * h; p++) {
+                  imgData.data[dst] = decompressedBuffer[src];
+                  imgData.data[dst + 1] = decompressedBuffer[src + 1];
+                  imgData.data[dst + 2] = decompressedBuffer[src + 2];
+                  imgData.data[dst + 3] = 255;
+                  src += 3;
+                  dst += 4;
+                }
+                rawCtx.putImageData(imgData, 0, 0);
+                const pngTmp = await rawCanvas.encode('png');
+                loadedImg = await loadImage(pngTmp);
+              } else if (csStr.includes('DeviceGray') && decompressedBuffer.length >= w * h) {
+                const rawCanvas = createCanvas(w, h);
+                const rawCtx = rawCanvas.getContext('2d');
+                const imgData = rawCtx.createImageData(w, h);
+                let src = 0;
+                let dst = 0;
+                for (let p = 0; p < w * h; p++) {
+                  const g = decompressedBuffer[src];
+                  imgData.data[dst] = g;
+                  imgData.data[dst + 1] = g;
+                  imgData.data[dst + 2] = g;
+                  imgData.data[dst + 3] = 255;
+                  src += 1;
+                  dst += 4;
+                }
+                rawCtx.putImageData(imgData, 0, 0);
+                const pngTmp = await rawCanvas.encode('png');
+                loadedImg = await loadImage(pngTmp);
+              }
             }
-          } catch {
-            loadedImg = null;
           }
 
           if (!loadedImg) continue;
@@ -284,52 +374,52 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
           const imgH = loadedImg.height;
           if (imgW <= 0 || imgH <= 0) continue;
 
-          // Classify image content: photographic vs line-art / diagram / text screenshot
           const classification = this.classifyImage(loadedImg);
 
-          // Calculate target dimensions
           let targetW = imgW;
           let targetH = imgH;
           const maxDim = settings.maxDimension;
 
           if (imgW > maxDim || imgH > maxDim) {
-            // If downsamplePhotographicOnly is true and image is line art/text, skip downsampling to keep text crisp
-            if (!settings.downsamplePhotographicOnly || classification.isPhotographic) {
-              const ratio = Math.min(maxDim / imgW, maxDim / imgH);
-              targetW = Math.max(1, Math.round(imgW * ratio));
-              targetH = Math.max(1, Math.round(imgH * ratio));
-            }
+            const ratio = Math.min(maxDim / imgW, maxDim / imgH);
+            targetW = Math.max(1, Math.round(imgW * ratio));
+            targetH = Math.max(1, Math.round(imgH * ratio));
           }
 
-          // Prepare canvas
           const canvas = createCanvas(targetW, targetH);
           const ctx = canvas.getContext('2d');
           ctx.drawImage(loadedImg, 0, 0, targetW, targetH);
 
-          // Choose encoding strategy based on classification and profile
           let compressedBytes: Buffer;
           let newFilter = 'DCTDecode';
 
-          if (classification.isPhotographic || isDirectJpeg) {
-            // Photographic: JPEG encoding at profile-calibrated quality
+          // Force JPEG in Extreme mode or when continuous-tone photographic
+          if (settings.forceJpeg || classification.isPhotographic || isDirectJpeg) {
             compressedBytes = await canvas.encode('jpeg', settings.jpegQuality);
             newFilter = 'DCTDecode';
           } else {
-            // Diagrams / Line Art / Text screenshots: Flate/PNG encoding to prevent text ringing
             const pngBytes = await canvas.encode('png');
             compressedBytes = zlib.deflateSync(pngBytes, { level: 9 });
             newFilter = 'FlateDecode';
           }
 
-          // Replace only if candidate stream is genuinely smaller than the original stream
+          if (isDiagnosticPass) {
+            this.logger.log(
+              `[Image #${totalImages}] Original=${rawContents.length} B (${(rawContents.length / 1024).toFixed(1)} KB), Format=${filterStr || 'raw'}, Decoded=${imgW}x${imgH} -> Target=${targetW}x${targetH}, Compressed=${compressedBytes.length} B (${(compressedBytes.length / 1024).toFixed(1)} KB)`,
+            );
+          }
+
+          // Replace stream if candidate is smaller than original stream
           if (compressedBytes.length < rawContents.length) {
             dict.set(PDFName.of('Width'), PDFNumber.of(targetW));
             dict.set(PDFName.of('Height'), PDFNumber.of(targetH));
             dict.set(PDFName.of('Length'), PDFNumber.of(compressedBytes.length));
             dict.set(PDFName.of('Filter'), PDFName.of(newFilter));
+            dict.set(PDFName.of('ColorSpace'), PDFName.of('DeviceRGB'));
+            dict.set(PDFName.of('BitsPerComponent'), PDFNumber.of(8));
             dict.delete(PDFName.of('DecodeParms'));
 
-            // Handle transparency soft mask (/SMask) scaling if present
+            // Soft mask (/SMask) scaling for transparency preservation
             const smaskRef = dict.get(PDFName.of('SMask'));
             if (smaskRef instanceof PDFRef && (targetW !== imgW || targetH !== imgH)) {
               await this.scaleSMask(doc, smaskRef, targetW, targetH);
@@ -340,11 +430,11 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
             optimizedImages++;
           }
         } catch {
-          // Safeguard: individual stream decoding failure must never crash document pipeline
+          // Non-critical: skip individual stream on decode anomaly
         }
       }
     } catch {
-      // Safeguard: continue if enumeration encountered anomalies
+      // Non-critical: continue if traversal encounters anomalies
     }
 
     return { total: totalImages, optimized: optimizedImages };
@@ -365,10 +455,11 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
 
       const smaskDict = (smaskObj as any).dict;
       const rawContents = Buffer.from((smaskObj as any).getContents());
-      const filter = smaskDict.get(PDFName.of('Filter'))?.toString();
+      const filterObj = doc.context.lookup(smaskDict.get(PDFName.of('Filter')));
+      const filterStr = filterObj ? filterObj.toString() : '';
 
       let decompressed: Buffer | null = null;
-      if (filter === '/FlateDecode') {
+      if (filterStr.includes('FlateDecode')) {
         try {
           decompressed = zlib.inflateSync(rawContents);
         } catch {
@@ -421,7 +512,7 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
 
       let hasAlpha = false;
       const uniqueColors = new Set<number>();
-      const sampleStep = Math.max(1, Math.floor(data.length / (4 * 500))); // Sample up to 500 pixels
+      const sampleStep = Math.max(1, Math.floor(data.length / (4 * 500)));
 
       for (let i = 0; i < data.length; i += sampleStep * 4) {
         const a = data[i + 3];
@@ -432,7 +523,6 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
         uniqueColors.add(rgbKey);
       }
 
-      // If sampled distinct colors > 100, treat as continuous-tone photographic
       const isPhotographic = uniqueColors.size > 100;
       return { isPhotographic, hasAlpha };
     } catch {
@@ -440,4 +530,3 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
     }
   }
 }
-

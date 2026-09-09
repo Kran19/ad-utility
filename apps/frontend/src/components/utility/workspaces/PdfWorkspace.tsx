@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UtilityPublicDto } from '@ad-utility/shared';
 import { FileText, Upload, Download, RefreshCw, AlertCircle, Trash2, Plus, Check } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
@@ -21,7 +21,25 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const [pageRanges, setPageRanges] = useState<string>('1-3');
   const [pdfToJpgPage, setPdfToJpgPage] = useState<'all' | number>('all');
   const [scale, setScale] = useState<number>(1.5);
-  const [profile, setProfile] = useState<'VISUALLY_LOSSLESS' | 'BALANCED' | 'EXTREME'>('VISUALLY_LOSSLESS');
+  const [profile, setProfile] = useState<'EXTREME' | 'BALANCED' | 'VISUALLY_LOSSLESS'>('EXTREME');
+  const [compressStep, setCompressStep] = useState<string>('Analyzing PDF...');
+
+  useEffect(() => {
+    if (!isLoading || !isCompress) return;
+    const steps = [
+      'Analyzing PDF structure & embedded XObjects...',
+      'Optimizing raster streams & slide artwork...',
+      'Evaluating adaptive compression passes (Target: ≤1 MB)...',
+      'Measuring bytes & verifying smallest valid PDF...',
+    ];
+    let idx = 0;
+    setCompressStep(steps[0]);
+    const timer = setInterval(() => {
+      idx = (idx + 1) % steps.length;
+      setCompressStep(steps[idx]);
+    }, 1800);
+    return () => clearInterval(timer);
+  }, [isLoading, isCompress]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -325,24 +343,24 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   {
-                    id: 'VISUALLY_LOSSLESS',
-                    name: 'Visually Lossless',
-                    desc: 'Highest fidelity • Minimal to zero perceptible difference',
-                    badge: 'Default • Crisp',
+                    id: 'EXTREME',
+                    name: 'Extreme',
+                    desc: 'Aggressively optimizes raster content • Target: ≤1 MB when achievable',
+                    badge: 'Default • Smallest Size',
                     badgeColor: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60',
                   },
                   {
                     id: 'BALANCED',
                     name: 'Balanced',
-                    desc: 'Strong compression • Clear layout & text readability',
+                    desc: 'Strong compression with clear layout & text readability',
                     badge: 'Recommended',
                     badgeColor: 'bg-blue-950/80 text-blue-400 border-blue-800/60',
                   },
                   {
-                    id: 'EXTREME',
-                    name: 'Extreme',
-                    desc: 'Maximum practical reduction • Target ≤1 MB when achievable',
-                    badge: 'Smallest Size',
+                    id: 'VISUALLY_LOSSLESS',
+                    name: 'Visually Lossless',
+                    desc: 'Highest quality • Prioritizes visual fidelity over size',
+                    badge: 'High Fidelity',
                     badgeColor: 'bg-purple-950/80 text-purple-400 border-purple-800/60',
                   },
                 ].map((lvl) => {
@@ -480,7 +498,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             >
               {isLoading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Processing PDF...
+                  <RefreshCw className="w-4 h-4 animate-spin" /> {isCompress ? compressStep : 'Processing PDF...'}
                 </>
               ) : (
                 <>Run {utility.name}</>
