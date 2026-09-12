@@ -112,9 +112,14 @@ export class PdfToTextAdapter implements UtilityAdapter<PdfToTextInput, PdfToTex
     const baseName = input.filename ? input.filename.replace(/\.[^/.]+$/, '') : 'document';
     const outFilename = `${baseName}_extracted.txt`;
 
+    const textBuffer = Buffer.from(fullText, 'utf-8');
+    const dataUrl = `data:text/plain;charset=utf-8;base64,${textBuffer.toString('base64')}`;
+
     return {
       text: fullText,
+      dataUrl,
       filename: outFilename,
+      sizeBytes: textBuffer.length,
       pageCount: totalPages,
       charCount: totalChars,
       wordCount: words.length,

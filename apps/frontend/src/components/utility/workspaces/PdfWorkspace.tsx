@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UtilityPublicDto } from '@ad-utility/shared';
-import { FileText, Upload, Download, RefreshCw, AlertCircle, Trash2, Plus, Check } from 'lucide-react';
+import { FileText, Upload, Download, RefreshCw, AlertCircle, Trash2, Plus, Check, Copy } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
 
@@ -11,7 +11,7 @@ interface PdfWorkspaceProps {
 }
 
 export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
-  // Single file state (for compressor, split, pdf-to-jpg)
+  // Single file state (for compressor, split, pdf-to-jpg, etc.)
   const [singleFile, setSingleFile] = useState<{ file: File; base64: string } | null>(null);
 
   // Multi file state (for merge)
@@ -21,14 +21,26 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const isMerge = utility.slug === 'pdf-merge';
   const isSplit = utility.slug === 'pdf-split';
   const isPdfToJpg = utility.slug === 'pdf-to-jpg';
+  const isPdfToPng = utility.slug === 'pdf-to-png';
+  const isPdfToText = utility.slug === 'pdf-to-text';
   const isCompress = utility.slug === 'pdf-compressor';
+  const isPageExtractor = utility.slug === 'pdf-page-extractor';
+  const isRotator = utility.slug === 'pdf-rotator';
+  const isWatermark = utility.slug === 'pdf-watermark';
+  const isReorder = utility.slug === 'pdf-reorder-pages';
+  const isMetadataRemover = utility.slug === 'pdf-metadata-remover';
 
   // Configuration state
   const [pageRanges, setPageRanges] = useState<string>('1-3');
   const [pdfToJpgPage, setPdfToJpgPage] = useState<'all' | number>('all');
   const [scale, setScale] = useState<number>(1.5);
   const [profile, setProfile] = useState<'EXTREME' | 'BALANCED' | 'VISUALLY_LOSSLESS'>('EXTREME');
+  const [rotateAngle, setRotateAngle] = useState<90 | 180 | 270>(90);
+  const [watermarkText, setWatermarkText] = useState<string>('CONFIDENTIAL');
+  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.3);
+  const [pageOrder, setPageOrder] = useState<string>('1, 2');
   const [compressStep, setCompressStep] = useState<string>('Analyzing PDF...');
+  const [copiedText, setCopiedText] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -44,6 +56,13 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
     profile?: string;
     wasActuallyCompressed?: boolean;
     pageCount?: number;
+    text?: string;
+    charCount?: number;
+    wordCount?: number;
+    hasSelectableText?: boolean;
+    extractedPages?: number[];
+    rotatedAngle?: number;
+    removedFields?: string[];
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +101,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
     if (!filesList || filesList.length === 0) return;
     setErrorMsg(null);
     setResultData(null);
+    setCopiedText(false);
 
     const pdfFiles = Array.from(filesList).filter((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
 
@@ -123,6 +143,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const handleExecute = async () => {
     setErrorMsg(null);
     setResultData(null);
+    setCopiedText(false);
     setIsLoading(true);
 
     const startTime = performance.now();
@@ -151,13 +172,29 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           filename: singleFile.file.name,
         };
 
-        if (isSplit) {
+        if (isSplit || isPageExtractor) {
           payload.pageRanges = pageRanges;
         } else if (isPdfToJpg) {
           payload.page = pdfToJpgPage;
           payload.scale = scale;
+        } else if (isPdfToPng) {
+          payload.scale = scale;
         } else if (isCompress) {
           payload.profile = profile;
+        } else if (isRotator) {
+          payload.angle = rotateAngle;
+        } else if (isWatermark) {
+          payload.watermarkText = watermarkText;
+          payload.opacity = watermarkOpacity;
+        } else if (isReorder) {
+          const order = pageOrder
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n) && n > 0);
+          if (order.length === 0) {
+            throw new Error('Please provide valid comma-separated page numbers.');
+          }
+          payload.pageOrder = order;
         }
       }
 
@@ -173,10 +210,28 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
       }
 
       const output = json.data.result;
+
+      // Handle dataUrl fallback for text extractor if needed
+      let dataUrl = output.dataUrl || '';
+      let sizeBytes = output.sizeBytes || output.compressedSizeBytes || 0;
+      if (!dataUrl && output.text) {
+        dataUrl = `data:text/plain;charset=utf-8;base64,${btoa(unescape(encodeURIComponent(output.text)))}`;
+      }
+      if (!sizeBytes && output.text) {
+        sizeBytes = new Blob([output.text]).size;
+      }
+
+      const baseName = singleFile?.file?.name ? singleFile.file.name.replace(/\.[^/.]+$/, '') : 'document';
+      const fallbackFilename = isPdfToText
+        ? `${baseName}_extracted.txt`
+        : isPdfToPng
+        ? `${baseName}_pages.png`
+        : 'processed.pdf';
+
       setResultData({
-        dataUrl: output.dataUrl,
-        filename: output.filename || 'processed.pdf',
-        sizeBytes: output.sizeBytes || output.compressedSizeBytes || 0,
+        dataUrl,
+        filename: output.filename || fallbackFilename,
+        sizeBytes,
         originalSizeBytes: output.originalSizeBytes,
         compressedSizeBytes: output.compressedSizeBytes,
         savedBytes: output.savedBytes,
@@ -185,6 +240,13 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
         wasActuallyCompressed: output.wasActuallyCompressed,
         mimeType: output.mimeType,
         pageCount: output.pageCount || output.totalPageCount,
+        text: output.text,
+        charCount: output.charCount,
+        wordCount: output.wordCount,
+        hasSelectableText: output.hasSelectableText,
+        extractedPages: output.extractedPages,
+        rotatedAngle: output.rotatedAngle,
+        removedFields: output.removedFields,
       });
 
       const elapsed = Math.round(performance.now() - startTime);
@@ -201,12 +263,39 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const handleDownload = () => {
     if (!resultData) return;
     trackResultDownload(utility.slug, { filename: resultData.filename, sizeBytes: resultData.sizeBytes });
+
+    let downloadUrl = resultData.dataUrl;
+    let cleanupBlob = false;
+
+    if (!downloadUrl && resultData.text) {
+      const blob = new Blob([resultData.text], { type: 'text/plain;charset=utf-8' });
+      downloadUrl = URL.createObjectURL(blob);
+      cleanupBlob = true;
+    }
+
+    if (!downloadUrl) return;
+
     const a = document.createElement('a');
-    a.href = resultData.dataUrl;
-    a.download = resultData.filename;
+    a.href = downloadUrl;
+    a.download = resultData.filename || 'extracted_text.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+
+    if (cleanupBlob) {
+      URL.revokeObjectURL(downloadUrl);
+    }
+  };
+
+  const handleCopyText = async () => {
+    if (!resultData?.text) return;
+    try {
+      await navigator.clipboard.writeText(resultData.text);
+      setCopiedText(true);
+      setTimeout(() => setCopiedText(false), 2500);
+    } catch {
+      // Fallback
+    }
   };
 
   const formatBytes = (bytes: number): string => {
@@ -397,7 +486,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             </div>
           )}
 
-          {isSplit && (
+          {(isSplit || isPageExtractor) && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
               <label htmlFor="page-ranges" className="block text-xs font-semibold text-gray-300 uppercase">
                 Page Range to Extract
@@ -444,52 +533,195 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             </div>
           )}
 
+          {isPdfToPng && (
+            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-gray-300 uppercase">Render Scale (DPI)</label>
+                <select
+                  value={scale}
+                  onChange={(e) => setScale(parseFloat(e.target.value))}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-200"
+                >
+                  <option value="1.0">1.0x (Standard 72 DPI)</option>
+                  <option value="1.5">1.5x (High Quality 150 DPI - Recommended)</option>
+                  <option value="2.0">2.0x (Ultra Crisp 300 DPI)</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {isRotator && (
+            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
+              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                Rotation Angle
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { angle: 90, label: '90° Clockwise' },
+                  { angle: 180, label: '180° Flip' },
+                  { angle: 270, label: '270° Counter-CW' },
+                ].map((item) => (
+                  <button
+                    key={item.angle}
+                    type="button"
+                    onClick={() => setRotateAngle(item.angle as any)}
+                    className={`py-2.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                      rotateAngle === item.angle
+                        ? 'bg-blue-600/20 border-blue-500 text-blue-400'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isWatermark && (
+            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-gray-300 uppercase">Watermark Text</label>
+                <input
+                  type="text"
+                  value={watermarkText}
+                  onChange={(e) => setWatermarkText(e.target.value)}
+                  placeholder="e.g. CONFIDENTIAL, DRAFT, DO NOT COPY"
+                  className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>Opacity</span>
+                  <span>{Math.round(watermarkOpacity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="1.0"
+                  step="0.05"
+                  value={watermarkOpacity}
+                  onChange={(e) => setWatermarkOpacity(parseFloat(e.target.value))}
+                  className="w-full accent-blue-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {isReorder && (
+            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
+              <label className="block text-xs font-semibold text-gray-300 uppercase">Page Order</label>
+              <input
+                type="text"
+                value={pageOrder}
+                onChange={(e) => setPageOrder(e.target.value)}
+                placeholder="e.g. 3, 1, 2"
+                className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-[11px] text-gray-500">
+                Specify new sequence of 1-based page numbers separated by commas.
+              </p>
+            </div>
+          )}
+
           {/* Result Box */}
           {resultData && (
-            <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-900/40 border border-emerald-700/60 flex items-center justify-center text-emerald-400 shrink-0">
-                  <Check className="w-5 h-5" />
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-900/40 border border-emerald-700/60 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Check className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{resultData.filename}</p>
+                    {isCompress && resultData.originalSizeBytes ? (
+                      <div className="text-xs text-gray-400 space-y-0.5 mt-0.5">
+                        <p>
+                          Original: <span className="text-gray-300 font-mono">{formatBytes(resultData.originalSizeBytes)}</span>
+                          {' '}&rarr; Output: <span className="text-emerald-400 font-bold font-mono">{formatBytes(resultData.compressedSizeBytes || resultData.sizeBytes)}</span>
+                          {resultData.wasActuallyCompressed && (
+                            <span className="text-emerald-400 ml-1.5 font-semibold">
+                              (Saved {formatBytes(resultData.savedBytes || 0)} • {resultData.savingsPercent}%)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-gray-500 flex items-center gap-2">
+                          <span>Profile: <strong className="text-gray-400">{resultData.profile || profile}</strong></span>
+                          {resultData.pageCount && <span>• {resultData.pageCount} pages</span>}
+                          {!resultData.wasActuallyCompressed && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800/60 text-amber-400 font-medium">
+                              Already highly optimized
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    ) : isPdfToText ? (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Output size: <span className="text-emerald-400 font-mono">{formatBytes(resultData.sizeBytes)}</span>
+                        {resultData.pageCount && ` • ${resultData.pageCount} pages`}
+                        {resultData.charCount !== undefined && ` • ${resultData.charCount.toLocaleString()} chars`}
+                        {resultData.wordCount !== undefined && ` • ${resultData.wordCount.toLocaleString()} words`}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Output size: {formatBytes(resultData.sizeBytes)}
+                        {typeof resultData.savingsPercent === 'number' && ` • Saved ${resultData.savingsPercent}%`}
+                        {resultData.pageCount && ` • ${resultData.pageCount} pages`}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-white">{resultData.filename}</p>
-                  {isCompress && resultData.originalSizeBytes ? (
-                    <div className="text-xs text-gray-400 space-y-0.5 mt-0.5">
-                      <p>
-                        Original: <span className="text-gray-300 font-mono">{formatBytes(resultData.originalSizeBytes)}</span>
-                        {' '}&rarr; Output: <span className="text-emerald-400 font-bold font-mono">{formatBytes(resultData.compressedSizeBytes || resultData.sizeBytes)}</span>
-                        {resultData.wasActuallyCompressed && (
-                          <span className="text-emerald-400 ml-1.5 font-semibold">
-                            (Saved {formatBytes(resultData.savedBytes || 0)} • {resultData.savingsPercent}%)
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-[11px] text-gray-500 flex items-center gap-2">
-                        <span>Profile: <strong className="text-gray-400">{resultData.profile || profile}</strong></span>
-                        {resultData.pageCount && <span>• {resultData.pageCount} pages</span>}
-                        {!resultData.wasActuallyCompressed && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800/60 text-amber-400 font-medium">
-                            Already highly optimized
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400">
-                      Output size: {formatBytes(resultData.sizeBytes)}
-                      {typeof resultData.savingsPercent === 'number' && ` • Saved ${resultData.savingsPercent}%`}
-                      {resultData.pageCount && ` • ${resultData.pageCount} pages`}
-                    </p>
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  {isPdfToText && resultData.text && (
+                    <button
+                      type="button"
+                      onClick={handleCopyText}
+                      className="px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm font-semibold text-gray-200 flex items-center gap-1.5 transition-colors"
+                    >
+                      {copiedText ? (
+                        <>
+                          <Check className="w-4 h-4 text-emerald-400" />
+                          <span className="text-emerald-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Copy Text</span>
+                        </>
+                      )}
+                    </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> Download
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2 shrink-0 self-end sm:self-auto"
-              >
-                <Download className="w-4 h-4" /> Download
-              </button>
+
+              {/* Text preview box for PDF to Text */}
+              {isPdfToText && resultData.text && (
+                <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Extracted Text Content
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyText}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                    >
+                      {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedText ? 'Copied to Clipboard' : 'Copy All'}
+                    </button>
+                  </div>
+                  <pre className="p-4 rounded-lg bg-gray-900 border border-gray-800 text-xs text-gray-200 font-mono max-h-80 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-text">
+                    {resultData.text}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
 

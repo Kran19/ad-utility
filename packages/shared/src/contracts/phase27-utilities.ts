@@ -143,6 +143,8 @@ export interface PdfToTextInput {
 export interface PdfToTextOutput {
   text: string;
   filename: string;
+  dataUrl?: string;
+  sizeBytes?: number;
   pageCount: number;
   charCount: number;
   wordCount: number;
