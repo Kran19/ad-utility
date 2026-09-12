@@ -13,3 +13,5 @@ export * from './contracts/phase27-utilities';
 export * from './registry/utility-registry';
 export * from './registry/reference-adapters';
 export * from './registry/text-adapters';
+export * from './utils/qr-engine';
+export * from './utils/barcode-engine';

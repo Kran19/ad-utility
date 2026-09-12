@@ -135,7 +135,8 @@ export class ImageToPdfAdapter implements UtilityAdapter<ImageToPdfInput, ImageT
     const pdfBuffer = Buffer.from(pdfBytes);
     const dataUrl = bufferToDataUrl(pdfBuffer, 'application/pdf');
 
-    const outFilename = input.filename?.endsWith('.pdf') ? input.filename : `${input.filename || 'converted-images'}.pdf`;
+    const baseName = (input.filename || 'converted-images').replace(/\.[^/.]+$/, '');
+    const outFilename = `${baseName}.pdf`;
 
     return {
       dataUrl,

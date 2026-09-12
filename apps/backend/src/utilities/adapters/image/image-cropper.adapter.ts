@@ -35,16 +35,17 @@ export class ImageCropperAdapter implements UtilityAdapter<ImageCropperInput, Im
       throw new Error('Property "fileData" is required');
     }
 
-    if (typeof width !== 'number' || width <= 0 || typeof height !== 'number' || height <= 0) {
-      throw new Error('Crop "width" and "height" must be positive numbers');
-    }
+    const parsedX = typeof x === 'number' && !isNaN(x) ? Math.max(0, Math.round(x)) : 0;
+    const parsedY = typeof y === 'number' && !isNaN(y) ? Math.max(0, Math.round(y)) : 0;
+    const parsedWidth = typeof width === 'number' && !isNaN(width) && width > 0 ? Math.round(width) : 0;
+    const parsedHeight = typeof height === 'number' && !isNaN(height) && height > 0 ? Math.round(height) : 0;
 
     return {
       fileData,
-      x: typeof x === 'number' ? Math.max(0, Math.round(x)) : 0,
-      y: typeof y === 'number' ? Math.max(0, Math.round(y)) : 0,
-      width: Math.round(width),
-      height: Math.round(height),
+      x: parsedX,
+      y: parsedY,
+      width: parsedWidth,
+      height: parsedHeight,
       rotateDegrees: rotateDegrees === 90 || rotateDegrees === 180 || rotateDegrees === 270 ? rotateDegrees : 0,
       format: format === 'image/jpeg' || format === 'image/webp' ? format : 'image/png',
       quality: typeof quality === 'number' && quality >= 1 && quality <= 100 ? quality : 85,
@@ -72,11 +73,19 @@ export class ImageCropperAdapter implements UtilityAdapter<ImageCropperInput, Im
     const origWidth = img.width;
     const origHeight = img.height;
 
-    // Bounds checking
-    const cropX = Math.min(input.x, origWidth - 1);
-    const cropY = Math.min(input.y, origHeight - 1);
-    const cropW = Math.min(input.width, origWidth - cropX);
-    const cropH = Math.min(input.height, origHeight - cropY);
+    if (origWidth <= 0 || origHeight <= 0) {
+      throw new Error('Invalid decoded image dimensions');
+    }
+
+    // Defensive fallback: if width or height are zero/omitted, crop full bounds from (x, y)
+    const reqWidth = input.width > 0 ? input.width : origWidth - input.x;
+    const reqHeight = input.height > 0 ? input.height : origHeight - input.y;
+
+    // Bounds checking & strict clamping
+    const cropX = Math.max(0, Math.min(input.x, origWidth - 1));
+    const cropY = Math.max(0, Math.min(input.y, origHeight - 1));
+    const cropW = Math.max(1, Math.min(reqWidth, origWidth - cropX));
+    const cropH = Math.max(1, Math.min(reqHeight, origHeight - cropY));
 
     if (cropW <= 0 || cropH <= 0) {
       throw new Error('Crop coordinates are outside image boundaries');

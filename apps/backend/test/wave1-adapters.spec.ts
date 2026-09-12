@@ -169,6 +169,34 @@ describe('Phase 27 — Wave 1 Utilities Verification', () => {
       expect(res.result.sizeBytes).toBeGreaterThan(0);
     });
 
+    it('should safely default to full image bounds when width and height are omitted or zero', async () => {
+      const pngBuf = createTestPngBuffer(120, 80);
+      const res = await utilitiesService.executeUtility('image-cropper', {
+        fileData: `data:image/png;base64,${pngBuf.toString('base64')}`,
+        // No width/height or x/y passed (e.g. user clicked Run immediately)
+      });
+
+      expect(res.result.width).toBe(120);
+      expect(res.result.height).toBe(80);
+      expect(res.result.sizeBytes).toBeGreaterThan(0);
+    });
+
+    it('should clamp out-of-bounds crop coordinates safely to image edges', async () => {
+      const pngBuf = createTestPngBuffer(100, 100);
+      const res = await utilitiesService.executeUtility('image-cropper', {
+        fileData: `data:image/png;base64,${pngBuf.toString('base64')}`,
+        x: 80,
+        y: 80,
+        width: 150, // exceeds right edge
+        height: 150, // exceeds bottom edge
+      });
+
+      // Clamped width: 100 - 80 = 20, Clamped height: 100 - 80 = 20
+      expect(res.result.width).toBe(20);
+      expect(res.result.height).toBe(20);
+      expect(res.result.sizeBytes).toBeGreaterThan(0);
+    });
+
     it('should support rotation during crop', async () => {
       const pngBuf = createTestPngBuffer(100, 100);
       const res = await utilitiesService.executeUtility('image-cropper', {
