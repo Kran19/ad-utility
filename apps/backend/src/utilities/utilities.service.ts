@@ -127,6 +127,18 @@ export class UtilitiesService implements OnModuleInit {
         });
       }
 
+      // Deactivate / remove any deprecated utilities not present in catalog
+      const activeSlugs = DEFAULT_CATALOG_UTILITIES.map((u) => u.slug);
+      await this.prisma.utility.updateMany({
+        where: {
+          slug: { notIn: activeSlugs },
+          status: 'ACTIVE',
+        },
+        data: {
+          status: 'DISABLED',
+        },
+      });
+
       try {
         await this.cache.del('categories:list');
         await this.cache.del('list:all');
@@ -137,7 +149,7 @@ export class UtilitiesService implements OnModuleInit {
         this.logger.warn(`Could not clear Redis cache during catalog sync: ${cacheErr?.message}`);
       }
 
-      this.logger.log('Utility catalog auto-synced successfully (all categories and utilities active).');
+      this.logger.log('Utility catalog auto-synced successfully (all active utilities synchronized).');
     } catch (err: any) {
       this.logger.error(`Automated utility catalog synchronization error: ${err?.message}`, err?.stack);
     }

@@ -57,7 +57,7 @@ interface ToolRunnerProps {
 
 export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
   // 1. QR / Barcode Workspace
-  if (utility.categorySlug === 'qr-barcode' || ['qr-code-generator', 'barcode-generator', 'qr-code-scanner'].includes(utility.slug)) {
+  if (utility.categorySlug === 'qr-barcode' || ['qr-code-generator', 'barcode-generator'].includes(utility.slug)) {
     return <QrWorkspace utility={utility} />;
   }
 

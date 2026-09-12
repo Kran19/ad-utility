@@ -198,8 +198,6 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
 
       case 'qr-code-generator':
         return { icon: <QrCode className="w-5 h-5 text-cyan-600" />, bg: 'bg-cyan-50 border-cyan-100' };
-      case 'qr-code-scanner':
-        return { icon: <QrCode className="w-5 h-5 text-teal-600" />, bg: 'bg-teal-50 border-teal-100' };
       case 'barcode-generator':
         return { icon: <QrCode className="w-5 h-5 text-emerald-600" />, bg: 'bg-emerald-50 border-emerald-100' };
 
