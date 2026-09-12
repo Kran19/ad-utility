@@ -14,6 +14,10 @@ import {
   Maximize2,
   RotateCw,
   Sparkles,
+  Layers,
+  Move,
+  Smartphone,
+  Monitor,
 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
@@ -39,7 +43,8 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
 
   // Crop Controls
   const [crop, setCrop] = useState<CropState>({ x: 0, y: 0, width: 0, height: 0 });
-  const [cropPreset, setCropPreset] = useState<'full' | '1:1' | '4:3' | '16:9' | '3:2' | 'custom'>('full');
+  const [cropCategory, setCropCategory] = useState<'ratio' | 'social' | 'custom'>('ratio');
+  const [activePreset, setActivePreset] = useState<string>('full');
   const [rotateDegrees, setRotateDegrees] = useState<number>(0);
   const [targetFormat, setTargetFormat] = useState<string>('image/png');
 
@@ -74,30 +79,25 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
       width: nw,
       height: nh,
     });
-    setCropPreset('full');
+    setActivePreset('full');
 
     // Auto-initialize resizer
     setTargetWidth(nw);
     setTargetHeight(nh);
   };
 
-  const applyCropPreset = (preset: 'full' | '1:1' | '4:3' | '16:9' | '3:2' | 'custom') => {
-    setCropPreset(preset);
+  const applyRatioPreset = (presetKey: string, ratioNumerator: number, ratioDenominator: number) => {
+    setActivePreset(presetKey);
     const nw = naturalDimensions.width;
     const nh = naturalDimensions.height;
     if (nw <= 0 || nh <= 0) return;
 
-    if (preset === 'full' || preset === 'custom') {
+    if (presetKey === 'full') {
       setCrop({ x: 0, y: 0, width: nw, height: nh });
       return;
     }
 
-    let targetRatio = 1;
-    if (preset === '1:1') targetRatio = 1;
-    if (preset === '4:3') targetRatio = 4 / 3;
-    if (preset === '16:9') targetRatio = 16 / 9;
-    if (preset === '3:2') targetRatio = 3 / 2;
-
+    const targetRatio = ratioNumerator / ratioDenominator;
     let cw = nw;
     let ch = Math.round(nw / targetRatio);
 
@@ -111,16 +111,48 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
     const cx = Math.max(0, Math.floor((nw - cw) / 2));
     const cy = Math.max(0, Math.floor((nh - ch) / 2));
 
-    setCrop({
-      x: cx,
-      y: cy,
-      width: cw,
-      height: ch,
-    });
+    setCrop({ x: cx, y: cy, width: cw, height: ch });
+  };
+
+  const applyFixedSizePreset = (presetKey: string, targetW: number, targetH: number) => {
+    setActivePreset(presetKey);
+    const nw = naturalDimensions.width;
+    const nh = naturalDimensions.height;
+    if (nw <= 0 || nh <= 0) return;
+
+    // Scale down if preset exceeds source bounds while maintaining exact ratio
+    let cw = targetW;
+    let ch = targetH;
+    const targetRatio = targetW / targetH;
+
+    if (cw > nw || ch > nh) {
+      cw = nw;
+      ch = Math.round(nw / targetRatio);
+      if (ch > nh) {
+        ch = nh;
+        cw = Math.round(nh * targetRatio);
+      }
+    }
+
+    cw = Math.max(1, Math.min(cw, nw));
+    ch = Math.max(1, Math.min(ch, nh));
+    const cx = Math.max(0, Math.floor((nw - cw) / 2));
+    const cy = Math.max(0, Math.floor((nh - ch) / 2));
+
+    setCrop({ x: cx, y: cy, width: cw, height: ch });
+  };
+
+  const centerCrop = () => {
+    const nw = naturalDimensions.width;
+    const nh = naturalDimensions.height;
+    if (nw <= 0 || nh <= 0) return;
+    const cx = Math.max(0, Math.floor((nw - crop.width) / 2));
+    const cy = Math.max(0, Math.floor((nh - crop.height) / 2));
+    setCrop((prev) => ({ ...prev, x: cx, y: cy }));
   };
 
   const updateCropCoord = (field: keyof CropState, value: number) => {
-    setCropPreset('custom');
+    setActivePreset('custom');
     const nw = naturalDimensions.width;
     const nh = naturalDimensions.height;
     if (nw <= 0 || nh <= 0) return;
@@ -202,7 +234,13 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
         filename: selectedFile.name,
       };
 
-      if (utility.slug === 'png-to-jpg' || utility.slug === 'image-compressor' || utility.slug === 'webp-to-jpg' || utility.slug === 'jpg-to-webp' || utility.slug === 'png-to-webp') {
+      if (
+        utility.slug === 'png-to-jpg' ||
+        utility.slug === 'image-compressor' ||
+        utility.slug === 'webp-to-jpg' ||
+        utility.slug === 'jpg-to-webp' ||
+        utility.slug === 'png-to-webp'
+      ) {
         payload.quality = quality;
       }
 
@@ -357,7 +395,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
         /* Selected Image View & Controls */
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Original File Preview & Crop Box */}
+            {/* Original File Preview & Live Crop Box */}
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3 flex flex-col justify-between">
               <div className="flex items-center justify-between text-xs text-gray-400">
                 <span className="font-semibold uppercase text-gray-300">
@@ -366,17 +404,17 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
                 <span>{formatBytes(selectedFile.size)}</span>
               </div>
               {filePreview && (
-                <div className="relative aspect-video max-h-64 rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-800/80">
+                <div className="relative aspect-video max-h-72 rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-800/80 select-none">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={filePreview}
                     alt="Selected preview"
                     onLoad={handleImageLoaded}
-                    className="max-h-full max-w-full object-contain"
+                    className="max-h-full max-w-full object-contain pointer-events-none"
                   />
                   {utility.slug === 'image-cropper' && crop.width > 0 && naturalDimensions.width > 0 && (
                     <div
-                      className="absolute border-2 border-dashed border-blue-400 bg-blue-500/15 pointer-events-none transition-all"
+                      className="absolute border-2 border-blue-400 bg-blue-500/20 shadow-2xl pointer-events-none transition-all duration-150"
                       style={{
                         left: `${(crop.x / naturalDimensions.width) * 100}%`,
                         top: `${(crop.y / naturalDimensions.height) * 100}%`,
@@ -384,9 +422,9 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
                         height: `${(crop.height / naturalDimensions.height) * 100}%`,
                       }}
                     >
-                      <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-blue-900/90 text-blue-200 text-[10px] font-mono font-bold">
-                        {crop.width} &times; {crop.height}
-                      </span>
+                      <div className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-mono font-bold shadow whitespace-nowrap">
+                        {crop.width} &times; {crop.height} px
+                      </div>
                     </div>
                   )}
                 </div>
@@ -421,7 +459,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
                     </span>
                     <span className="text-gray-300 font-mono">{formatBytes(resultData.sizeBytes)}</span>
                   </div>
-                  <div className="relative aspect-video max-h-64 rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center border border-emerald-900/40">
+                  <div className="relative aspect-video max-h-72 rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center border border-emerald-900/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={resultData.dataUrl} alt="Processed output" className="max-h-full max-w-full object-contain" />
                   </div>
@@ -439,44 +477,109 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
               ) : (
                 /* Conversion & Tool Options */
                 <div className="space-y-4 my-auto">
-                  {/* Image Cropper Controls */}
+                  {/* IMAGE CROPPER CONTROLS & PRESETS */}
                   {utility.slug === 'image-cropper' && (
-                    <div className="space-y-3 p-3.5 rounded-lg bg-gray-900/60 border border-gray-800">
+                    <div className="space-y-3.5 p-3.5 rounded-lg bg-gray-900/60 border border-gray-800">
                       <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
-                        <span className="flex items-center gap-1.5 text-blue-400">
-                          <Crop className="w-3.5 h-3.5" /> Aspect Ratio Preset
+                        <span className="flex items-center gap-1.5 text-blue-400 font-bold">
+                          <Crop className="w-4 h-4" /> Select Crop Size / Ratio
                         </span>
-                        <span className="font-mono text-gray-400">
+                        <span className="font-mono text-xs text-blue-300 bg-blue-950 px-2 py-0.5 rounded border border-blue-800/50">
                           {crop.width} &times; {crop.height} px
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-1.5 text-xs">
-                        {[
-                          { key: 'full', label: 'Full Image' },
-                          { key: '1:1', label: '1:1 Square' },
-                          { key: '4:3', label: '4:3 Standard' },
-                          { key: '16:9', label: '16:9 Wide' },
-                          { key: '3:2', label: '3:2 Classic' },
-                          { key: 'custom', label: 'Free / Custom' },
-                        ].map((p) => (
-                          <button
-                            key={p.key}
-                            type="button"
-                            onClick={() => applyCropPreset(p.key as any)}
-                            className={`py-1.5 px-2 rounded font-medium text-xs transition-colors ${
-                              cropPreset === p.key
-                                ? 'bg-blue-600 text-white shadow'
-                                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                            }`}
-                          >
-                            {p.label}
-                          </button>
-                        ))}
+
+                      {/* Preset Category Switcher */}
+                      <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-gray-950 border border-gray-800 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setCropCategory('ratio')}
+                          className={`py-1 px-2 rounded-md font-medium transition-all ${
+                            cropCategory === 'ratio' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
+                          }`}
+                        >
+                          Aspect Ratios
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCropCategory('social')}
+                          className={`py-1 px-2 rounded-md font-medium transition-all flex items-center justify-center gap-1 ${
+                            cropCategory === 'social' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
+                          }`}
+                        >
+                          <Smartphone className="w-3 h-3" /> Social Sizes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCropCategory('custom')}
+                          className={`py-1 px-2 rounded-md font-medium transition-all flex items-center justify-center gap-1 ${
+                            cropCategory === 'custom' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
+                          }`}
+                        >
+                          <Sliders className="w-3 h-3" /> Custom (px)
+                        </button>
                       </div>
 
+                      {/* 1. Aspect Ratio Presets */}
+                      {cropCategory === 'ratio' && (
+                        <div className="grid grid-cols-4 gap-1.5 text-xs">
+                          {[
+                            { key: 'full', label: 'Full', n: 1, d: 1 },
+                            { key: '1:1', label: '1:1 Square', n: 1, d: 1 },
+                            { key: '4:3', label: '4:3 Standard', n: 4, d: 3 },
+                            { key: '16:9', label: '16:9 Wide', n: 16, d: 9 },
+                            { key: '9:16', label: '9:16 Story', n: 9, d: 16 },
+                            { key: '3:2', label: '3:2 Classic', n: 3, d: 2 },
+                            { key: '2:3', label: '2:3 Portrait', n: 2, d: 3 },
+                            { key: 'custom', label: 'Free', n: 1, d: 1 },
+                          ].map((p) => (
+                            <button
+                              key={p.key}
+                              type="button"
+                              onClick={() => applyRatioPreset(p.key, p.n, p.d)}
+                              className={`py-1.5 px-2 rounded font-medium text-xs transition-colors ${
+                                activePreset === p.key
+                                  ? 'bg-blue-600 text-white shadow'
+                                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                              }`}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 2. Social & Digital Media Size Presets */}
+                      {cropCategory === 'social' && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs">
+                          {[
+                            { key: 'ig_post', label: 'Instagram (1080×1080)', w: 1080, h: 1080 },
+                            { key: 'ig_story', label: 'Story/Reels (1080×1920)', w: 1080, h: 1920 },
+                            { key: 'yt_thumb', label: 'YouTube (1280×720)', w: 1280, h: 720 },
+                            { key: 'fb_cover', label: 'FB Cover (820×312)', w: 820, h: 312 },
+                            { key: 'x_header', label: 'X Header (1500×500)', w: 1500, h: 500 },
+                            { key: 'id_photo', label: 'Avatar / ID (600×600)', w: 600, h: 600 },
+                          ].map((p) => (
+                            <button
+                              key={p.key}
+                              type="button"
+                              onClick={() => applyFixedSizePreset(p.key, p.w, p.h)}
+                              className={`py-1.5 px-2 rounded font-medium text-left text-[11px] transition-colors truncate ${
+                                activePreset === p.key
+                                  ? 'bg-blue-600 text-white shadow'
+                                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                              }`}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Manual Dimension Inputs */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
                         <div>
-                          <label className="text-[10px] text-gray-400 block mb-1">X Offset</label>
+                          <label className="text-[10px] text-gray-400 block mb-1">X Offset (px)</label>
                           <input
                             type="number"
                             min="0"
@@ -487,7 +590,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-gray-400 block mb-1">Y Offset</label>
+                          <label className="text-[10px] text-gray-400 block mb-1">Y Offset (px)</label>
                           <input
                             type="number"
                             min="0"
@@ -498,46 +601,49 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-gray-400 block mb-1">Width (px)</label>
+                          <label className="text-[10px] text-gray-400 block mb-1 font-semibold text-blue-300">Width (px)</label>
                           <input
                             type="number"
                             min="1"
                             max={naturalDimensions.width}
                             value={crop.width}
                             onChange={(e) => updateCropCoord('width', parseInt(e.target.value, 10) || 1)}
-                            className="w-full bg-gray-950 border border-gray-800 rounded px-2 py-1 text-white font-mono text-xs"
+                            className="w-full bg-gray-950 border border-blue-500/50 rounded px-2 py-1 text-white font-mono text-xs"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-gray-400 block mb-1">Height (px)</label>
+                          <label className="text-[10px] text-gray-400 block mb-1 font-semibold text-blue-300">Height (px)</label>
                           <input
                             type="number"
                             min="1"
                             max={naturalDimensions.height}
                             value={crop.height}
                             onChange={(e) => updateCropCoord('height', parseInt(e.target.value, 10) || 1)}
-                            className="w-full bg-gray-950 border border-gray-800 rounded px-2 py-1 text-white font-mono text-xs"
+                            className="w-full bg-gray-950 border border-blue-500/50 rounded px-2 py-1 text-white font-mono text-xs"
                           />
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-1 text-xs">
-                        <div className="flex items-center gap-2">
-                          <RotateCw className="w-3.5 h-3.5 text-gray-400" />
-                          <span className="text-gray-400">Rotation:</span>
-                          <select
-                            value={rotateDegrees}
-                            onChange={(e) => setRotateDegrees(parseInt(e.target.value, 10))}
-                            className="bg-gray-950 border border-gray-800 rounded px-2 py-0.5 text-white text-xs"
+                      {/* Quick Actions & Format */}
+                      <div className="flex flex-wrap items-center justify-between pt-1 gap-2 text-xs border-t border-gray-800/80">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={centerCrop}
+                            className="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
                           >
-                            <option value="0">0&deg; (None)</option>
-                            <option value="90">90&deg; Clockwise</option>
-                            <option value="180">180&deg; Invert</option>
-                            <option value="270">270&deg; Counter-Clockwise</option>
-                          </select>
+                            Center Selection
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyRatioPreset('full', 1, 1)}
+                            className="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                          >
+                            Reset Full
+                          </button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-400">Output:</span>
+                          <span className="text-gray-400 text-[11px]">Format:</span>
                           <select
                             value={targetFormat}
                             onChange={(e) => setTargetFormat(e.target.value)}
@@ -659,7 +765,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
                     <p className="font-medium text-gray-300">Execution Features:</p>
                     <ul className="list-disc list-inside text-gray-400 space-y-1">
                       <li>Authoritative magic byte format verification</li>
-                      {utility.slug === 'image-cropper' && <li>Lossless & subpixel-accurate coordinate cropping</li>}
+                      {utility.slug === 'image-cropper' && <li>Custom pixel sizes and social media ratio presets</li>}
                       {utility.slug === 'image-resizer' && <li>High-quality Lanczos/Bicubic resampling algorithm</li>}
                       {utility.slug === 'png-to-jpg' && <li>Solid white alpha channel background blending</li>}
                       {utility.slug === 'jpg-to-webp' && <li>Modern WebP compression with ~30% smaller footprint</li>}
