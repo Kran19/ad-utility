@@ -53,12 +53,15 @@ export class ImageToPdfAdapter implements UtilityAdapter<ImageToPdfInput, ImageT
         throw new Error('Maximum of 50 images can be combined in a single PDF');
       }
       for (const img of input.images) {
-        if (!img.fileData) continue;
-        const { buffer } = parseBase64Payload(img.fileData);
+        const rawPayload = typeof img === 'string' ? img : (img as any)?.fileData;
+        if (!rawPayload) continue;
+        const { buffer } = parseBase64Payload(rawPayload);
         const format = detectImageFormat(buffer);
         rawImages.push({ buffer, format });
       }
-    } else if (input.fileData) {
+    }
+
+    if (rawImages.length === 0 && input.fileData) {
       const { buffer } = parseBase64Payload(input.fileData);
       const format = detectImageFormat(buffer);
       rawImages.push({ buffer, format });

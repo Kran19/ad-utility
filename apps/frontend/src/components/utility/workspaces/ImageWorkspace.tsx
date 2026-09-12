@@ -266,10 +266,10 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
       }
 
       if (utility.slug === 'image-to-pdf') {
-        payload.images = [filePreview];
+        payload.fileData = filePreview;
+        payload.images = [{ fileData: filePreview, filename: selectedFile.name }];
         payload.pageSize = 'A4';
-        payload.orientation = 'portrait';
-        payload.fit = 'contain';
+        payload.orientation = 'PORTRAIT';
       }
 
       const res = await fetch(`${apiUrl}/utilities/${utility.slug}/execute`, {
