@@ -258,7 +258,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
             <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
             <p className="text-xs text-slate-500">
               {isDownloader
-                ? 'Direct HTTP/HTTPS video stream retrieval with SSRF protection'
+                ? 'Download Instagram Reels, YouTube Videos & Shorts, and direct MP4/WebM streams'
                 : 'FFmpeg hardware-accelerated processing • Privacy protected'}
             </p>
           </div>
@@ -274,7 +274,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
           <form onSubmit={handleUrlDownload} className="space-y-4">
             <div>
               <label htmlFor="video-url-input" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                Direct Video URL
+                Instagram Reel / YouTube / Direct Video URL
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-slate-400">
@@ -285,14 +285,14 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
                   type="url"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://example.com/assets/sample-video.mp4"
-                  className="w-full pl-10 pr-24 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                  placeholder="Paste Instagram Reel, YouTube Video, Shorts, or MP4 link..."
+                  className="w-full pl-10 pr-24 py-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={handlePasteClipboard}
-                  className="absolute right-2.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors"
+                  className="absolute right-2.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors shadow-xs"
                 >
                   Paste
                 </button>
@@ -302,7 +302,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>SSRF-protected • Max 50MB • Direct MP4/WebM/MOV streams</span>
+                <span>Supports Instagram Reels • YouTube Videos/Shorts • Direct MP4/WebM</span>
               </div>
               <div className="flex gap-2">
                 <button

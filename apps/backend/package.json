@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@ad-utility/shared": "workspace:*",
+    "@distube/ytdl-core": "^4.16.12",
     "@napi-rs/canvas": "^1.0.8",
     "@nestjs/common": "^10.3.8",
     "@nestjs/config": "^3.2.2",

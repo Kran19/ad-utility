@@ -4,6 +4,8 @@ import { URL } from 'url';
 import { VideoDownloaderInput, VideoDownloaderOutput, VideoDownloaderErrorCode } from '@ad-utility/shared';
 import { VideoSourceProvider } from './video-source-provider.interface';
 import { DirectVideoProvider } from './direct-video.provider';
+import { YouTubeVideoProvider } from './youtube-video.provider';
+import { InstagramVideoProvider } from './instagram-video.provider';
 import { VideoDownloadStorageService } from './video-storage.service';
 
 export interface VideoProbeMetadata {
@@ -17,28 +19,22 @@ export interface VideoProbeMetadata {
 }
 
 export class VideoUrlDownloadService {
-  private readonly providers: VideoSourceProvider[] = [new DirectVideoProvider()];
+  private readonly providers: VideoSourceProvider[] = [
+    new YouTubeVideoProvider(),
+    new InstagramVideoProvider(),
+    new DirectVideoProvider(),
+  ];
   private readonly storage = VideoDownloadStorageService.getInstance();
 
   /**
-   * List of known social/media platforms that require platform-bypass, cookies, or DRM.
-   * We explicitly reject these with UNSUPPORTED_SOURCE and clear explanations.
+   * List of known domains that require explicit authentication, DRM, or paywalls.
    */
   private readonly unsupportedDomains = [
-    'youtube.com',
-    'youtu.be',
-    'instagram.com',
-    'tiktok.com',
-    'facebook.com',
-    'fb.watch',
-    'twitter.com',
-    'x.com',
-    'vimeo.com',
-    'dailymotion.com',
-    'twitch.tv',
-    'reddit.com',
-    'pinterest.com',
-    'linkedin.com',
+    'netflix.com',
+    'spotify.com',
+    'disneyplus.com',
+    'hulu.com',
+    'primevideo.com',
   ];
 
   public async processUrlDownload(input: VideoDownloaderInput, signal?: AbortSignal): Promise<VideoDownloaderOutput> {

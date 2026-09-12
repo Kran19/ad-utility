@@ -134,37 +134,21 @@ describe('Phase 28 — Video Downloader End-to-End & Controlled HTTP Server Suit
     await app.close();
   });
 
-  describe('1. Unsupported Social Media Providers Guardrail', () => {
-    it('rejects YouTube URLs with UNSUPPORTED_SOURCE without scraping or bypass attempts', async () => {
+  describe('1. Unsupported Platforms and DRM Guardrails', () => {
+    it('rejects DRM and subscription paywall URLs with UNSUPPORTED_SOURCE', async () => {
       await expect(
         utilitiesService.executeUtility('video-downloader', {
-          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          url: 'https://www.netflix.com/watch/12345678',
         }),
-      ).rejects.toThrow('Direct video downloading is not supported for www.youtube.com');
+      ).rejects.toThrow('Direct video downloading is not supported for www.netflix.com');
     });
 
-    it('rejects Instagram URLs with UNSUPPORTED_SOURCE', async () => {
+    it('rejects Spotify media URLs with UNSUPPORTED_SOURCE', async () => {
       await expect(
         utilitiesService.executeUtility('video-downloader', {
-          url: 'https://instagram.com/reel/C89abcdef',
+          url: 'https://open.spotify.com/track/1234567890',
         }),
-      ).rejects.toThrow('Direct video downloading is not supported for instagram.com');
-    });
-
-    it('rejects TikTok URLs with UNSUPPORTED_SOURCE', async () => {
-      await expect(
-        utilitiesService.executeUtility('video-downloader', {
-          url: 'https://www.tiktok.com/@user/video/1234567890',
-        }),
-      ).rejects.toThrow('Direct video downloading is not supported for www.tiktok.com');
-    });
-
-    it('rejects Twitter / X URLs with UNSUPPORTED_SOURCE', async () => {
-      await expect(
-        utilitiesService.executeUtility('video-downloader', {
-          url: 'https://x.com/user/status/123456789',
-        }),
-      ).rejects.toThrow('Direct video downloading is not supported for x.com');
+      ).rejects.toThrow('Direct video downloading is not supported for open.spotify.com');
     });
   });
 
