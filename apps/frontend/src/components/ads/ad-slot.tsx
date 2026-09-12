@@ -184,9 +184,9 @@ export const AdSlot: React.FC<AdSlotProps> = ({
     return (
       <div
         data-ad-placement={placement}
-        className={`w-full mx-auto my-3 flex items-center justify-center rounded-lg bg-gray-900/20 border border-gray-800/40 text-gray-600 text-xs font-mono animate-pulse ${config.minHeight} ${config.maxWidth} ${className}`}
+        className={`w-full mx-auto my-3 flex items-center justify-center rounded-2xl bg-slate-100/60 border border-slate-200/60 text-slate-400 text-xs font-mono animate-pulse ${config.minHeight} ${config.maxWidth} ${className}`}
       >
-        <span className="text-[10px] text-gray-500">Sponsored Advertisement</span>
+        <span className="text-[10px] text-slate-400">Sponsored Advertisement</span>
       </div>
     );
   }
@@ -200,9 +200,9 @@ export const AdSlot: React.FC<AdSlotProps> = ({
       ref={slotRef}
       data-ad-placement={placement}
       data-creative-id={adCreative.creativeId}
-      className={`w-full mx-auto my-4 flex flex-col items-center justify-center relative overflow-hidden rounded-xl bg-gray-900/60 border border-gray-800/80 shadow-lg ${config.maxWidth} ${className}`}
+      className={`w-full mx-auto my-4 flex flex-col items-center justify-center relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs ${config.maxWidth} ${className}`}
     >
-      <div className="absolute top-1 right-2 z-10 text-[9px] uppercase tracking-wider text-gray-400 bg-gray-950/80 px-1.5 py-0.5 rounded font-mono">
+      <div className="absolute top-1.5 right-2 z-10 text-[9px] uppercase tracking-wider text-slate-400 bg-slate-100/90 px-1.5 py-0.5 rounded font-mono">
         Ad
       </div>
 

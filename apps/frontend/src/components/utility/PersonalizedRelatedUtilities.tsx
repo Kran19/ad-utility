@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePersonalization } from '../../lib/use-personalization';
+import { ArrowRight } from 'lucide-react';
 
 interface PersonalizedRelatedUtilitiesProps {
   utilitySlug: string;
@@ -34,27 +35,30 @@ export const PersonalizedRelatedUtilities: React.FC<PersonalizedRelatedUtilities
   }
 
   return (
-    <section className="space-y-4 pt-4 border-t border-slate-800">
+    <section className="space-y-4 pt-6 border-t border-slate-200">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-white">{headline}</h3>
+        <h3 className="text-xl font-bold text-slate-900">{headline}</h3>
         <Link
           href={`/category/${categorySlug}`}
-          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
         >
-          More in {categoryName} &rarr;
+          <span>More in {categoryName}</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         {slugsToDisplay.map((relSlug) => (
           <Link
             key={relSlug}
             href={`/${relSlug}`}
-            className="p-4 rounded-lg bg-slate-900/60 border border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900 transition-all flex items-center justify-between group"
+            className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-between group"
           >
-            <span className="font-medium text-slate-300 group-hover:text-blue-400 transition-colors capitalize">
+            <span className="font-semibold text-xs text-slate-800 group-hover:text-blue-600 transition-colors capitalize">
               {relSlug.replace(/-/g, ' ')}
             </span>
-            <span className="text-slate-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
+            <span className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-transform">
+              &rarr;
+            </span>
           </Link>
         ))}
       </div>

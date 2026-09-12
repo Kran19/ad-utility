@@ -8,6 +8,8 @@ import { AdSlot } from '../../components/ads/ad-slot';
 import { ToolRunner } from '../../components/utility/tool-runner';
 import { Breadcrumbs } from '../../components/navigation/Breadcrumbs';
 import { JsonLd } from '../../components/seo/JsonLd';
+import { Navbar } from '../../components/navigation/Navbar';
+import { Footer } from '../../components/navigation/Footer';
 import { PersonalizedRelatedUtilities } from '../../components/utility/PersonalizedRelatedUtilities';
 
 interface PageProps {
@@ -146,7 +148,7 @@ export default async function UtilityPage({ params }: PageProps) {
     ],
   };
 
-  // 3. FAQPage Schema — only if visible FAQ items genuinely exist
+  // 3. FAQPage Schema
   const hasFaqs = Array.isArray(utility.faqContent) && utility.faqContent.length > 0;
   const faqPageSchema = hasFaqs
     ? {
@@ -170,27 +172,22 @@ export default async function UtilityPage({ params }: PageProps) {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 pb-20">
+    <div className="min-h-screen flex flex-col justify-between bg-mesh-gradient text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       {/* Structured Data Scripts */}
       <JsonLd data={webApplicationSchema} />
       <JsonLd data={breadcrumbListSchema} />
       {faqPageSchema && <JsonLd data={faqPageSchema} />}
 
       {/* Top Navigation Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black">
-              U
-            </span>
-            <span>UtilityPlatform</span>
-          </Link>
-          <Breadcrumbs items={breadcrumbs} />
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content Container */}
-      <div className="max-w-5xl mx-auto px-4 pt-8 space-y-8">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 space-y-8 w-full">
+        {/* Breadcrumbs bar */}
+        <div className="flex items-center justify-between">
+          <Breadcrumbs items={breadcrumbs} />
+        </div>
+
         {/* Placement 1: HEADER_BANNER */}
         <AdSlot
           placement="HEADER_BANNER"
@@ -199,27 +196,27 @@ export default async function UtilityPage({ params }: PageProps) {
         />
 
         {/* Hero & Utility Header */}
-        <section className="space-y-3 text-center sm:text-left">
+        <section className="space-y-3 text-center sm:text-left bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
           <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
             <Link
               href={`/category/${utility.categorySlug}`}
-              className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-950 text-blue-400 border border-blue-800/60 uppercase tracking-wider hover:bg-blue-900 transition-colors"
+              className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 uppercase tracking-wider hover:bg-blue-100 transition-colors"
             >
               {utility.categoryName}
             </Link>
-            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
               v{utility.version}
             </span>
             {utility.isFeatured && (
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-950 text-amber-400 border border-amber-800/60">
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-600 border border-amber-200">
                 ★ Featured
               </span>
             )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
             {utility.name}
           </h1>
-          <p className="text-lg text-slate-400 max-w-3xl">
+          <p className="text-base text-slate-600 max-w-3xl leading-relaxed">
             {utility.description}
           </p>
         </section>
@@ -244,20 +241,20 @@ export default async function UtilityPage({ params }: PageProps) {
         />
 
         {/* How-to Guide & Documentation Section */}
-        <section className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 sm:p-8 space-y-4">
-          <h2 className="text-2xl font-bold text-white">How to Use {utility.name}</h2>
-          <div className="max-w-none text-slate-300 space-y-3 text-sm sm:text-base leading-relaxed">
+        <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs">
+          <h2 className="text-xl font-bold text-slate-900">How to Use {utility.name}</h2>
+          <div className="text-slate-600 space-y-3 text-sm leading-relaxed">
             <p>
-              This utility is designed for high performance, reliability, and security. Follow these simple steps:
+              This utility is designed for maximum speed, precision, and privacy. Follow these simple steps:
             </p>
-            <ol className="list-decimal list-inside space-y-2 text-slate-300">
-              <li>Upload your source file or enter text in the designated input area above.</li>
-              <li>Configure any desired options (e.g. output format, quality, compression, or tone).</li>
-              <li>Execute the tool to process the operation with instant performance.</li>
-              <li>Inspect and download the converted result or copy it directly to your clipboard.</li>
+            <ol className="list-decimal list-inside space-y-2 text-slate-700 font-medium">
+              <li>Upload your source file or enter text in the workspace above.</li>
+              <li>Configure desired settings (e.g. compression quality, angle, size, or style).</li>
+              <li>Click &ldquo;Run {utility.name}&rdquo; to process instantly.</li>
+              <li>Download your processed file or copy the result directly to your clipboard.</li>
             </ol>
-            <p className="text-xs text-slate-500 pt-2 border-t border-slate-800">
-              Zero storage retention: All operations process in memory or isolated execution tiers without permanent disk retention.
+            <p className="text-xs text-slate-500 pt-3 border-t border-slate-100">
+              Zero storage retention: Operations process entirely in-browser or inside isolated memory containers with zero disk retention.
             </p>
           </div>
         </section>
@@ -272,18 +269,18 @@ export default async function UtilityPage({ params }: PageProps) {
         {/* Frequently Asked Questions (FAQ) Section */}
         {hasFaqs && (
           <section className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+            <h2 className="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
             <div className="space-y-3">
               {utility.faqContent.map((faq, idx) => (
                 <details
                   key={idx}
-                  className="group bg-slate-900/80 border border-slate-800 rounded-lg p-4 open:bg-slate-900 transition-colors"
+                  className="group bg-white border border-slate-200/80 rounded-2xl p-4 open:shadow-xs transition-all"
                 >
-                  <summary className="font-medium text-slate-200 cursor-pointer list-none flex items-center justify-between">
+                  <summary className="font-semibold text-slate-800 text-sm cursor-pointer list-none flex items-center justify-between">
                     <span>{faq.question}</span>
                     <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
                   </summary>
-                  <p className="mt-3 text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
+                  <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
                     {faq.answer}
                   </p>
                 </details>
@@ -306,7 +303,7 @@ export default async function UtilityPage({ params }: PageProps) {
           categoryName={utility.categoryName}
           initialRelatedSlugs={utility.relatedSlugs || []}
         />
-      </div>
+      </main>
 
       {/* Floating Sticky Ad Slot (Mobile / Desktop) */}
       <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-2">
@@ -319,6 +316,9 @@ export default async function UtilityPage({ params }: PageProps) {
           />
         </div>
       </div>
-    </main>
+
+      {/* Footer */}
+      <Footer />
+    </div>
   );
 }

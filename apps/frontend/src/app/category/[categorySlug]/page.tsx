@@ -7,6 +7,19 @@ import { getSiteOrigin, getInternalApiUrl, siteConfig } from '../../../lib/site-
 import { AdSlot } from '../../../components/ads/ad-slot';
 import { Breadcrumbs } from '../../../components/navigation/Breadcrumbs';
 import { JsonLd } from '../../../components/seo/JsonLd';
+import { Navbar } from '../../../components/navigation/Navbar';
+import { Footer } from '../../../components/navigation/Footer';
+import {
+  Image as ImageIcon,
+  FileText,
+  Type,
+  Code2,
+  Sparkles,
+  Video,
+  Music,
+  QrCode,
+  ArrowRight,
+} from 'lucide-react';
 
 interface PageProps {
   params: {
@@ -83,6 +96,29 @@ export default async function CategoryPage({ params }: PageProps) {
   const origin = getSiteOrigin();
   const canonicalUrl = `${origin}/category/${category.slug}`;
 
+  const getCategoryIcon = (slug: string) => {
+    switch (slug) {
+      case 'image':
+        return <ImageIcon className="w-5 h-5 text-rose-500" />;
+      case 'pdf':
+        return <FileText className="w-5 h-5 text-red-500" />;
+      case 'text':
+        return <Type className="w-5 h-5 text-emerald-600" />;
+      case 'developer':
+        return <Code2 className="w-5 h-5 text-purple-600" />;
+      case 'ai':
+        return <Sparkles className="w-5 h-5 text-blue-600" />;
+      case 'video':
+        return <Video className="w-5 h-5 text-amber-600" />;
+      case 'audio':
+        return <Music className="w-5 h-5 text-pink-600" />;
+      case 'qr-barcode':
+        return <QrCode className="w-5 h-5 text-cyan-600" />;
+      default:
+        return <FileText className="w-5 h-5 text-blue-500" />;
+    }
+  };
+
   // Structured Data Schemas
   const breadcrumbListSchema = {
     '@context': 'https://schema.org',
@@ -127,38 +163,31 @@ export default async function CategoryPage({ params }: PageProps) {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 pb-20">
+    <div className="min-h-screen flex flex-col justify-between bg-mesh-gradient text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       {/* JSON-LD Structured Data */}
       <JsonLd data={breadcrumbListSchema} />
       <JsonLd data={collectionPageSchema} />
 
       {/* Top Navigation */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black">
-              U
-            </span>
-            <span>UtilityPlatform</span>
-          </Link>
-          <Breadcrumbs items={breadcrumbs} />
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 pt-8 space-y-8">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 space-y-8 w-full">
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={breadcrumbs} />
+
         {/* Placement 1: HEADER_BANNER */}
         <AdSlot placement="HEADER_BANNER" categorySlug={category.slug} />
 
         {/* Hero Section */}
-        <section className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full bg-blue-950 text-blue-400 border border-blue-800/60 uppercase tracking-wider">
+        <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-3 shadow-xs">
+          <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 uppercase tracking-wider">
             {category.utilityCount} Available Tools
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
             {category.name}
           </h1>
-          <p className="text-lg text-slate-400 max-w-3xl">
+          <p className="text-base text-slate-600 max-w-3xl leading-relaxed">
             {category.description ||
               `Discover fast, privacy-friendly ${category.name.toLowerCase()} built for precision and performance.`}
           </p>
@@ -169,33 +198,35 @@ export default async function CategoryPage({ params }: PageProps) {
 
         {/* Utilities Grid */}
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-white">All {category.name}</h2>
+          <h2 className="text-xl font-bold text-slate-900">All {category.name}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {category.utilities.map((util) => (
               <Link
                 key={util.slug}
                 href={`/${util.slug}`}
-                className="group p-5 rounded-xl bg-slate-900/70 border border-slate-800/80 hover:border-blue-500/60 hover:bg-slate-900 transition-all flex flex-col justify-between space-y-3 shadow-sm hover:shadow-md"
+                className="group p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between space-y-3"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 uppercase">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 uppercase">
                       {util.implementationMode}
                     </span>
                     {util.isFeatured && (
-                      <span className="text-xs font-semibold text-amber-400">★ Featured</span>
+                      <span className="text-xs font-semibold text-amber-500 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-full">
+                        ★ Featured
+                      </span>
                     )}
                   </div>
-                  <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                     {util.name}
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed mt-1 line-clamp-2">
+                  <p className="text-xs text-slate-500 leading-relaxed mt-1 line-clamp-2">
                     {util.description}
                   </p>
                 </div>
-                <div className="flex items-center text-sm font-medium text-blue-400 group-hover:translate-x-1 transition-transform">
+                <div className="flex items-center text-xs font-semibold text-blue-600 group-hover:translate-x-1 transition-transform">
                   <span>Open Tool</span>
-                  <span className="ml-1">&rarr;</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
                 </div>
               </Link>
             ))}
@@ -204,7 +235,10 @@ export default async function CategoryPage({ params }: PageProps) {
 
         {/* Placement 3: BOTTOM_CONTENT */}
         <AdSlot placement="BOTTOM_CONTENT" categorySlug={category.slug} />
-      </div>
-    </main>
+      </main>
+
+      {/* Footer */}
+      <Footer />
+    </div>
   );
 }
