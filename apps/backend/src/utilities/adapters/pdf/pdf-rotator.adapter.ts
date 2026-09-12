@@ -41,10 +41,39 @@ export class PdfRotatorAdapter implements UtilityAdapter<PdfRotatorInput, PdfRot
       throw new Error('Rotation angle must be 90, 180, or 270 degrees');
     }
 
+    let parsedPages: 'ALL' | number[] = 'ALL';
+    if (typeof pages === 'string') {
+      const trimmed = pages.trim();
+      if (!trimmed || trimmed.toUpperCase() === 'ALL') {
+        parsedPages = 'ALL';
+      } else {
+        const nums: number[] = [];
+        const parts = trimmed.split(',');
+        for (const part of parts) {
+          const p = part.trim();
+          if (p.includes('-')) {
+            const [start, end] = p.split('-').map((s) => parseInt(s.trim(), 10));
+            if (!isNaN(start) && !isNaN(end)) {
+              for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+                if (i > 0) nums.push(i);
+              }
+            }
+          } else {
+            const num = parseInt(p, 10);
+            if (!isNaN(num) && num > 0) nums.push(num);
+          }
+        }
+        parsedPages = nums.length > 0 ? nums : 'ALL';
+      }
+    } else if (Array.isArray(pages)) {
+      parsedPages = pages.filter((p) => typeof p === 'number' && p > 0);
+      if (parsedPages.length === 0) parsedPages = 'ALL';
+    }
+
     return {
       fileData,
       angle: parsedAngle as 90 | 180 | 270,
-      pages: Array.isArray(pages) ? pages : 'ALL',
+      pages: parsedPages,
       filename: sanitizeFilename(filename, 'document', 'pdf'),
     };
   }

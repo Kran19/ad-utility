@@ -2,7 +2,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UtilityPublicDto } from '@ad-utility/shared';
-import { FileText, Upload, Download, RefreshCw, AlertCircle, Trash2, Plus, Check, Copy } from 'lucide-react';
+import {
+  FileText,
+  Upload,
+  Download,
+  RefreshCw,
+  AlertCircle,
+  Trash2,
+  Plus,
+  Check,
+  Copy,
+  RotateCw,
+  Stamp,
+  Sliders,
+  ShieldCheck,
+  Type,
+  Layers,
+} from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
 
@@ -11,7 +27,7 @@ interface PdfWorkspaceProps {
 }
 
 export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
-  // Single file state (for compressor, split, pdf-to-jpg, etc.)
+  // Single file state (for compressor, split, pdf-to-jpg, rotator, watermark, etc.)
   const [singleFile, setSingleFile] = useState<{ file: File; base64: string } | null>(null);
 
   // Multi file state (for merge)
@@ -35,12 +51,23 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const [pdfToJpgPage, setPdfToJpgPage] = useState<'all' | number>('all');
   const [scale, setScale] = useState<number>(1.5);
   const [profile, setProfile] = useState<'EXTREME' | 'BALANCED' | 'VISUALLY_LOSSLESS'>('EXTREME');
-  const [rotateAngle, setRotateAngle] = useState<90 | 180 | 270>(90);
-  const [watermarkText, setWatermarkText] = useState<string>('CONFIDENTIAL');
-  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.3);
-  const [pageOrder, setPageOrder] = useState<string>('1, 2');
   const [compressStep, setCompressStep] = useState<string>('Analyzing PDF...');
   const [copiedText, setCopiedText] = useState<boolean>(false);
+
+  // Rotator options
+  const [rotateAngle, setRotateAngle] = useState<90 | 180 | 270>(90);
+  const [rotatorPageMode, setRotatorPageMode] = useState<'ALL' | 'CUSTOM'>('ALL');
+  const [rotatorCustomPages, setRotatorCustomPages] = useState<string>('1');
+
+  // Watermark options
+  const [watermarkText, setWatermarkText] = useState<string>('CONFIDENTIAL');
+  const [watermarkPosition, setWatermarkPosition] = useState<'DIAGONAL' | 'CENTER' | 'TOP' | 'BOTTOM'>('DIAGONAL');
+  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.3);
+  const [watermarkFontSize, setWatermarkFontSize] = useState<number>(42);
+  const [watermarkColorHex, setWatermarkColorHex] = useState<string>('#666666');
+
+  // Reorder options
+  const [pageOrder, setPageOrder] = useState<string>('1, 2');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -183,9 +210,16 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           payload.profile = profile;
         } else if (isRotator) {
           payload.angle = rotateAngle;
+          payload.pages = rotatorPageMode === 'ALL' ? 'ALL' : rotatorCustomPages;
         } else if (isWatermark) {
-          payload.watermarkText = watermarkText;
+          if (!watermarkText.trim()) {
+            throw new Error('Please enter watermark text.');
+          }
+          payload.watermarkText = watermarkText.trim();
+          payload.position = watermarkPosition;
           payload.opacity = watermarkOpacity;
+          payload.fontSize = watermarkFontSize;
+          payload.colorHex = watermarkColorHex;
         } else if (isReorder) {
           const order = pageOrder
             .split(',')
@@ -226,6 +260,10 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
         ? `${baseName}_extracted.txt`
         : isPdfToPng
         ? `${baseName}_pages.png`
+        : isRotator
+        ? `${baseName}_rotated_${rotateAngle}deg.pdf`
+        : isWatermark
+        ? `${baseName}_watermarked.pdf`
         : 'processed.pdf';
 
       setResultData({
@@ -245,7 +283,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
         wordCount: output.wordCount,
         hasSelectableText: output.hasSelectableText,
         extractedPages: output.extractedPages,
-        rotatedAngle: output.rotatedAngle,
+        rotatedAngle: output.rotatedAngle || rotateAngle,
         removedFields: output.removedFields,
       });
 
@@ -277,7 +315,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
     const a = document.createElement('a');
     a.href = downloadUrl;
-    a.download = resultData.filename || 'extracted_text.txt';
+    a.download = resultData.filename || 'processed.pdf';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -304,13 +342,30 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  const watermarkColorPresets = [
+    { label: 'Gray', hex: '#666666', bg: 'bg-[#666666]' },
+    { label: 'Red', hex: '#DC2626', bg: 'bg-red-600' },
+    { label: 'Blue', hex: '#2563EB', bg: 'bg-blue-600' },
+    { label: 'Black', hex: '#000000', bg: 'bg-black' },
+    { label: 'Emerald', hex: '#16A34A', bg: 'bg-emerald-600' },
+    { label: 'Orange', hex: '#EA580C', bg: 'bg-orange-600' },
+  ];
+
+  const watermarkTextPresets = ['CONFIDENTIAL', 'DO NOT COPY', 'SAMPLE', 'DRAFT', 'APPROVED', 'ORIGINAL'];
+
   return (
     <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-            <FileText className="w-5 h-5" />
+            {isRotator ? (
+              <RotateCw className="w-5 h-5" />
+            ) : isWatermark ? (
+              <Stamp className="w-5 h-5" />
+            ) : (
+              <FileText className="w-5 h-5" />
+            )}
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">{utility.name} Workspace</h2>
@@ -425,7 +480,302 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             )
           )}
 
-          {/* Specific tool options */}
+          {/* PDF Rotator Dedicated Controls */}
+          {isRotator && (
+            <div className="p-5 rounded-xl bg-gray-950 border border-gray-800 space-y-5">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <RotateCw className="w-4 h-4 text-blue-400" />
+                    Rotation Angle
+                  </label>
+                  <span className="text-[11px] text-gray-500">Applies clockwise rotation</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    {
+                      angle: 90 as const,
+                      label: '90° Clockwise',
+                      desc: 'Rotate 90 degrees right',
+                      badge: 'Standard',
+                      iconRotation: 'rotate-90',
+                    },
+                    {
+                      angle: 180 as const,
+                      label: '180° Half Turn',
+                      desc: 'Flip page upside down',
+                      badge: 'Flip',
+                      iconRotation: 'rotate-180',
+                    },
+                    {
+                      angle: 270 as const,
+                      label: '270° Counter-CW',
+                      desc: 'Rotate 90 degrees left',
+                      badge: 'Left',
+                      iconRotation: '-rotate-90',
+                    },
+                  ].map((item) => {
+                    const isSelected = rotateAngle === item.angle;
+                    return (
+                      <button
+                        key={item.angle}
+                        type="button"
+                        onClick={() => setRotateAngle(item.angle)}
+                        className={`p-3.5 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'bg-blue-600/10 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/30'
+                            : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={`text-sm font-semibold flex items-center gap-2 ${isSelected ? 'text-blue-400' : 'text-gray-200'}`}>
+                            <RotateCw className={`w-4 h-4 transition-transform duration-300 ${item.iconRotation}`} />
+                            {item.label}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">
+                            {item.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500">{item.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Page Selection */}
+              <div className="pt-4 border-t border-gray-800/80 space-y-3">
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-purple-400" />
+                  Target Pages
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRotatorPageMode('ALL')}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                      rotatorPageMode === 'ALL'
+                        ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    All Pages in PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRotatorPageMode('CUSTOM')}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                      rotatorPageMode === 'CUSTOM'
+                        ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    Specific Page Numbers / Range
+                  </button>
+                </div>
+
+                {rotatorPageMode === 'CUSTOM' && (
+                  <div className="space-y-2 mt-2">
+                    <input
+                      type="text"
+                      value={rotatorCustomPages}
+                      onChange={(e) => setRotatorCustomPages(e.target.value)}
+                      placeholder="e.g. 1, 3, 5-8"
+                      className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] text-gray-500">Quick presets:</span>
+                      {[
+                        { label: 'Page 1 Only', value: '1' },
+                        { label: 'First 3 Pages', value: '1-3' },
+                        { label: 'Odd Pages (1,3,5)', value: '1, 3, 5, 7, 9' },
+                        { label: 'Even Pages (2,4,6)', value: '2, 4, 6, 8, 10' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setRotatorCustomPages(preset.value)}
+                          className="px-2 py-0.5 rounded text-[11px] bg-gray-900 hover:bg-gray-800 text-gray-400 border border-gray-800"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* PDF Watermark Dedicated Controls */}
+          {isWatermark && (
+            <div className="p-5 rounded-xl bg-gray-950 border border-gray-800 space-y-5">
+              {/* Watermark text */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Type className="w-4 h-4 text-emerald-400" />
+                    Watermark Text
+                  </label>
+                  <span className="text-[11px] text-gray-500">Printed on every page</span>
+                </div>
+                <input
+                  type="text"
+                  value={watermarkText}
+                  onChange={(e) => setWatermarkText(e.target.value)}
+                  placeholder="e.g. CONFIDENTIAL, DO NOT COPY, SAMPLE"
+                  className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] text-gray-500 mr-1">Presets:</span>
+                  {watermarkTextPresets.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setWatermarkText(preset)}
+                      className={`px-2.5 py-1 rounded text-xs font-medium border transition-all ${
+                        watermarkText === preset
+                          ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold'
+                          : 'bg-gray-900 hover:bg-gray-800 text-gray-400 border-gray-800'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Watermark Position */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  Stamp Position & Angle
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {[
+                    { id: 'DIAGONAL' as const, label: 'Diagonal (45°)', desc: 'Full page diagonal' },
+                    { id: 'CENTER' as const, label: 'Center', desc: 'Horizontal middle' },
+                    { id: 'TOP' as const, label: 'Top Header', desc: 'Upper margin' },
+                    { id: 'BOTTOM' as const, label: 'Bottom Footer', desc: 'Lower margin' },
+                  ].map((pos) => {
+                    const isSelected = watermarkPosition === pos.id;
+                    return (
+                      <button
+                        key={pos.id}
+                        type="button"
+                        onClick={() => setWatermarkPosition(pos.id)}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          isSelected
+                            ? 'bg-emerald-600/10 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/30'
+                            : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                        }`}
+                      >
+                        <span className={`text-xs font-semibold block ${isSelected ? 'text-emerald-400' : 'text-gray-300'}`}>
+                          {pos.label}
+                        </span>
+                        <span className="text-[10px] text-gray-500">{pos.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Color & Size & Opacity Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-800/80">
+                {/* Color Selection */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                    Stamp Color
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {watermarkColorPresets.map((c) => {
+                      const isSelected = watermarkColorHex === c.hex;
+                      return (
+                        <button
+                          key={c.hex}
+                          type="button"
+                          onClick={() => setWatermarkColorHex(c.hex)}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all ${c.bg} ${
+                            isSelected ? 'ring-2 ring-emerald-400 scale-110 border-white' : 'border-gray-700 opacity-70 hover:opacity-100'
+                          }`}
+                          title={c.label}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Font Size */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                    Font Size ({watermarkFontSize}px)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {[24, 36, 42, 54, 72].map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => setWatermarkFontSize(sz)}
+                        className={`flex-1 py-1.5 rounded text-xs font-semibold border transition-all ${
+                          watermarkFontSize === sz
+                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
+                            : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Opacity */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-gray-300 uppercase tracking-wider">Opacity</span>
+                    <span className="text-emerald-400 font-mono font-bold">{Math.round(watermarkOpacity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.05"
+                    max="0.90"
+                    step="0.05"
+                    value={watermarkOpacity}
+                    onChange={(e) => setWatermarkOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Watermark Live Preview Box */}
+              <div className="p-4 rounded-xl bg-gray-900 border border-gray-800 text-center relative overflow-hidden h-28 flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-900/40 to-gray-900 pointer-events-none" />
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest absolute top-2 left-3 font-semibold">
+                  Live Watermark Visualizer
+                </p>
+                <span
+                  style={{
+                    color: watermarkColorHex,
+                    opacity: watermarkOpacity,
+                    fontSize: `${Math.min(28, watermarkFontSize * 0.55)}px`,
+                    transform:
+                      watermarkPosition === 'DIAGONAL'
+                        ? 'rotate(-25deg)'
+                        : watermarkPosition === 'TOP'
+                        ? 'translateY(-20px)'
+                        : watermarkPosition === 'BOTTOM'
+                        ? 'translateY(20px)'
+                        : 'none',
+                  }}
+                  className="font-black font-sans uppercase tracking-widest transition-all select-none"
+                >
+                  {watermarkText || 'WATERMARK'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* PDF Compressor Profile Controls */}
           {isCompress && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
               <div className="flex items-center justify-between">
@@ -486,6 +836,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             </div>
           )}
 
+          {/* Split & Page Extractor Controls */}
           {(isSplit || isPageExtractor) && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
               <label htmlFor="page-ranges" className="block text-xs font-semibold text-gray-300 uppercase">
@@ -505,6 +856,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             </div>
           )}
 
+          {/* PDF to JPG Controls */}
           {isPdfToJpg && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -533,6 +885,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             </div>
           )}
 
+          {/* PDF to PNG Controls */}
           {isPdfToPng && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -550,67 +903,23 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             </div>
           )}
 
-          {isRotator && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
-              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                Rotation Angle
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { angle: 90, label: '90° Clockwise' },
-                  { angle: 180, label: '180° Flip' },
-                  { angle: 270, label: '270° Counter-CW' },
-                ].map((item) => (
-                  <button
-                    key={item.angle}
-                    type="button"
-                    onClick={() => setRotateAngle(item.angle as any)}
-                    className={`py-2.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
-                      rotateAngle === item.angle
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-400'
-                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+          {/* PDF Metadata Remover Information */}
+          {isMetadataRemover && (
+            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">Privacy Sanitization</p>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                  Removes all author names, editing software tags, organization names, hidden dates, and revision histories permanently.
+                </p>
               </div>
             </div>
           )}
 
-          {isWatermark && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-4">
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-300 uppercase">Watermark Text</label>
-                <input
-                  type="text"
-                  value={watermarkText}
-                  onChange={(e) => setWatermarkText(e.target.value)}
-                  placeholder="e.g. CONFIDENTIAL, DRAFT, DO NOT COPY"
-                  className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>Opacity</span>
-                  <span>{Math.round(watermarkOpacity * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.05"
-                  max="1.0"
-                  step="0.05"
-                  value={watermarkOpacity}
-                  onChange={(e) => setWatermarkOpacity(parseFloat(e.target.value))}
-                  className="w-full accent-blue-500"
-                />
-              </div>
-            </div>
-          )}
-
+          {/* PDF Reorder Pages Controls */}
           {isReorder && (
             <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
-              <label className="block text-xs font-semibold text-gray-300 uppercase">Page Order</label>
+              <label className="block text-xs font-semibold text-gray-300 uppercase">Page Sequence</label>
               <input
                 type="text"
                 value={pageOrder}
@@ -667,6 +976,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                         Output size: {formatBytes(resultData.sizeBytes)}
                         {typeof resultData.savingsPercent === 'number' && ` • Saved ${resultData.savingsPercent}%`}
                         {resultData.pageCount && ` • ${resultData.pageCount} pages`}
+                        {resultData.rotatedAngle && ` • Rotated ${resultData.rotatedAngle}°`}
                       </p>
                     )}
                   </div>
