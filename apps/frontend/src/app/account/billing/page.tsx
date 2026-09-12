@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { UserBillingOverviewDto } from '@ad-utility/shared';
+import { Navbar } from '../../../components/navigation/Navbar';
+import { Footer } from '../../../components/navigation/Footer';
+import { getClientApiUrl } from '../../../lib/site-config';
+import { Check, ShieldCheck, Zap, Star, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function AccountBillingPage() {
   const [overview, setOverview] = useState<UserBillingOverviewDto | null>(null);
@@ -18,7 +22,8 @@ export default function AccountBillingPage() {
         return;
       }
 
-      const res = await fetch('http://localhost:4001/api/v1/billing/subscription/me', {
+      const apiUrl = getClientApiUrl();
+      const res = await fetch(`${apiUrl}/billing/subscription/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -45,7 +50,8 @@ export default function AccountBillingPage() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:4001/api/v1/billing/portal', {
+      const apiUrl = getClientApiUrl();
+      const res = await fetch(`${apiUrl}/billing/portal`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,14 +75,19 @@ export default function AccountBillingPage() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your Premium subscription? Your benefits will remain active until the end of the current billing cycle.')) {
+    if (
+      !confirm(
+        'Are you sure you want to cancel your Premium subscription? Your benefits will remain active until the end of the current billing cycle.',
+      )
+    ) {
       return;
     }
 
     setActionLoading(true);
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:4001/api/v1/billing/cancel', {
+      const apiUrl = getClientApiUrl();
+      const res = await fetch(`${apiUrl}/billing/cancel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,86 +113,81 @@ export default function AccountBillingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white">
-            <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm shadow">
-              ⚡
-            </span>
-            <span>UtilityPlatform</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/pricing" className="text-sm text-slate-400 hover:text-white transition">
-              Plans & Pricing
-            </Link>
-            <Link href="/" className="text-sm text-slate-400 hover:text-white transition">
-              Utilities
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#FAFBFD] text-slate-900 font-sans flex flex-col">
+      <Navbar />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-12 sm:py-16">
         <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 mb-3 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>SUBSCRIPTION & LIMITS</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
             Account & Billing
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm sm:text-base text-slate-500">
             Manage your subscription tier, entitlements, and daily utility usage quotas.
           </p>
         </div>
 
         {message && (
           <div
-            className={`mb-6 p-4 rounded-xl text-sm border flex items-center gap-3 ${
+            className={`mb-6 p-4 rounded-2xl text-sm border flex items-center gap-3 shadow-xs ${
               message.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50 border-rose-200 text-rose-900'
             }`}
           >
-            <span>{message.type === 'success' ? '✓' : '⚠'}</span>
-            <span>{message.text}</span>
+            {message.type === 'success' ? (
+              <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
+            <span className="font-medium">{message.text}</span>
           </div>
         )}
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : !overview ? (
-          <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-8 text-center">
-            <p className="text-slate-400 mb-4 text-sm">
-              Please sign in to view your subscription details and usage limits.
+          <div className="rounded-3xl bg-white border border-slate-200/90 p-8 sm:p-12 text-center shadow-sm">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto mb-4 shadow-xs">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Sign In Required</h3>
+            <p className="text-slate-500 mb-6 text-sm max-w-md mx-auto">
+              Please sign in to view your subscription details, active benefits, and usage limits.
             </p>
             <Link
               href="/admin/login?redirect=/account/billing"
-              className="inline-block px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md shadow-blue-500/25 transition"
             >
-              Sign In
+              <span>Sign In</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Current Plan Card */}
-            <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 md:p-8 shadow-xl">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 md:p-8 shadow-sm hover:shadow-md transition-all">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-2xl font-bold text-white">{overview.plan.name}</h2>
+                    <h2 className="text-2xl font-black text-slate-900">{overview.plan.name}</h2>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
                         overview.isPremium
-                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
                       {overview.subscription?.status || 'ACTIVE'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs sm:text-sm text-slate-500">
                     {overview.isPremium
                       ? 'Ad-free experience with maximum processing priority and 20x quotas.'
                       : 'Standard tier with community advertising and basic daily quotas.'}
@@ -192,17 +198,19 @@ export default function AccountBillingPage() {
                   {overview.isPremium ? (
                     <>
                       <button
+                        type="button"
                         onClick={handlePortalSession}
                         disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition"
+                        className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition shadow-xs"
                       >
                         Manage Billing
                       </button>
                       {overview.subscription && !overview.subscription.cancelAtPeriodEnd && (
                         <button
+                          type="button"
                           onClick={handleCancelSubscription}
                           disabled={actionLoading}
-                          className="px-4 py-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-semibold transition"
+                          className="px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition"
                         >
                           Cancel
                         </button>
@@ -211,9 +219,10 @@ export default function AccountBillingPage() {
                   ) : (
                     <Link
                       href="/pricing"
-                      className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition"
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/25 transition flex items-center gap-1.5"
                     >
-                      Upgrade to Premium
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span>Upgrade to Premium</span>
                     </Link>
                   )}
                 </div>
@@ -223,32 +232,38 @@ export default function AccountBillingPage() {
               {overview.subscription && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 text-xs">
                   <div>
-                    <span className="text-slate-500 block mb-1">Billing Interval</span>
-                    <span className="font-semibold text-slate-200">
+                    <span className="text-slate-400 block mb-1 font-bold uppercase tracking-wider text-[10px]">
+                      Billing Interval
+                    </span>
+                    <span className="font-bold text-slate-800">
                       {overview.plan.billingInterval || 'Monthly'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block mb-1">Renewal / End Date</span>
-                    <span className="font-semibold text-slate-200">
+                    <span className="text-slate-400 block mb-1 font-bold uppercase tracking-wider text-[10px]">
+                      Renewal Date
+                    </span>
+                    <span className="font-bold text-slate-800 font-mono">
                       {overview.subscription.currentPeriodEnd
                         ? new Date(overview.subscription.currentPeriodEnd).toLocaleDateString()
                         : '—'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block mb-1">Payment Provider</span>
-                    <span className="font-semibold text-slate-200 uppercase">
+                    <span className="text-slate-400 block mb-1 font-bold uppercase tracking-wider text-[10px]">
+                      Provider
+                    </span>
+                    <span className="font-bold text-slate-800 uppercase font-mono">
                       {overview.subscription.provider}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block mb-1">Auto-Renew</span>
+                    <span className="text-slate-400 block mb-1 font-bold uppercase tracking-wider text-[10px]">
+                      Auto-Renew
+                    </span>
                     <span
-                      className={`font-semibold ${
-                        overview.subscription.cancelAtPeriodEnd
-                          ? 'text-amber-400'
-                          : 'text-emerald-400'
+                      className={`font-bold ${
+                        overview.subscription.cancelAtPeriodEnd ? 'text-amber-700' : 'text-emerald-700'
                       }`}
                     >
                       {overview.subscription.cancelAtPeriodEnd ? 'Ends at cycle' : 'Enabled'}
@@ -259,16 +274,14 @@ export default function AccountBillingPage() {
             </div>
 
             {/* Daily Usage Quotas */}
-            <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 md:p-8 shadow-xl">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 md:p-8 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-white">Daily Usage Quotas</h3>
-                  <p className="text-xs text-slate-400">
-                    Usage resets automatically at midnight UTC.
-                  </p>
+                  <h3 className="text-lg font-bold text-slate-900">Daily Usage Quotas</h3>
+                  <p className="text-xs text-slate-500">Usage resets automatically at midnight UTC.</p>
                 </div>
-                <span className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400">
-                  UTC Time
+                <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold border border-slate-200">
+                  UTC Midnight Reset
                 </span>
               </div>
 
@@ -285,19 +298,19 @@ export default function AccountBillingPage() {
                   return (
                     <div key={u.featureKey} className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium text-slate-300">{label}</span>
-                        <span className="text-slate-400 font-mono">
+                        <span className="font-bold text-slate-800">{label}</span>
+                        <span className="text-slate-500 font-mono font-medium">
                           {u.currentCount} / {u.limit} ({u.remaining} remaining)
                         </span>
                       </div>
-                      <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                         <div
-                          className={`h-full transition-all duration-300 ${
+                          className={`h-full transition-all duration-300 rounded-full ${
                             percent > 90
                               ? 'bg-rose-500'
                               : percent > 60
                               ? 'bg-amber-500'
-                              : 'bg-indigo-500'
+                              : 'bg-blue-600'
                           }`}
                           style={{ width: `${percent}%` }}
                         ></div>
@@ -309,27 +322,31 @@ export default function AccountBillingPage() {
             </div>
 
             {/* Included Entitlements */}
-            <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-6 shadow-md text-xs">
-              <h4 className="font-bold text-slate-300 uppercase tracking-wider mb-4">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 shadow-sm text-xs space-y-4">
+              <h4 className="font-bold text-slate-700 uppercase tracking-wider">
                 Active Entitlements Summary
               </h4>
-              <div className="grid sm:grid-cols-2 gap-3 text-slate-300">
+              <div className="grid sm:grid-cols-2 gap-3 text-slate-700 font-medium">
                 <div className="flex items-center gap-2">
-                  <span className={overview.entitlements.showAds ? 'text-amber-400' : 'text-emerald-400 font-bold'}>
+                  <span
+                    className={`w-4 h-4 flex items-center justify-center font-bold ${
+                      overview.entitlements.showAds ? 'text-amber-600' : 'text-emerald-600'
+                    }`}
+                  >
                     {overview.entitlements.showAds ? 'ℹ' : '✓'}
                   </span>
                   <span>{overview.entitlements.showAds ? 'Advertisements enabled' : '100% Ad-Free active'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
+                  <span className="w-4 h-4 flex items-center justify-center text-emerald-600 font-bold">✓</span>
                   <span>Full access to all registered public utilities</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
+                  <span className="w-4 h-4 flex items-center justify-center text-emerald-600 font-bold">✓</span>
                   <span>Client-side and Server-side execution engines</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
+                  <span className="w-4 h-4 flex items-center justify-center text-emerald-600 font-bold">✓</span>
                   <span>Zero individual tracking / privacy-safe analytics</span>
                 </div>
               </div>
@@ -337,6 +354,8 @@ export default function AccountBillingPage() {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }
