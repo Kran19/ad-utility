@@ -1,4 +1,4 @@
-import { UtilityRegistry } from '@ad-utility/shared';
+import { UtilityRegistry, TextHashAdapter } from '@ad-utility/shared';
 import { AiGatewayService } from '../../ai/services/ai-gateway.service';
 
 // Image Adapters
@@ -103,6 +103,9 @@ export function registerServerAdapters(registry: UtilityRegistry, aiGateway: AiG
   if (!registry.has('video-to-gif')) registry.register(new VideoToGifAdapter());
   if (!registry.has('video-trimmer')) registry.register(new VideoTrimmerAdapter());
   if (!registry.has('audio-cutter')) registry.register(new AudioCutterAdapter());
+
+  // Text & Developer
+  if (!registry.has('text-hash')) registry.register(new TextHashAdapter());
 
   // AI
   if (!registry.has('ai-humanizer')) registry.register(new AiHumanizerAdapter(aiGateway));
