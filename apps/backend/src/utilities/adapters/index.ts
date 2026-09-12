@@ -59,11 +59,14 @@ export * from './pdf/pdf-reorder-pages.adapter';
 export * from './pdf/pdf-watermark.adapter';
 export * from './pdf/pdf-metadata-remover.adapter';
 
+import { VideoDownloaderAdapter } from './media/video-downloader.adapter';
+
 export * from './media/video-compressor.adapter';
 export * from './media/mp4-to-mp3.adapter';
 export * from './media/video-to-gif.adapter';
 export * from './media/video-trimmer.adapter';
 export * from './media/audio-cutter.adapter';
+export * from './media/video-downloader.adapter';
 
 export * from './ai/ai-humanizer.adapter';
 export * from './ai/ai-paraphraser.adapter';
@@ -103,6 +106,7 @@ export function registerServerAdapters(registry: UtilityRegistry, aiGateway: AiG
   if (!registry.has('video-to-gif')) registry.register(new VideoToGifAdapter());
   if (!registry.has('video-trimmer')) registry.register(new VideoTrimmerAdapter());
   if (!registry.has('audio-cutter')) registry.register(new AudioCutterAdapter());
+  if (!registry.has('video-downloader')) registry.register(new VideoDownloaderAdapter());
 
   // Text & Developer
   if (!registry.has('text-hash')) registry.register(new TextHashAdapter());

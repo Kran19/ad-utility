@@ -62,7 +62,12 @@ export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
   }
 
   // 2. Video Workspace
-  if (utility.categorySlug === 'video' || ['video-compressor', 'video-converter', 'video-to-gif', 'video-to-jpg', 'mp4-to-mp3', 'video-trimmer'].includes(utility.slug)) {
+  if (
+    utility.categorySlug === 'video' ||
+    ['video-compressor', 'video-converter', 'video-to-gif', 'video-to-jpg', 'mp4-to-mp3', 'video-trimmer', 'video-downloader'].includes(
+      utility.slug,
+    )
+  ) {
     return <VideoWorkspace utility={utility} />;
   }
 

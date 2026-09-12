@@ -108,6 +108,75 @@ export function validatePdfMagicBytes(buffer: Buffer): void {
   }
 }
 
+export function validateVideoMagicBytes(buffer: Buffer): { format: 'mp4' | 'webm' | 'mov' | 'avi' | 'mkv'; mimeType: string } {
+  if (buffer.length < 12) {
+    throw new Error('File payload too small to be a valid video');
+  }
+
+  // 1. Reject executable binaries (PE, ELF, Mach-O)
+  if (buffer[0] === 0x4d && buffer[1] === 0x5a) {
+    throw new Error('Invalid video signature: executable binary (DOS/PE) detected.');
+  }
+  if (buffer[0] === 0x7f && buffer[1] === 0x45 && buffer[2] === 0x4c && buffer[3] === 0x46) {
+    throw new Error('Invalid video signature: executable binary (ELF) detected.');
+  }
+  if (
+    (buffer[0] === 0xfe && buffer[1] === 0xed && buffer[2] === 0xfa && (buffer[3] === 0xce || buffer[3] === 0xcf)) ||
+    (buffer[0] === 0xcf && buffer[1] === 0xfa && buffer[2] === 0xed && buffer[3] === 0xfe) ||
+    (buffer[0] === 0xca && buffer[1] === 0xfe && buffer[2] === 0xba && buffer[3] === 0xbe)
+  ) {
+    throw new Error('Invalid video signature: executable binary (Mach-O/Java) detected.');
+  }
+
+  // 2. Reject HTML/Script/XML disguised files
+  const headerStr = buffer.subarray(0, 512).toString('ascii').toLowerCase();
+  if (headerStr.includes('<!doctype html') || headerStr.includes('<html') || headerStr.includes('<script')) {
+    throw new Error('Invalid video file: HTML/webpage detected instead of binary video.');
+  }
+
+  // 3. WebM / Matroska (MKV) — EBML ID 0x1A 0x45 0xDF 0xA3
+  if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+    // Check if DocType is webm or matroska
+    const ebmlSlice = buffer.subarray(0, 128).toString('binary');
+    if (ebmlSlice.includes('webm')) {
+      return { format: 'webm', mimeType: 'video/webm' };
+    }
+    return { format: 'mkv', mimeType: 'video/x-matroska' };
+  }
+
+  // 4. ISO Base Media File Format (MP4, MOV, M4V)
+  // Standard format: [4 bytes size] [4 bytes box type: 'ftyp', 'moov', 'mdat']
+  const boxType = buffer.subarray(4, 8).toString('ascii');
+  if (boxType === 'ftyp' || boxType === 'moov' || boxType === 'mdat') {
+    if (boxType === 'ftyp' && buffer.length >= 12) {
+      const majorBrand = buffer.subarray(8, 12).toString('ascii');
+      if (majorBrand === 'qt  ' || majorBrand === 'moov') {
+        return { format: 'mov', mimeType: 'video/quicktime' };
+      }
+    }
+    return { format: 'mp4', mimeType: 'video/mp4' };
+  }
+
+  // QuickTime MOV can also start with 'moov' or 'mdat' directly at byte 0
+  const startType = buffer.subarray(0, 4).toString('ascii');
+  if (startType === 'moov' || startType === 'mdat' || startType === 'wide') {
+    return { format: 'mov', mimeType: 'video/quicktime' };
+  }
+
+  // 5. AVI — RIFF....AVI
+  if (
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer.subarray(8, 12).toString('ascii') === 'AVI '
+  ) {
+    return { format: 'avi', mimeType: 'video/x-msvideo' };
+  }
+
+  throw new Error('Unsupported or invalid video format. Only MP4, WebM, MOV, MKV, and AVI are supported.');
+}
+
 export function sanitizeFilename(name?: string, fallback = 'file', ext = ''): string {
   if (!name || typeof name !== 'string') {
     return `${fallback}${ext ? '.' + ext : ''}`;
@@ -136,3 +205,4 @@ export function sanitizeFilename(name?: string, fallback = 'file', ext = ''): st
 
   return clean;
 }
+

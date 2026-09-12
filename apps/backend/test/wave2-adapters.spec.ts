@@ -39,7 +39,7 @@ describe('Phase 27 — Wave 2 Utilities Verification', () => {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#38bdf8';
     ctx.fillRect(0, 0, width, height);
-    return canvas.toBuffer('image/webp', { quality: 0.8 });
+    return canvas.toBuffer('image/webp', 80);
   };
 
   const createTestPdfWithMetadataBuffer = async (): Promise<Buffer> => {

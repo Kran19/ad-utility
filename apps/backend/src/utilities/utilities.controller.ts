@@ -6,14 +6,18 @@ import {
   Body,
   Query,
   Req,
+  Res,
   HttpCode,
   HttpStatus,
   UseGuards,
   Header,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
+import * as fs from 'fs';
 import { UtilitiesService } from './utilities.service';
+import { VideoDownloadStorageService } from './services/video-downloader/video-storage.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -84,6 +88,36 @@ export class UtilitiesController {
         timestamp: new Date().toISOString(),
       },
     };
+  }
+
+  @Public()
+  @Get('video-downloader/download/:token')
+  @ApiOperation({ summary: 'Stream and download processed video file by temporary token' })
+  @ApiParam({ name: 'token', description: 'Temporary download token' })
+  @ApiResponse({ status: 200, description: 'Video binary stream' })
+  @ApiResponse({ status: 404, description: 'Download token not found or expired' })
+  async downloadVideoArtifact(
+    @Param('token') token: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const storage = VideoDownloadStorageService.getInstance();
+    const artifact = storage.getArtifact(token);
+    if (!artifact || !fs.existsSync(artifact.filePath)) {
+      throw new NotFoundException('Download link has expired or is invalid. Please request a new download.');
+    }
+
+    res.setHeader('Content-Type', artifact.mimeType);
+    res.setHeader('Content-Length', artifact.sizeBytes);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(artifact.filename)}"; filename*=UTF-8''${encodeURIComponent(artifact.filename)}`,
+    );
+
+    const stream = fs.createReadStream(artifact.filePath);
+    stream.pipe(res);
+    stream.on('end', () => {
+      storage.deleteArtifact(token);
+    });
   }
 
   @Public()
