@@ -117,7 +117,7 @@ function LoginContent() {
                 Welcome back
               </h1>
               <p className="text-slate-500 text-xs sm:text-sm mt-1.5">
-                Sign in to access your utility workspace & credits
+                Sign in to access your utility workspace
               </p>
             </div>
 

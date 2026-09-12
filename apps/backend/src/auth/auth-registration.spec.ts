@@ -9,13 +9,13 @@ import {
 import * as request from 'supertest';
 import * as cookieParser from 'cookie-parser';
 import * as bcrypt from 'bcryptjs';
-import { AppModule } from '../src/app.module';
-import { AuthService } from '../src/auth/auth.service';
-import { PrismaService } from '../src/prisma/prisma.service';
-import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../src/auth/guards/roles.guard';
-import { Roles } from '../src/auth/decorators/roles.decorator';
-import { CurrentUser } from '../src/auth/decorators/current-user.decorator';
+import { AppModule } from '../app.module';
+import { AuthService } from './auth.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { JwtPayload } from '@ad-utility/shared';
 
 @Controller('test-registration-guard')

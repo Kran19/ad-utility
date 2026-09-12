@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Search,
   ChevronDown,
@@ -36,6 +36,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -47,8 +48,12 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
   const categoriesRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch authentication status on mount
+  // Fetch authentication status on mount (skip when explicitly on auth pages)
   useEffect(() => {
+    if (pathname === '/login' || pathname === '/signup') {
+      return;
+    }
+
     async function checkAuth() {
       try {
         const apiUrl = getClientApiUrl();
@@ -66,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
       }
     }
     checkAuth();
-  }, []);
+  }, [pathname]);
 
   // Close dropdowns on click outside
   useEffect(() => {

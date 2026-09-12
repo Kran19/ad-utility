@@ -43,17 +43,22 @@ export class AuthController {
 
     const result = await this.authService.register(registerDto, ip, userAgent);
 
-    // Set secure HTTP-only cookies for web clients
+    // Set secure HTTP-only cookies for web clients (adaptive to HTTPS vs direct HTTP IP access)
+    const isSecure =
+      process.env.COOKIE_SECURE === 'true' ||
+      (process.env.NODE_ENV === 'production' &&
+        (req.secure || req.headers['x-forwarded-proto'] === 'https'));
+
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -84,17 +89,21 @@ export class AuthController {
 
     const result = await this.authService.login(loginDto, ip, userAgent);
 
-    // Optional: Set secure HTTP-only cookie for web clients
+    const isSecure =
+      process.env.COOKIE_SECURE === 'true' ||
+      (process.env.NODE_ENV === 'production' &&
+        (req.secure || req.headers['x-forwarded-proto'] === 'https'));
+
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -124,16 +133,21 @@ export class AuthController {
 
     const result = await this.authService.refreshToken(token, ip);
 
+    const isSecure =
+      process.env.COOKIE_SECURE === 'true' ||
+      (process.env.NODE_ENV === 'production' &&
+        (req.secure || req.headers['x-forwarded-proto'] === 'https'));
+
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
