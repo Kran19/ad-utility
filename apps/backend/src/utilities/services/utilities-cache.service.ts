@@ -83,6 +83,15 @@ export class UtilitiesCacheService implements OnModuleDestroy {
     }
   }
 
+  async del(key: string): Promise<void> {
+    if (!this.client || !this.isConnected) return;
+    try {
+      await this.client.del(`utility_cache:${key}`);
+    } catch {
+      // fail open
+    }
+  }
+
   async invalidatePrefix(prefix: string): Promise<void> {
     if (!this.client || !this.isConnected) return;
     try {
@@ -93,6 +102,10 @@ export class UtilitiesCacheService implements OnModuleDestroy {
     } catch {
       // fail open
     }
+  }
+
+  async clear(): Promise<void> {
+    await this.invalidatePrefix('');
   }
 
   async onModuleDestroy() {
