@@ -131,19 +131,35 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
   };
 
   return (
-    <div className="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 sm:p-8 space-y-6">
+    <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+            {utility.slug === 'video-trimmer' ? <Scissors className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
+            <p className="text-xs text-slate-500">FFmpeg hardware-accelerated processing &bull; Privacy protected</p>
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
+          {utility.implementationMode}
+        </span>
+      </div>
+
       {/* Upload Dropzone */}
       {!selectedFile && (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="w-full border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-xl p-8 text-center cursor-pointer transition-colors bg-slate-950/40 space-y-3"
+          className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3 group"
         >
-          <div className="w-12 h-12 rounded-full bg-sky-500/10 text-sky-400 flex items-center justify-center mx-auto">
-            <Video className="w-6 h-6" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-blue-600 shadow-xs group-hover:scale-105 transition-transform">
+            <Upload className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-white font-medium">Click or drag a video to upload</p>
-            <p className="text-xs text-slate-400 mt-1">Supports MP4, WebM, MOV (Max 50MB)</p>
+            <h3 className="text-base font-bold text-slate-900">Click or drag a video to upload</h3>
+            <p className="text-xs text-slate-500 mt-1">Supports MP4, WebM, MOV (Max 50MB)</p>
           </div>
           <input
             ref={fileInputRef}
@@ -160,17 +176,17 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Player Preview */}
-            <div className="lg:col-span-6 bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
+            <div className="lg:col-span-6 bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 flex flex-col justify-between">
               <video
                 ref={videoRef}
                 src={fileUrl}
                 controls
                 onLoadedMetadata={handleLoadedMetadata}
-                className="w-full max-h-64 object-contain mx-auto"
+                className="w-full max-h-64 object-contain mx-auto bg-slate-900"
               />
-              <div className="p-3 bg-slate-900/80 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800">
-                <span className="font-medium text-slate-300 truncate max-w-[200px]">{selectedFile.name}</span>
-                <span>{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB {duration ? `• ${duration}s` : ''}</span>
+              <div className="p-3.5 bg-white flex items-center justify-between text-xs text-slate-500 border-t border-slate-200">
+                <span className="font-bold text-slate-800 truncate max-w-[200px]">{selectedFile.name}</span>
+                <span className="font-mono">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB {duration ? `• ${duration}s` : ''}</span>
               </div>
             </div>
 
@@ -179,17 +195,17 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
               {utility.slug === 'video-compressor' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Compression Level</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Compression Level</label>
                     <div className="grid grid-cols-3 gap-2">
                       {(['high', 'medium', 'low'] as const).map((lvl) => (
                         <button
                           key={lvl}
                           type="button"
                           onClick={() => setTargetQuality(lvl)}
-                          className={`px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${
+                          className={`px-3 py-2.5 rounded-xl text-xs font-bold capitalize transition-colors ${
                             targetQuality === lvl
-                              ? 'bg-sky-500 text-white shadow-md'
-                              : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
+                              ? 'bg-blue-50 border-2 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-500/20'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           {lvl === 'high' ? 'High Quality' : lvl === 'medium' ? 'Balanced' : 'Smallest Size'}
@@ -199,11 +215,11 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Max Resolution</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Max Resolution</label>
                     <select
                       value={maxResolution}
                       onChange={(e) => setMaxResolution(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-sky-500"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="original">Original Resolution</option>
                       <option value="1080p">1080p (Full HD)</option>
@@ -216,15 +232,17 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
 
               {utility.slug === 'mp4-to-mp3' && (
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Audio Bitrate</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Audio Bitrate</label>
                   <div className="grid grid-cols-4 gap-2">
                     {(['128k', '192k', '256k', '320k'] as const).map((b) => (
                       <button
                         key={b}
                         type="button"
                         onClick={() => setBitrate(b)}
-                        className={`px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
-                          bitrate === b ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-300'
+                        className={`px-2 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+                          bitrate === b
+                            ? 'bg-blue-50 border-2 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-500/20'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         {b}
@@ -238,25 +256,25 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Time (sec)</label>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Start Time (sec)</label>
                       <input
                         type="number"
                         min="0"
                         max={duration}
                         value={startTimeSec}
                         onChange={(e) => setStartTimeSec(Math.max(0, parseFloat(e.target.value) || 0))}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
+                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">End Time (sec)</label>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">End Time (sec)</label>
                       <input
                         type="number"
                         min="1"
                         max={duration || 180}
                         value={endTimeSec}
                         onChange={(e) => setEndTimeSec(parseFloat(e.target.value) || 10)}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
+                        className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -267,7 +285,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
                 <button
                   onClick={handleProcess}
                   disabled={isLoading}
-                  className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white font-medium text-sm transition-colors shadow-lg shadow-sky-500/20"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition-all"
                 >
                   {isLoading ? (
                     <>
@@ -287,7 +305,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
                     setFileUrl(null);
                     setResultData(null);
                   }}
-                  className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium"
+                  className="px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold transition-colors"
                 >
                   Change
                 </button>
@@ -296,30 +314,30 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
           </div>
 
           {errorMsg && (
-            <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-sm flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {/* Result Card */}
           {resultData && (
-            <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-4">
+            <div className="p-6 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-4 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-white font-bold flex items-center gap-2">
-                    <Check className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-emerald-900 font-bold flex items-center gap-2">
+                    <Check className="w-5 h-5 text-emerald-600" />
                     Conversion Complete
                   </h3>
-                  <p className="text-xs text-slate-300 mt-1">
-                    Output: {resultData.filename}{' '}
+                  <p className="text-xs text-slate-600 mt-1 font-medium">
+                    Output: <span className="font-bold text-slate-800">{resultData.filename}</span>{' '}
                     {resultData.sizeBytes ? `(${(resultData.sizeBytes / 1024 / 1024).toFixed(2)} MB)` : ''}
                     {resultData.savingsPercent ? ` • Saved ${resultData.savingsPercent}%` : ''}
                   </p>
                 </div>
                 <button
                   onClick={handleDownload}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-colors"
+                  className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/25 transition-all"
                 >
                   <Download className="w-4 h-4" />
                   Download File

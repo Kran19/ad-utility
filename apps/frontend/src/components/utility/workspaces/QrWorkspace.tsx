@@ -309,32 +309,32 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
   // --- SCANNER VIEW ---
   if (isScanner) {
     return (
-      <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-        <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+      <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
               <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">QR Code Scanner</h2>
-              <p className="text-xs text-gray-400">Instant in-browser QR decoding & camera scanner</p>
+              <h2 className="text-lg font-bold text-slate-900">QR Code Scanner</h2>
+              <p className="text-xs text-slate-500">Instant in-browser QR decoding & camera scanner</p>
             </div>
           </div>
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 uppercase">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
             LOCAL
           </span>
         </div>
 
         {/* Tab Selection */}
-        <div className="flex bg-gray-950 p-1 rounded-xl border border-gray-800 w-fit">
+        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit">
           <button
             type="button"
             onClick={() => {
               stopCameraScan();
               setScanMode('upload');
             }}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-              scanMode === 'upload' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              scanMode === 'upload' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Upload className="w-3.5 h-3.5" /> Upload Image
@@ -342,8 +342,8 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
           <button
             type="button"
             onClick={() => setScanMode('camera')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-              scanMode === 'camera' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              scanMode === 'camera' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Camera className="w-3.5 h-3.5" /> Live Camera
@@ -354,7 +354,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
         {scanMode === 'upload' && (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-800 hover:border-gray-700 bg-gray-950/50 hover:bg-gray-950 rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3"
+            className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3"
           >
             <input
               ref={fileInputRef}
@@ -367,13 +367,13 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                 }
               }}
             />
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-gray-800/80 border border-gray-700/60 flex items-center justify-center text-blue-400">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-blue-600 shadow-xs">
               <Upload className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-semibold text-gray-200">
-              Drop QR image here, or <span className="text-blue-400 underline">browse</span>
+            <h3 className="text-base font-bold text-slate-900">
+              Drop QR image here, or <span className="text-blue-600 underline">browse</span>
             </h3>
-            <p className="text-xs text-gray-500">Supports PNG, JPG, WebP up to 15MB</p>
+            <p className="text-xs text-slate-500">Supports PNG, JPG, WebP up to 15MB</p>
           </div>
         )}
 
@@ -381,27 +381,27 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
         {scanMode === 'camera' && (
           <div className="space-y-4">
             {!isSecureContext && (
-              <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-800/60 text-amber-200 text-xs flex items-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-amber-300">HTTPS Context Required for Camera</p>
-                  <p className="mt-0.5 text-amber-200/90 leading-relaxed">
+                  <p className="font-bold text-amber-800">HTTPS Context Required for Camera</p>
+                  <p className="mt-0.5 text-amber-700 leading-relaxed">
                     Browser security policies require a secure origin (HTTPS) to activate live camera scanning. On HTTP environments, please use the <strong>Upload Image</strong> tab to scan QR codes seamlessly.
                   </p>
                 </div>
               </div>
             )}
 
-            <div className="relative aspect-video max-h-72 rounded-xl overflow-hidden bg-gray-950 border border-gray-800 flex items-center justify-center">
+            <div className="relative aspect-video max-h-72 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
               <video ref={videoRef} playsInline className="w-full h-full object-cover" />
               {!isCameraActive && (
                 <div className="text-center p-6 space-y-3">
-                  <Camera className="w-10 h-10 text-gray-600 mx-auto" />
-                  <p className="text-xs text-gray-400">Camera preview inactive</p>
+                  <Camera className="w-10 h-10 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-500 font-medium">Camera preview inactive</p>
                   <button
                     type="button"
                     onClick={startCameraScan}
-                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-colors"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition-colors"
                   >
                     Start Camera Scan
                   </button>
@@ -413,7 +413,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
               <button
                 type="button"
                 onClick={stopCameraScan}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white transition-colors"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white transition-colors"
               >
                 Stop Camera
               </button>
@@ -423,14 +423,14 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
 
         {/* Result Card */}
         {scannedResult && (
-          <div className="p-5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 space-y-3">
-            <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold uppercase">
+          <div className="p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between text-xs text-emerald-800 font-bold uppercase tracking-wider">
               <span className="flex items-center gap-1.5">
-                <Check className="w-4 h-4" /> QR Code Detected
+                <Check className="w-4 h-4 text-emerald-600" /> QR Code Detected
               </span>
               <span>Decoded Successfully</span>
             </div>
-            <div className="p-3.5 rounded-lg bg-gray-950 border border-gray-800 text-white font-mono text-sm break-all select-all">
+            <div className="p-3.5 rounded-xl bg-white border border-emerald-200 text-slate-900 font-mono text-sm break-all select-all shadow-xs">
               {scannedResult}
             </div>
             <div className="flex gap-2.5 pt-1">
@@ -441,9 +441,9 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-bold text-gray-200 transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors flex items-center gap-1.5 shadow-xs"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied' : 'Copy Text'}
               </button>
               {isValidUrl(scannedResult) && (
@@ -451,7 +451,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                   href={scannedResult}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition-colors flex items-center gap-1.5"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> Open Link
                 </a>
@@ -462,11 +462,11 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
 
         {/* Error Display */}
         {scanError && (
-          <div className="p-4 rounded-xl bg-red-950/60 border border-red-800/80 text-red-200 text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-red-300">Scan Notice</p>
-              <p className="text-red-200 text-xs mt-0.5">{scanError}</p>
+              <p className="font-bold text-rose-800">Scan Notice</p>
+              <p className="text-rose-700 text-xs mt-0.5">{scanError}</p>
             </div>
           </div>
         )}
@@ -476,20 +476,20 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
 
   // --- GENERATOR VIEW (QR & Barcode) ---
   return (
-    <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+    <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
             {isBarcode ? <Barcode className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{utility.name}</h2>
-            <p className="text-xs text-gray-400">
+            <h2 className="text-lg font-bold text-slate-900">{utility.name}</h2>
+            <p className="text-xs text-slate-500">
               {isBarcode ? 'Standards-compliant Code 128 barcode' : 'ISO/IEC 18004 compliant, high-contrast QR codes'}
             </p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 uppercase">
+        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
           LOCAL
         </span>
       </div>
@@ -499,7 +499,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
         <div className="lg:col-span-7 space-y-5">
           {!isBarcode && (
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-2">Content Type</label>
+              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Content Type</label>
               <div className="grid grid-cols-5 gap-1.5">
                 {[
                   { id: 'url', label: 'URL', icon: Globe },
@@ -514,10 +514,10 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                       key={type.id}
                       type="button"
                       onClick={() => setContentType(type.id as any)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs font-medium transition-all ${
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition-all ${
                         contentType === type.id
-                          ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-sm'
-                          : 'bg-gray-950 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                          ? 'bg-blue-50 border-2 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-500/20'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900'
                       }`}
                     >
                       <Icon className="w-4 h-4 mb-1" />
@@ -533,7 +533,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
           <div className="space-y-4">
             {(contentType === 'url' || contentType === 'text' || isBarcode) && (
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
                   {isBarcode ? 'Barcode Text / Digits' : contentType === 'url' ? 'Target URL' : 'Plain Text'}
                 </label>
                 <input
@@ -541,7 +541,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                   value={textVal}
                   onChange={(e) => setTextVal(e.target.value)}
                   placeholder={isBarcode ? 'e.g. 1234567890' : contentType === 'url' ? 'https://example.com' : 'Enter text...'}
-                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                 />
               </div>
             )}
@@ -549,23 +549,23 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
             {contentType === 'email' && !isBarcode && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Email Address</label>
                   <input
                     type="email"
                     value={emailTo}
                     onChange={(e) => setEmailTo(e.target.value)}
                     placeholder="recipient@example.com"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Subject</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Subject</label>
                   <input
                     type="text"
                     value={emailSubject}
                     onChange={(e) => setEmailSubject(e.target.value)}
                     placeholder="Hello from QR"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -573,13 +573,13 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
 
             {contentType === 'phone' && !isBarcode && (
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Phone Number</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Phone Number</label>
                 <input
                   type="tel"
                   value={phoneNum}
                   onChange={(e) => setPhoneNum(e.target.value)}
                   placeholder="+1 (555) 000-0000"
-                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
             )}
@@ -587,23 +587,23 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
             {contentType === 'wifi' && !isBarcode && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Network Name (SSID)</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Network Name (SSID)</label>
                   <input
                     type="text"
                     value={wifiSsid}
                     onChange={(e) => setWifiSsid(e.target.value)}
                     placeholder="Office_5G"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Password</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Password</label>
                   <input
                     type="password"
                     value={wifiPass}
                     onChange={(e) => setWifiPass(e.target.value)}
                     placeholder="Password"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -614,11 +614,11 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
           {!isBarcode && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Resolution</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Resolution</label>
                 <select
                   value={qrSize}
                   onChange={(e) => setQrSize(parseInt(e.target.value, 10))}
-                  className="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-white"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="256">256 &times; 256 px</option>
                   <option value="320">320 &times; 320 px</option>
@@ -627,11 +627,11 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Error Correction</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Error Correction</label>
                 <select
                   value={ecLevel}
                   onChange={(e) => setEcLevel(e.target.value as any)}
-                  className="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-white"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="L">L (7% Recovery)</option>
                   <option value="M">M (15% Recovery - Standard)</option>
@@ -640,12 +640,12 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">QR Color</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">QR Color</label>
                 <input
                   type="color"
                   value={darkColor}
                   onChange={(e) => setDarkColor(e.target.value)}
-                  className="w-full h-8 bg-gray-950 border border-gray-800 rounded-lg cursor-pointer p-0.5"
+                  className="w-full h-9 bg-white border border-slate-200 rounded-xl cursor-pointer p-0.5"
                 />
               </div>
             </div>
@@ -653,19 +653,19 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
         </div>
 
         {/* Right Preview Card */}
-        <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-gray-950 rounded-2xl border border-gray-800 space-y-4">
-          <div className="p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center">
+        <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
+          <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center">
             <canvas ref={canvasRef} className="max-w-[240px] max-h-[240px] w-auto h-auto object-contain" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-medium">
+          <div className="flex items-center gap-2 text-xs font-bold">
             {decodeVerified ? (
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <Check className="w-3.5 h-3.5" /> Scannable & Verified
+              <span className="flex items-center gap-1.5 text-emerald-700">
+                <Check className="w-4 h-4 text-emerald-600" /> Scannable & Verified
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 text-amber-400">
-                <AlertCircle className="w-3.5 h-3.5" /> Generating Matrix...
+              <span className="flex items-center gap-1.5 text-amber-700">
+                <AlertCircle className="w-4 h-4 text-amber-600" /> Generating Matrix...
               </span>
             )}
           </div>
@@ -674,14 +674,14 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
             <button
               type="button"
               onClick={handleDownloadPng}
-              className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5"
+              className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" /> Download PNG
             </button>
             <button
               type="button"
               onClick={handleDownloadSvg}
-              className="py-2.5 px-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
+              className="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs"
             >
               <Download className="w-3.5 h-3.5" /> Download SVG
             </button>
@@ -690,9 +690,9 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
           <button
             type="button"
             onClick={handleCopy}
-            className="w-full py-2 px-3 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? 'Copied Payload!' : 'Copy Payload String'}
           </button>
         </div>

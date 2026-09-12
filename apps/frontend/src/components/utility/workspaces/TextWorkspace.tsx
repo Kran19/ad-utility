@@ -102,19 +102,19 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
   ];
 
   return (
-    <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+    <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
             <Type className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{utility.name} Workspace</h2>
-            <p className="text-xs text-gray-400">Client-side instant execution &bull; Complete privacy</p>
+            <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
+            <p className="text-xs text-slate-500">Client-side instant execution &bull; Complete privacy</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 uppercase">
+        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
           {utility.implementationMode}
         </span>
       </div>
@@ -122,7 +122,7 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
       {/* Options Bar */}
       {isCaseConverter ? (
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
             Choose Target Case
           </label>
           <div className="flex flex-wrap gap-2">
@@ -134,10 +134,10 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
                   setTargetCase(c.key);
                   handleExecute(c.key);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   targetCase === c.key
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                    : 'bg-gray-950 text-gray-400 hover:text-gray-200 border border-gray-800 hover:border-gray-700'
+                    ? 'bg-blue-50 border-2 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-500/20'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
                 }`}
               >
                 {c.label}
@@ -147,52 +147,52 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
         </div>
       ) : (
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
             Cleaning Rules
           </label>
           <div className="flex flex-wrap gap-2">
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-950 border border-gray-800 text-xs text-gray-300 cursor-pointer hover:border-gray-700">
+            <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
               <input
                 type="checkbox"
                 checked={trimWhitespace}
                 onChange={(e) => setTrimWhitespace(e.target.checked)}
-                className="rounded accent-purple-500"
+                className="rounded text-blue-600 accent-blue-600"
               />
               <span>Trim Edges</span>
             </label>
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-950 border border-gray-800 text-xs text-gray-300 cursor-pointer hover:border-gray-700">
+            <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
               <input
                 type="checkbox"
                 checked={collapseSpaces}
                 onChange={(e) => setCollapseSpaces(e.target.checked)}
-                className="rounded accent-purple-500"
+                className="rounded text-blue-600 accent-blue-600"
               />
               <span>Collapse Spaces</span>
             </label>
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-950 border border-gray-800 text-xs text-gray-300 cursor-pointer hover:border-gray-700">
+            <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
               <input
                 type="checkbox"
                 checked={removeEmptyLines}
                 onChange={(e) => setRemoveEmptyLines(e.target.checked)}
-                className="rounded accent-purple-500"
+                className="rounded text-blue-600 accent-blue-600"
               />
               <span>Remove Blank Lines</span>
             </label>
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-950 border border-gray-800 text-xs text-gray-300 cursor-pointer hover:border-gray-700">
+            <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
               <input
                 type="checkbox"
                 checked={normalizeEndings}
                 onChange={(e) => setNormalizeEndings(e.target.checked)}
-                className="rounded accent-purple-500"
+                className="rounded text-blue-600 accent-blue-600"
               />
               <span>Normalize Line Endings</span>
             </label>
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-950 border border-gray-800 text-xs text-gray-300 cursor-pointer hover:border-gray-700">
+            <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
               <input
                 type="checkbox"
                 checked={tabSpaces}
                 onChange={(e) => setTabSpaces(e.target.checked)}
-                className="rounded accent-purple-500"
+                className="rounded text-blue-600 accent-blue-600"
               />
               <span>Tabs to Spaces</span>
             </label>
@@ -204,25 +204,25 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Input Pane */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <span className="font-semibold uppercase text-gray-300">Input Text</span>
-            <span>{inputText.length} characters &bull; {inputText.trim().split(/\s+/).filter(Boolean).length} words</span>
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span className="font-bold uppercase tracking-wider text-slate-700">Input Text</span>
+            <span className="font-mono">{inputText.length} chars &bull; {inputText.trim().split(/\s+/).filter(Boolean).length} words</span>
           </div>
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Type or paste your text here..."
             rows={10}
-            className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-gray-100 placeholder-gray-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-y"
+            className="w-full px-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
           />
         </div>
 
         {/* Output Pane */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <span className="font-semibold uppercase text-gray-300">Transformed Result</span>
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span className="font-bold uppercase tracking-wider text-slate-700">Transformed Result</span>
             {outputText && (
-              <span>{outputText.length} characters &bull; {outputText.trim().split(/\s+/).filter(Boolean).length} words</span>
+              <span className="font-mono">{outputText.length} chars &bull; {outputText.trim().split(/\s+/).filter(Boolean).length} words</span>
             )}
           </div>
           <div className="relative">
@@ -231,21 +231,21 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
               value={outputText}
               placeholder="Output will appear here..."
               rows={10}
-              className="w-full px-4 py-3 rounded-xl bg-gray-950/80 border border-gray-800 text-purple-300 placeholder-gray-600 text-sm font-mono focus:outline-none resize-y"
+              className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-mono focus:outline-none resize-y"
             />
             {outputText && (
               <button
                 type="button"
                 onClick={handleCopy}
-                className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 border border-gray-700 flex items-center gap-1.5 shadow-lg transition-all"
+                className="absolute top-3 right-3 px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 border border-slate-200 flex items-center gap-1.5 shadow-xs transition-all"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied!
+                    <Check className="w-3.5 h-3.5 text-emerald-600" /> Copied!
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" /> Copy
+                    <Copy className="w-3.5 h-3.5 text-slate-600" /> Copy
                   </>
                 )}
               </button>
@@ -263,7 +263,7 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
             setOutputText('');
             setErrorMsg(null);
           }}
-          className="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-medium text-gray-400 hover:text-gray-200 flex items-center gap-1.5 transition-colors"
+          className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" /> Clear
         </button>
@@ -271,7 +271,7 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
           type="button"
           onClick={() => handleExecute()}
           disabled={isLoading || !inputText.trim()}
-          className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-sm font-bold text-white shadow-lg shadow-purple-600/20 flex items-center gap-2 transition-all"
+          className="px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-bold text-white shadow-md shadow-blue-500/25 flex items-center gap-2 transition-all"
         >
           {isLoading ? (
             <>
@@ -288,7 +288,7 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
 
       {/* Error Message */}
       {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-950/60 border border-red-800/80 text-red-200 text-xs">
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
           {errorMsg}
         </div>
       )}

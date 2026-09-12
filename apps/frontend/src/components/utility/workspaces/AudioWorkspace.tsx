@@ -118,18 +118,34 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
   };
 
   return (
-    <div className="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 sm:p-8 space-y-6">
+    <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+            {utility.slug === 'audio-cutter' ? <Scissors className="w-5 h-5" /> : <Music className="w-5 h-5" />}
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
+            <p className="text-xs text-slate-500">In-memory lossless audio stream &bull; Privacy protected</p>
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
+          {utility.implementationMode}
+        </span>
+      </div>
+
       {!selectedFile && (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="w-full border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-xl p-8 text-center cursor-pointer transition-colors bg-slate-950/40 space-y-3"
+          className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3 group"
         >
-          <div className="w-12 h-12 rounded-full bg-sky-500/10 text-sky-400 flex items-center justify-center mx-auto">
-            <Music className="w-6 h-6" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-blue-600 shadow-xs group-hover:scale-105 transition-transform">
+            <Upload className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-white font-medium">Click or drag an audio file to upload</p>
-            <p className="text-xs text-slate-400 mt-1">Supports MP3, WAV, OGG, M4A (Max 30MB)</p>
+            <h3 className="text-base font-bold text-slate-900">Click or drag an audio file to upload</h3>
+            <p className="text-xs text-slate-500 mt-1">Supports MP3, WAV, OGG, M4A (Max 30MB)</p>
           </div>
           <input
             ref={fileInputRef}
@@ -143,11 +159,11 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
 
       {selectedFile && fileUrl && (
         <div className="space-y-6">
-          <div className="bg-slate-950 rounded-xl border border-slate-800 p-6 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h4 className="text-white font-medium text-sm">{selectedFile.name}</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-slate-900 font-bold text-sm">{selectedFile.name}</h4>
+                <p className="text-xs text-slate-500 mt-0.5 font-mono">
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB {duration ? `• ${duration}s` : ''}
                 </p>
               </div>
@@ -155,27 +171,27 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
             </div>
 
             {utility.slug === 'audio-cutter' && (
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200/80">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Time (sec)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Start Time (sec)</label>
                   <input
                     type="number"
                     min="0"
                     max={duration}
                     value={startTimeSec}
                     onChange={(e) => setStartTimeSec(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">End Time (sec)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">End Time (sec)</label>
                   <input
                     type="number"
                     min="1"
                     max={duration || 300}
                     value={endTimeSec}
                     onChange={(e) => setEndTimeSec(parseFloat(e.target.value) || 30)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -185,7 +201,7 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
               <button
                 onClick={handleProcess}
                 disabled={isLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white font-medium text-sm transition-colors shadow-lg shadow-sky-500/20"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition-all"
               >
                 {isLoading ? (
                   <>
@@ -205,7 +221,7 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
                   setFileUrl(null);
                   setResultData(null);
                 }}
-                className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium"
+                className="px-4 py-3.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold transition-colors"
               >
                 Change
               </button>
@@ -213,24 +229,24 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
           </div>
 
           {errorMsg && (
-            <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-sm flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {resultData && (
-            <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
+            <div className="p-6 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex flex-wrap items-center justify-between gap-4 shadow-xs">
               <div>
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <Check className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-emerald-900 font-bold flex items-center gap-2">
+                  <Check className="w-5 h-5 text-emerald-600" />
                   Audio Ready
                 </h3>
-                <p className="text-xs text-slate-300 mt-1">{resultData.filename}</p>
+                <p className="text-xs text-slate-600 mt-1 font-medium">{resultData.filename}</p>
               </div>
               <button
                 onClick={handleDownload}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-colors"
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/25 transition-all"
               >
                 <Download className="w-4 h-4" />
                 Download Audio

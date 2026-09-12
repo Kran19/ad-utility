@@ -14,10 +14,10 @@ import {
   Copy,
   RotateCw,
   Stamp,
-  Sliders,
-  ShieldCheck,
-  Type,
+  Scissors,
   Layers,
+  Type,
+  ShieldCheck,
 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
@@ -354,11 +354,11 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   const watermarkTextPresets = ['CONFIDENTIAL', 'DO NOT COPY', 'SAMPLE', 'DRAFT', 'APPROVED', 'ORIGINAL'];
 
   return (
-    <div className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+    <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+          <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-xs">
             {isRotator ? (
               <RotateCw className="w-5 h-5" />
             ) : isWatermark ? (
@@ -368,11 +368,11 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             )}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{utility.name} Workspace</h2>
-            <p className="text-xs text-gray-400">Server stream processing &bull; Privacy protected</p>
+            <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
+            <p className="text-xs text-slate-500">Server stream processing &bull; Privacy protected</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-950 text-red-400 border border-red-800/60 uppercase">
+        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
           {utility.implementationMode}
         </span>
       </div>
@@ -381,7 +381,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
       {(!isMerge && !singleFile) || (isMerge && mergeFiles.length === 0) ? (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-800 hover:border-gray-700 bg-gray-950/50 hover:bg-gray-950 rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all"
+          className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all group"
         >
           <input
             ref={fileInputRef}
@@ -391,13 +391,13 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             className="hidden"
             onChange={(e) => handleFilesAdded(e.target.files)}
           />
-          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gray-800/80 border border-gray-700/60 flex items-center justify-center text-red-400">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-blue-600 shadow-xs group-hover:scale-105 transition-transform">
             <Upload className="w-7 h-7" />
           </div>
-          <h3 className="text-base font-semibold text-gray-200 mb-1">
+          <h3 className="text-base font-bold text-slate-900 mb-1">
             {isMerge ? 'Select multiple PDF files to merge' : 'Drag & drop your PDF file, or browse'}
           </h3>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-500">
             {isMerge ? 'Add up to 10 files (max 50MB combined)' : 'PDF documents up to 25MB'}
           </p>
         </div>
@@ -408,14 +408,14 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             /* Multi-file List */
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-300 uppercase">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Files to Merge ({mergeFiles.length} / 10)
                 </span>
                 {mergeFiles.length < 10 && (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                    className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add More Files
                   </button>
@@ -433,19 +433,19 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                 {mergeFiles.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-950 border border-gray-800 text-sm"
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm"
                   >
                     <div className="flex items-center gap-3 truncate">
-                      <span className="w-6 h-6 rounded-md bg-gray-800 text-gray-400 flex items-center justify-center text-xs font-mono font-bold">
+                      <span className="w-6 h-6 rounded-md bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-mono font-bold">
                         {idx + 1}
                       </span>
-                      <span className="truncate text-gray-200">{item.file.name}</span>
-                      <span className="text-xs text-gray-500">({formatBytes(item.file.size)})</span>
+                      <span className="truncate font-medium text-slate-800">{item.file.name}</span>
+                      <span className="text-xs text-slate-500 font-mono">({formatBytes(item.file.size)})</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setMergeFiles((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-500 hover:text-red-400 p-1"
+                      className="text-slate-400 hover:text-rose-600 p-1"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -456,14 +456,14 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           ) : (
             /* Single file card */
             singleFile && (
-              <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 flex items-center justify-between">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-red-950/60 border border-red-800/60 flex items-center justify-center text-red-400">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-red-600 shadow-xs">
                     <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-200 truncate max-w-sm">{singleFile.file.name}</p>
-                    <p className="text-xs text-gray-500">{formatBytes(singleFile.file.size)}</p>
+                    <p className="text-sm font-bold text-slate-900 truncate max-w-sm">{singleFile.file.name}</p>
+                    <p className="text-xs text-slate-500 font-mono">{formatBytes(singleFile.file.size)}</p>
                   </div>
                 </div>
                 <button
@@ -472,7 +472,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                     setSingleFile(null);
                     setResultData(null);
                   }}
-                  className="text-xs text-red-400 hover:text-red-300 font-medium"
+                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-white border border-rose-200 px-3 py-1.5 rounded-lg shadow-xs hover:bg-rose-50 transition-colors"
                 >
                   Change File
                 </button>
@@ -482,14 +482,14 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF Rotator Dedicated Controls */}
           {isRotator && (
-            <div className="p-5 rounded-xl bg-gray-950 border border-gray-800 space-y-5">
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <RotateCw className="w-4 h-4 text-blue-400" />
+                  <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <RotateCw className="w-4 h-4 text-blue-600" />
                     Rotation Angle
                   </label>
-                  <span className="text-[11px] text-gray-500">Applies clockwise rotation</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Applies clockwise rotation</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
@@ -523,20 +523,20 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                         onClick={() => setRotateAngle(item.angle)}
                         className={`p-3.5 rounded-xl border text-left transition-all ${
                           isSelected
-                            ? 'bg-blue-600/10 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/30'
-                            : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                            ? 'bg-blue-50/90 border-2 border-blue-600 text-blue-950 font-bold shadow-xs ring-2 ring-blue-500/20'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-sm font-semibold flex items-center gap-2 ${isSelected ? 'text-blue-400' : 'text-gray-200'}`}>
+                          <span className={`text-sm font-bold flex items-center gap-2 ${isSelected ? 'text-blue-600' : 'text-slate-900'}`}>
                             <RotateCw className={`w-4 h-4 transition-transform duration-300 ${item.iconRotation}`} />
                             {item.label}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-semibold">
                             {item.badge}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-500">{item.desc}</p>
+                        <p className="text-[11px] text-slate-500 font-normal">{item.desc}</p>
                       </button>
                     );
                   })}
@@ -544,19 +544,19 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
               </div>
 
               {/* Page Selection */}
-              <div className="pt-4 border-t border-gray-800/80 space-y-3">
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-purple-400" />
+              <div className="pt-4 border-t border-slate-200/80 space-y-3">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-purple-600" />
                   Target Pages
                 </label>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setRotatorPageMode('ALL')}
-                    className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
                       rotatorPageMode === 'ALL'
-                        ? 'bg-purple-600/20 border-purple-500 text-purple-300'
-                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                        ? 'bg-purple-50 border-purple-500 text-purple-700 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     All Pages in PDF
@@ -564,10 +564,10 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                   <button
                     type="button"
                     onClick={() => setRotatorPageMode('CUSTOM')}
-                    className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
                       rotatorPageMode === 'CUSTOM'
-                        ? 'bg-purple-600/20 border-purple-500 text-purple-300'
-                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                        ? 'bg-purple-50 border-purple-500 text-purple-700 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     Specific Page Numbers / Range
@@ -581,10 +581,10 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                       value={rotatorCustomPages}
                       onChange={(e) => setRotatorCustomPages(e.target.value)}
                       placeholder="e.g. 1, 3, 5-8"
-                      className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] text-gray-500">Quick presets:</span>
+                      <span className="text-[11px] text-slate-500 font-medium">Quick presets:</span>
                       {[
                         { label: 'Page 1 Only', value: '1' },
                         { label: 'First 3 Pages', value: '1-3' },
@@ -595,7 +595,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                           key={preset.label}
                           type="button"
                           onClick={() => setRotatorCustomPages(preset.value)}
-                          className="px-2 py-0.5 rounded text-[11px] bg-gray-900 hover:bg-gray-800 text-gray-400 border border-gray-800"
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 shadow-xs"
                         >
                           {preset.label}
                         </button>
@@ -609,34 +609,34 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF Watermark Dedicated Controls */}
           {isWatermark && (
-            <div className="p-5 rounded-xl bg-gray-950 border border-gray-800 space-y-5">
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-5">
               {/* Watermark text */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <Type className="w-4 h-4 text-emerald-400" />
+                  <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Type className="w-4 h-4 text-emerald-600" />
                     Watermark Text
                   </label>
-                  <span className="text-[11px] text-gray-500">Printed on every page</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Printed on every page</span>
                 </div>
                 <input
                   type="text"
                   value={watermarkText}
                   onChange={(e) => setWatermarkText(e.target.value)}
                   placeholder="e.g. CONFIDENTIAL, DO NOT COPY, SAMPLE"
-                  className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
                 />
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-gray-500 mr-1">Presets:</span>
+                  <span className="text-[11px] text-slate-500 mr-1 font-medium">Presets:</span>
                   {watermarkTextPresets.map((preset) => (
                     <button
                       key={preset}
                       type="button"
                       onClick={() => setWatermarkText(preset)}
-                      className={`px-2.5 py-1 rounded text-xs font-medium border transition-all ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
                         watermarkText === preset
-                          ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold'
-                          : 'bg-gray-900 hover:bg-gray-800 text-gray-400 border-gray-800'
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-bold shadow-xs'
+                          : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
                       }`}
                     >
                       {preset}
@@ -647,7 +647,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
               {/* Watermark Position */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                   Stamp Position & Angle
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -663,16 +663,16 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                         key={pos.id}
                         type="button"
                         onClick={() => setWatermarkPosition(pos.id)}
-                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
                           isSelected
-                            ? 'bg-emerald-600/10 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/30'
-                            : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                            ? 'bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-bold shadow-xs ring-2 ring-emerald-500/20'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
                         }`}
                       >
-                        <span className={`text-xs font-semibold block ${isSelected ? 'text-emerald-400' : 'text-gray-300'}`}>
+                        <span className={`text-xs font-bold block ${isSelected ? 'text-emerald-700' : 'text-slate-800'}`}>
                           {pos.label}
                         </span>
-                        <span className="text-[10px] text-gray-500">{pos.desc}</span>
+                        <span className="text-[10px] text-slate-500 font-normal">{pos.desc}</span>
                       </button>
                     );
                   })}
@@ -680,10 +680,10 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
               </div>
 
               {/* Color & Size & Opacity Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-800/80">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-200/80">
                 {/* Color Selection */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Stamp Color
                   </label>
                   <div className="flex flex-wrap items-center gap-2">
@@ -695,7 +695,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                           type="button"
                           onClick={() => setWatermarkColorHex(c.hex)}
                           className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all ${c.bg} ${
-                            isSelected ? 'ring-2 ring-emerald-400 scale-110 border-white' : 'border-gray-700 opacity-70 hover:opacity-100'
+                            isSelected ? 'ring-2 ring-emerald-500 scale-110 border-white shadow-xs' : 'border-slate-300 opacity-80 hover:opacity-100'
                           }`}
                           title={c.label}
                         >
@@ -708,7 +708,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
                 {/* Font Size */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Font Size ({watermarkFontSize}px)
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -717,10 +717,10 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                         key={sz}
                         type="button"
                         onClick={() => setWatermarkFontSize(sz)}
-                        className={`flex-1 py-1.5 rounded text-xs font-semibold border transition-all ${
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                           watermarkFontSize === sz
-                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
-                            : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                         }`}
                       >
                         {sz}
@@ -732,8 +732,8 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                 {/* Opacity */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-gray-300 uppercase tracking-wider">Opacity</span>
-                    <span className="text-emerald-400 font-mono font-bold">{Math.round(watermarkOpacity * 100)}%</span>
+                    <span className="font-bold text-slate-800 uppercase tracking-wider">Opacity</span>
+                    <span className="text-emerald-600 font-mono font-bold">{Math.round(watermarkOpacity * 100)}%</span>
                   </div>
                   <input
                     type="range"
@@ -742,15 +742,14 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                     step="0.05"
                     value={watermarkOpacity}
                     onChange={(e) => setWatermarkOpacity(parseFloat(e.target.value))}
-                    className="w-full accent-emerald-500"
+                    className="w-full accent-emerald-600 cursor-pointer"
                   />
                 </div>
               </div>
 
               {/* Watermark Live Preview Box */}
-              <div className="p-4 rounded-xl bg-gray-900 border border-gray-800 text-center relative overflow-hidden h-28 flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-900/40 to-gray-900 pointer-events-none" />
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest absolute top-2 left-3 font-semibold">
+              <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200/90 text-center relative overflow-hidden h-28 flex items-center justify-center shadow-inner">
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest absolute top-2 left-3 font-bold">
                   Live Watermark Visualizer
                 </p>
                 <span
@@ -777,12 +776,12 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF Compressor Profile Controls */}
           {isCompress && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                   Compression Profile
                 </label>
-                <span className="text-[11px] text-gray-500">Target: ≤1 MB when achievable</span>
+                <span className="text-[11px] text-slate-500 font-medium">Target: ≤1 MB when achievable</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
@@ -791,21 +790,21 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                     name: 'Extreme',
                     desc: 'Aggressively optimizes raster content • Target: ≤1 MB when achievable',
                     badge: 'Default • Smallest Size',
-                    badgeColor: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60',
+                    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
                   },
                   {
                     id: 'BALANCED',
                     name: 'Balanced',
                     desc: 'Strong compression with clear layout & text readability',
                     badge: 'Recommended',
-                    badgeColor: 'bg-blue-950/80 text-blue-400 border-blue-800/60',
+                    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
                   },
                   {
                     id: 'VISUALLY_LOSSLESS',
                     name: 'Visually Lossless',
                     desc: 'Highest quality • Prioritizes visual fidelity over size',
                     badge: 'High Fidelity',
-                    badgeColor: 'bg-purple-950/80 text-purple-400 border-purple-800/60',
+                    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
                   },
                 ].map((lvl) => {
                   const isSelected = profile === lvl.id;
@@ -814,21 +813,21 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                       key={lvl.id}
                       type="button"
                       onClick={() => setProfile(lvl.id as any)}
-                      className={`p-3 rounded-lg border text-left transition-all ${
+                      className={`p-3.5 rounded-xl border text-left transition-all ${
                         isSelected
-                          ? 'bg-blue-600/10 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/30'
-                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                          ? 'bg-blue-50/90 border-2 border-blue-600 text-blue-950 font-bold shadow-xs ring-2 ring-blue-500/20'
+                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-xs font-semibold ${isSelected ? 'text-blue-400' : 'text-gray-300'}`}>
+                        <span className={`text-xs font-bold ${isSelected ? 'text-blue-700' : 'text-slate-900'}`}>
                           {lvl.name}
                         </span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${lvl.badgeColor}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${lvl.badgeColor}`}>
                           {lvl.badge}
                         </span>
                       </div>
-                      <p className="text-[11px] text-gray-500 leading-snug">{lvl.desc}</p>
+                      <p className="text-[11px] text-slate-500 font-normal leading-snug">{lvl.desc}</p>
                     </button>
                   );
                 })}
@@ -838,8 +837,8 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* Split & Page Extractor Controls */}
           {(isSplit || isPageExtractor) && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
-              <label htmlFor="page-ranges" className="block text-xs font-semibold text-gray-300 uppercase">
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+              <label htmlFor="page-ranges" className="block text-xs font-bold text-slate-800 uppercase">
                 Page Range to Extract
               </label>
               <input
@@ -848,9 +847,9 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                 value={pageRanges}
                 onChange={(e) => setPageRanges(e.target.value)}
                 placeholder="e.g. 1-3, 5, 8-10"
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
               />
-              <p className="text-[11px] text-gray-500">
+              <p className="text-[11px] text-slate-500 font-medium">
                 Specify pages separated by commas or hyphens (e.g. &ldquo;1-3, 5, 8-10&rdquo;).
               </p>
             </div>
@@ -858,24 +857,24 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF to JPG Controls */}
           {isPdfToJpg && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-300 uppercase">Pages to Convert</label>
+                <label className="block text-xs font-bold text-slate-800 uppercase">Pages to Convert</label>
                 <select
                   value={typeof pdfToJpgPage === 'number' ? pdfToJpgPage : 'all'}
                   onChange={(e) => setPdfToJpgPage(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-200"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
                   <option value="all">All Pages (Download ZIP)</option>
                   <option value="1">Page 1 Only (Single JPG)</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-300 uppercase">Render Scale</label>
+                <label className="block text-xs font-bold text-slate-800 uppercase">Render Scale</label>
                 <select
                   value={scale}
                   onChange={(e) => setScale(parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-200"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
                   <option value="1.0">1.0x (Standard - Fast)</option>
                   <option value="1.5">1.5x (High Quality - Recommended)</option>
@@ -887,13 +886,13 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF to PNG Controls */}
           {isPdfToPng && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-300 uppercase">Render Scale (DPI)</label>
+                <label className="block text-xs font-bold text-slate-800 uppercase">Render Scale (DPI)</label>
                 <select
                   value={scale}
                   onChange={(e) => setScale(parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-200"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
                   <option value="1.0">1.0x (Standard 72 DPI)</option>
                   <option value="1.5">1.5x (High Quality 150 DPI - Recommended)</option>
@@ -905,11 +904,11 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF Metadata Remover Information */}
           {isMetadataRemover && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">Privacy Sanitization</p>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">Privacy Sanitization</p>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed font-normal">
                   Removes all author names, editing software tags, organization names, hidden dates, and revision histories permanently.
                 </p>
               </div>
@@ -918,16 +917,16 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
           {/* PDF Reorder Pages Controls */}
           {isReorder && (
-            <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
-              <label className="block text-xs font-semibold text-gray-300 uppercase">Page Sequence</label>
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+              <label className="block text-xs font-bold text-slate-800 uppercase">Page Sequence</label>
               <input
                 type="text"
                 value={pageOrder}
                 onChange={(e) => setPageOrder(e.target.value)}
                 placeholder="e.g. 3, 1, 2"
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
               />
-              <p className="text-[11px] text-gray-500">
+              <p className="text-[11px] text-slate-500 font-medium">
                 Specify new sequence of 1-based page numbers separated by commas.
               </p>
             </div>
@@ -936,44 +935,44 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
           {/* Result Box */}
           {resultData && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-900/40 border border-emerald-700/60 flex items-center justify-center text-emerald-400 shrink-0">
-                    <Check className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Check className="w-5 h-5 stroke-[2.5]" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white">{resultData.filename}</p>
+                    <p className="text-sm font-bold text-slate-900">{resultData.filename}</p>
                     {isCompress && resultData.originalSizeBytes ? (
-                      <div className="text-xs text-gray-400 space-y-0.5 mt-0.5">
+                      <div className="text-xs text-slate-600 space-y-0.5 mt-0.5">
                         <p>
-                          Original: <span className="text-gray-300 font-mono">{formatBytes(resultData.originalSizeBytes)}</span>
-                          {' '}&rarr; Output: <span className="text-emerald-400 font-bold font-mono">{formatBytes(resultData.compressedSizeBytes || resultData.sizeBytes)}</span>
+                          Original: <span className="text-slate-800 font-mono font-medium">{formatBytes(resultData.originalSizeBytes)}</span>
+                          {' '}&rarr; Output: <span className="text-emerald-700 font-bold font-mono">{formatBytes(resultData.compressedSizeBytes || resultData.sizeBytes)}</span>
                           {resultData.wasActuallyCompressed && (
-                            <span className="text-emerald-400 ml-1.5 font-semibold">
+                            <span className="text-emerald-700 ml-1.5 font-bold">
                               (Saved {formatBytes(resultData.savedBytes || 0)} • {resultData.savingsPercent}%)
                             </span>
                           )}
                         </p>
-                        <p className="text-[11px] text-gray-500 flex items-center gap-2">
-                          <span>Profile: <strong className="text-gray-400">{resultData.profile || profile}</strong></span>
+                        <p className="text-[11px] text-slate-500 flex items-center gap-2">
+                          <span>Profile: <strong className="text-slate-700">{resultData.profile || profile}</strong></span>
                           {resultData.pageCount && <span>• {resultData.pageCount} pages</span>}
                           {!resultData.wasActuallyCompressed && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800/60 text-amber-400 font-medium">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-800 font-semibold">
                               Already highly optimized
                             </span>
                           )}
                         </p>
                       </div>
                     ) : isPdfToText ? (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Output size: <span className="text-emerald-400 font-mono">{formatBytes(resultData.sizeBytes)}</span>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Output size: <span className="text-emerald-700 font-mono font-bold">{formatBytes(resultData.sizeBytes)}</span>
                         {resultData.pageCount && ` • ${resultData.pageCount} pages`}
                         {resultData.charCount !== undefined && ` • ${resultData.charCount.toLocaleString()} chars`}
                         {resultData.wordCount !== undefined && ` • ${resultData.wordCount.toLocaleString()} words`}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Output size: {formatBytes(resultData.sizeBytes)}
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Output size: <span className="font-mono font-bold text-slate-800">{formatBytes(resultData.sizeBytes)}</span>
                         {typeof resultData.savingsPercent === 'number' && ` • Saved ${resultData.savingsPercent}%`}
                         {resultData.pageCount && ` • ${resultData.pageCount} pages`}
                         {resultData.rotatedAngle && ` • Rotated ${resultData.rotatedAngle}°`}
@@ -986,12 +985,12 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                     <button
                       type="button"
                       onClick={handleCopyText}
-                      className="px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm font-semibold text-gray-200 flex items-center gap-1.5 transition-colors"
+                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-sm font-semibold text-slate-700 border border-slate-200 shadow-xs flex items-center gap-1.5 transition-colors"
                     >
                       {copiedText ? (
                         <>
-                          <Check className="w-4 h-4 text-emerald-400" />
-                          <span className="text-emerald-400">Copied!</span>
+                          <Check className="w-4 h-4 text-emerald-600" />
+                          <span className="text-emerald-600">Copied!</span>
                         </>
                       ) : (
                         <>
@@ -1004,7 +1003,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
                   <button
                     type="button"
                     onClick={handleDownload}
-                    className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-bold text-white shadow-sm shadow-emerald-600/25 flex items-center gap-2 transition-all hover:scale-[1.02]"
                   >
                     <Download className="w-4 h-4" /> Download
                   </button>
@@ -1013,21 +1012,21 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
               {/* Text preview box for PDF to Text */}
               {isPdfToText && resultData.text && (
-                <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-2">
+                <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                       Extracted Text Content
                     </span>
                     <button
                       type="button"
                       onClick={handleCopyText}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                      className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1"
                     >
-                      {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                       {copiedText ? 'Copied to Clipboard' : 'Copy All'}
                     </button>
                   </div>
-                  <pre className="p-4 rounded-lg bg-gray-900 border border-gray-800 text-xs text-gray-200 font-mono max-h-80 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-text">
+                  <pre className="p-4 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 font-mono max-h-80 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-text shadow-inner">
                     {resultData.text}
                   </pre>
                 </div>
@@ -1041,7 +1040,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
               type="button"
               onClick={handleExecute}
               disabled={isLoading || (isMerge && mergeFiles.length < 2)}
-              className="w-full px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+              className="w-full px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.005] active:scale-[0.995]"
             >
               {isLoading ? (
                 <>
@@ -1057,11 +1056,11 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
       {/* Error Message */}
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-950/60 border border-red-800/80 text-red-200 text-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-sm flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-red-300">Operation Error</p>
-            <p className="text-red-200 text-xs mt-0.5">{errorMsg}</p>
+            <p className="font-bold text-rose-800">Operation Error</p>
+            <p className="text-rose-700 text-xs mt-0.5">{errorMsg}</p>
           </div>
         </div>
       )}

@@ -11,7 +11,7 @@ import { trackToolStart, trackToolComplete, trackToolError } from '../../lib/ana
 import { getClientApiUrl } from '../../lib/site-config';
 
 const WorkspaceLoading = () => (
-  <div className="w-full h-64 rounded-xl bg-slate-900/50 border border-slate-800 animate-pulse flex items-center justify-center text-slate-500 text-sm">
+  <div className="w-full h-64 rounded-3xl bg-slate-50 border border-slate-200 animate-pulse flex items-center justify-center text-slate-400 text-sm font-medium">
     Loading utility workspace...
   </div>
 );
@@ -205,26 +205,26 @@ const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
   };
 
   return (
-    <div className="w-full bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl space-y-6">
-      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+    <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Tool Workspace</h2>
-          <p className="text-xs text-gray-400">
+          <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
+          <p className="text-xs text-slate-500">
             Execution Mode:{' '}
-            <span className="inline-block px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 border border-blue-800/60 font-mono text-[11px]">
+            <span className="inline-block px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 font-medium text-[11px]">
               {utility.implementationMode}
             </span>
           </p>
         </div>
         {stats && (
-          <div className="text-right text-xs text-emerald-400 font-mono">
+          <div className="text-right text-xs text-emerald-700 font-mono font-medium">
             <span>{stats.executionTimeMs}ms</span> &bull; <span>{stats.mode}</span>
           </div>
         )}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="tool-input" className="block text-sm font-medium text-gray-300">
+        <label htmlFor="tool-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
           Input Text / Data
         </label>
         <textarea
@@ -233,7 +233,7 @@ const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
           onChange={(e) => setInputVal(e.target.value)}
           placeholder={`Paste or type input for ${utility.name}...`}
           rows={6}
-          className="w-full px-4 py-3 rounded-lg bg-gray-950 border border-gray-800 text-gray-100 placeholder-gray-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          className="w-full px-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         />
       </div>
 
@@ -246,7 +246,7 @@ const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
             setErrorMsg(null);
             setStats(null);
           }}
-          className="px-4 py-2 text-sm font-medium text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+          className="px-4 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
         >
           Clear
         </button>
@@ -254,7 +254,7 @@ const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
           type="button"
           onClick={handleExecute}
           disabled={isLoading || !inputVal.trim()}
-          className="px-6 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-md hover:shadow-blue-500/20 transition-all flex items-center gap-2"
+          className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center gap-2"
         >
           {isLoading ? (
             <>
@@ -271,29 +271,29 @@ const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-lg bg-red-950/50 border border-red-800/80 text-red-200 text-sm flex items-start gap-3">
-          <span className="text-red-400 font-bold">Error:</span>
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+          <span className="text-rose-600 font-bold">Error:</span>
           <span>{errorMsg}</span>
         </div>
       )}
 
       {outputVal && (
-        <div className="space-y-2 pt-2 border-t border-gray-800">
+        <div className="space-y-2 pt-2 border-t border-slate-100">
           <div className="flex items-center justify-between">
-            <label htmlFor="tool-output" className="block text-sm font-medium text-gray-300">
+            <label htmlFor="tool-output" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
               Output Result
             </label>
             <button
               type="button"
               onClick={() => navigator.clipboard?.writeText(outputVal)}
-              className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+              className="text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors"
             >
               Copy to Clipboard
             </button>
           </div>
           <pre
             id="tool-output"
-            className="w-full p-4 rounded-lg bg-gray-950 border border-gray-800 text-emerald-400 font-mono text-sm overflow-x-auto max-h-[350px]"
+            className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-sm overflow-x-auto max-h-[350px]"
           >
             {outputVal}
           </pre>
