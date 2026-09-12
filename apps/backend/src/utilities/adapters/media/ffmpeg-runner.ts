@@ -34,9 +34,10 @@ export async function runFfmpegSafe(options: FfmpegRunOptions): Promise<FfmpegRu
 
     const ffmpegArgs = options.args(inputPath, outputPath);
 
+    const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
     await new Promise<void>((resolve, reject) => {
       let isTimedOut = false;
-      const proc = spawn('ffmpeg', ['-y', ...ffmpegArgs], {
+      const proc = spawn(ffmpegBin, ['-y', ...ffmpegArgs], {
         stdio: ['ignore', 'pipe', 'pipe'],
         shell: false,
       });
