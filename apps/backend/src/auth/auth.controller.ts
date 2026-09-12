@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -24,6 +25,47 @@ import { ApiEnvelope, AuthResponseData, AuthUserProfile, JwtPayload } from '@ad-
 @UseGuards(JwtAuthGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new user account with email and password' })
+  @ApiResponse({ status: 201, description: 'User registered successfully; returns JWT tokens and user profile' })
+  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({ status: 409, description: 'Email already registered' })
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ApiEnvelope<AuthResponseData>> {
+    const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    const result = await this.authService.register(registerDto, ip, userAgent);
+
+    // Set secure HTTP-only cookies for web clients
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 mins
+    });
+
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return {
+      success: true,
+      data: result,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
 
   @Public()
   @Post('login')

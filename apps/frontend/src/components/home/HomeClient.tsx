@@ -244,7 +244,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
       <AdSlot placement="TOP_CONTENT" />
 
       {/* Hero Section */}
-      <section className="relative pt-6 sm:pt-10 pb-12 sm:pb-16 text-center max-w-4xl mx-auto px-4">
+      <section className="relative pt-6 sm:pt-10 pb-8 sm:pb-16 text-center max-w-4xl mx-auto px-4 overflow-hidden">
         {/* Playful Hand-drawn Annotation: Left */}
         <div className="hidden lg:block absolute left-[-40px] top-12 -rotate-6 text-slate-700 pointer-events-none select-none">
           <div className="relative font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide">
@@ -277,13 +277,13 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </div>
 
         {/* Pill Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-600 text-xs font-bold shadow-xs mb-4">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-600 text-xs font-bold shadow-xs mb-3 sm:mb-4">
           <span className="text-amber-500 text-xs">✨</span>
-          <span>{totalTools > 0 ? `${totalTools}+ FREE TOOLS` : '37+ FREE TOOLS'}</span>
+          <span>{totalTools > 0 ? `${totalTools}+ FREE TOOLS` : '38+ FREE TOOLS'}</span>
         </div>
 
         {/* Main Hero Headline */}
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.15]">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.15] break-words">
           Free, Fast & Secure <br />
           <span className="text-blue-600 font-extrabold inline-block mt-1">
             Online Web Utilities
@@ -291,27 +291,27 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </h1>
 
         {/* Subtitle */}
-        <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed mt-4 font-normal">
+        <p className="text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed mt-2.5 sm:mt-4 font-normal px-2">
           Everyday utilities for images, PDFs, text, and AI writing. Zero software installation required. Direct
           in-browser and server-accelerated processing with total privacy.
         </p>
 
         {/* Hero Search Box */}
-        <div className="mt-8 max-w-2xl mx-auto">
-          <div className="relative bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl p-2 sm:p-2.5 flex items-center ring-4 ring-slate-100/80 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
-            <Search className="w-5 h-5 text-slate-400 ml-2.5 mr-3 shrink-0" />
+        <div className="mt-5 sm:mt-8 max-w-2xl mx-auto">
+          <div className="relative bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl p-1.5 sm:p-2.5 flex items-center ring-4 ring-slate-100/80 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 ml-2 sm:ml-2.5 mr-2 sm:mr-3 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for a tool (e.g. merge PDF, resize image, QR code...)"
-              className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none"
+              placeholder="Search 38+ tools (e.g. merge PDF, resize, QR)..."
+              className="w-full bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 shrink-0 mr-1"
+                className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 shrink-0 mr-1"
               >
                 Clear
               </button>
@@ -319,44 +319,44 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
           </div>
         </div>
 
-        {/* Value Props Row */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-left">
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-slate-200/60 shadow-xs">
-            <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4" />
+        {/* Value Props Row: Seamless 3-item responsive grid */}
+        <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900 leading-tight">100% Private</p>
-              <p className="text-[10px] text-slate-500">Your files stay secure</p>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight">100% Private</p>
+              <p className="hidden sm:block text-[10px] text-slate-500">Your files stay secure</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-slate-200/60 shadow-xs">
-            <div className="w-6 h-6 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4" />
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900 leading-tight">Super Fast</p>
-              <p className="text-[10px] text-slate-500">Optimized for speed</p>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight">Super Fast</p>
+              <p className="hidden sm:block text-[10px] text-slate-500">Optimized speed</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-slate-200/60 shadow-xs">
-            <div className="w-6 h-6 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0">
-              <Heart className="w-4 h-4" />
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0">
+              <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900 leading-tight">Always Free</p>
-              <p className="text-[10px] text-slate-500">No registration required</p>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight">Always Free</p>
+              <p className="hidden sm:block text-[10px] text-slate-500">No sign-up needed</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Browse by Category Section */}
-      <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
+      <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-900">Browse by Category</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900">Browse by Category</h2>
           <button
             type="button"
             onClick={() => setSelectedCategory(null)}
@@ -367,7 +367,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
           {categories.map((cat) => {
             const meta = getCategoryMeta(cat.slug);
             const isSelected = selectedCategory === cat.slug;

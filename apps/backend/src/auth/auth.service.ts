@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import {
   AuthUserProfile,
   AuthResponseData,
@@ -67,6 +69,118 @@ export class AuthService {
       isActive: user.isActive,
       roles,
       permissions: Array.from(permissionsSet),
+      createdAt: user.createdAt,
+    };
+  }
+
+  /**
+   * Register a new user with secure password hashing and default non-admin role
+   */
+  async register(
+    registerDto: RegisterDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<AuthResponseData> {
+    const normalizedEmail = registerDto.email.trim().toLowerCase();
+
+    // Check if user already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingUser) {
+      this.logger.warn(
+        `Registration attempt with already existing email: ${normalizedEmail} from IP: ${ip || 'unknown'}`,
+      );
+      throw new ConflictException(
+        'An account with this email already exists. Try logging in instead.',
+      );
+    }
+
+    // Parse name if provided
+    let firstName = registerDto.firstName?.trim() || null;
+    let lastName = registerDto.lastName?.trim() || null;
+
+    if (registerDto.name && !firstName) {
+      const parts = registerDto.name.trim().split(/\s+/);
+      firstName = parts[0] || null;
+      lastName = parts.slice(1).join(' ') || null;
+    }
+
+    // Hash password with bcrypt
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(registerDto.password, saltRounds);
+
+    // Create user (strictly no admin roles assigned to prevent privilege escalation)
+    const newUser = await this.prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash,
+        firstName,
+        lastName,
+        isActive: true,
+        lastLoginAt: new Date(),
+      },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Record auditable registration event
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'USER_REGISTERED',
+        entityType: 'User',
+        entityId: newUser.id,
+        actorUserId: newUser.id,
+        actorEmail: newUser.email,
+        actorIp: ip,
+        details: {
+          userAgent,
+          termsAccepted: !!registerDto.termsAccepted,
+        },
+      },
+    });
+
+    const userProfile = this.formatUserProfile(newUser);
+
+    const payload: JwtPayload = {
+      sub: userProfile.id,
+      email: userProfile.email,
+      roles: userProfile.roles,
+      permissions: userProfile.permissions,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.jwtSecret,
+      expiresIn: this.jwtExpiresIn,
+    });
+
+    const refreshToken = this.jwtService.sign(
+      { sub: userProfile.id, email: userProfile.email },
+      {
+        secret: this.jwtRefreshSecret,
+        expiresIn: this.jwtRefreshExpiresIn,
+      },
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 900,
+      user: userProfile,
     };
   }
 

@@ -14,6 +14,7 @@ export interface AuthUserProfile {
   isActive: boolean;
   roles: RoleType[];
   permissions: string[];
+  createdAt?: string | Date;
 }
 
 /**
@@ -26,6 +27,18 @@ export interface JwtPayload {
   permissions: string[];
   iat?: number;
   exp?: number;
+}
+
+/**
+ * Register Request DTO
+ */
+export interface RegisterRequestDto {
+  email: string;
+  password: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  termsAccepted?: boolean;
 }
 
 /**
@@ -52,3 +65,4 @@ export interface AuthResponseData {
   expiresIn: number;
   user: AuthUserProfile;
 }
+

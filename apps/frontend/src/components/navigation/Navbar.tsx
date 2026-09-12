@@ -17,7 +17,13 @@ import {
   Video,
   Music,
   QrCode,
+  User,
+  Zap,
+  LogOut,
+  CreditCard,
 } from 'lucide-react';
+import { AuthUserProfile } from '@ad-utility/shared';
+import { getClientApiUrl } from '../../lib/site-config';
 
 interface NavbarProps {
   categories?: Array<{
@@ -32,11 +38,35 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
   const router = useRouter();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userProfile, setUserProfile] = useState<AuthUserProfile | null>(null);
 
   const toolsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch authentication status on mount
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const apiUrl = getClientApiUrl();
+        const res = await fetch(`${apiUrl}/auth/me`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            setUserProfile(json.data);
+          }
+        }
+      } catch (err) {
+        // Unauthenticated or network error - gracefully stay in anonymous mode
+      }
+    }
+    checkAuth();
+  }, []);
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -47,10 +77,29 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
       if (categoriesRef.current && !categoriesRef.current.contains(e.target as Node)) {
         setIsCategoriesOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const apiUrl = getClientApiUrl();
+      await fetch(`${apiUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setUserProfile(null);
+      setIsUserMenuOpen(false);
+      router.push('/login');
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,14 +133,14 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Brand Logo & Main Nav */}
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-black text-lg flex items-center justify-center shadow-sm shadow-blue-500/30 group-hover:scale-105 transition-transform">
+        <div className="flex items-center gap-4 sm:gap-8 min-w-0">
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-600 text-white font-black text-base sm:text-lg flex items-center justify-center shadow-sm shadow-blue-500/30 group-hover:scale-105 transition-transform">
               U
             </div>
-            <span className="font-extrabold text-slate-900 text-lg tracking-tight">
+            <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight whitespace-nowrap">
               Utility<span className="text-blue-600">Platform</span>
             </span>
           </Link>
@@ -233,22 +282,103 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
             </button>
           </form>
 
-          {/* Sign in button */}
-          <Link
-            href="/account"
-            className="hidden sm:inline-block text-xs font-semibold text-slate-700 hover:text-slate-900 px-2 py-1.5 transition-colors"
-          >
-            Sign in
-          </Link>
+          {/* Right Controls: Authenticated vs Anonymous */}
+          {userProfile ? (
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              {/* Account Link Button */}
+              <Link
+                href="/account"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                <span>Workspace</span>
+              </Link>
 
-          {/* Get Premium button */}
-          <Link
-            href="/pricing"
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm shadow-blue-500/25 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
-          >
-            <Crown className="w-3.5 h-3.5 fill-current" />
-            <span>Get Premium</span>
-          </Link>
+              {/* User Dropdown */}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-1 sm:gap-2 p-1 pl-1.5 sm:pl-2 rounded-full border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-left"
+                >
+                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                    {(userProfile.firstName?.[0] || userProfile.email[0] || 'U').toUpperCase()}
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 mr-0.5 sm:mr-1" />
+                </button>
+
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-3 py-2 border-b border-slate-100">
+                      <div className="text-xs font-bold text-slate-900 truncate">
+                        {userProfile.firstName
+                          ? `${userProfile.firstName} ${userProfile.lastName || ''}`
+                          : userProfile.email.split('@')[0]}
+                      </div>
+                      <div className="text-[11px] text-slate-500 truncate">{userProfile.email}</div>
+                    </div>
+
+                    <div className="py-1">
+                      <Link
+                        href="/account"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                      >
+                        <User className="w-4 h-4 text-slate-500" />
+                        <span>Account & Workspace</span>
+                      </Link>
+
+                      <Link
+                        href="/account/billing"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                      >
+                        <CreditCard className="w-4 h-4 text-slate-500" />
+                        <span>Billing & Plan</span>
+                      </Link>
+                    </div>
+
+                    <div className="pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Sign in button */}
+              <Link
+                href="/login"
+                className="hidden sm:inline-block text-xs font-semibold text-slate-700 hover:text-slate-900 px-2.5 py-1.5 transition-colors"
+              >
+                Sign in
+              </Link>
+
+              {/* Sign up button */}
+              <Link
+                href="/signup"
+                className="hidden sm:inline-block text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Sign up
+              </Link>
+
+              {/* Get Premium button */}
+              <Link
+                href="/pricing"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm shadow-blue-500/25 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
+              >
+                <Crown className="w-3.5 h-3.5 fill-current" />
+                <span>Get Premium</span>
+              </Link>
+            </div>
+          )}
 
           {/* Mobile menu hamburger */}
           <button
@@ -300,21 +430,52 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
             ))}
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <Link
-              href="/pricing"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-xs font-semibold text-slate-700 hover:text-blue-600"
-            >
-              Pricing Plans
-            </Link>
-            <Link
-              href="/account"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-xs font-semibold text-slate-700 hover:text-blue-600"
-            >
-              Sign In
-            </Link>
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            {userProfile ? (
+              <div className="space-y-2">
+                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="text-xs font-bold text-slate-900 truncate">
+                    {userProfile.email}
+                  </div>
+                  <div className="text-[11px] text-slate-500">Authenticated Member</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Link
+                    href="/account"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-xs font-semibold text-slate-700 hover:text-blue-600"
+                  >
+                    Account Dashboard
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="text-xs font-semibold text-rose-600"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-xs font-semibold text-slate-700 hover:text-blue-600"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-xs font-bold text-blue-600"
+                >
+                  Create Free Account
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}

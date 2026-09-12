@@ -45,3 +45,5 @@ backups/
 *.sql
 *.sql.gz
 scratch/
+*.tsbuildinfo
+
