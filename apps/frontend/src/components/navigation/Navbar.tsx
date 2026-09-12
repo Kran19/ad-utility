@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   Search,
   ChevronDown,
-  Sun,
   Crown,
   Menu,
   X,
@@ -233,15 +232,6 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
               <Search className="w-3.5 h-3.5" />
             </button>
           </form>
-
-          {/* Theme icon indicator */}
-          <button
-            type="button"
-            className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            title="Light Theme"
-          >
-            <Sun className="w-4 h-4 text-amber-500" />
-          </button>
 
           {/* Sign in button */}
           <Link
