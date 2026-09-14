@@ -54,10 +54,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const visibleNavItems = navItems.filter((item) => !item.requiredPermission || hasPermission(item.requiredPermission));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+    <div className="min-h-screen md:h-screen md:overflow-hidden bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
+      {/* Sidebar - Sticky / Fixed on Desktop */}
+      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 md:h-screen md:sticky md:top-0 z-30">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
           <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-white">
             <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm shadow-md">AD</span>
             <span>Admin Control</span>
@@ -70,7 +70,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav className={`flex-1 p-3 space-y-1 ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
+        <nav className={`flex-1 p-3 space-y-1 overflow-y-auto ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
           {visibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -92,7 +92,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* User Card */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+        <div className="p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-indigo-400 text-sm">
               {user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -117,9 +117,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="h-14 border-b border-slate-800 bg-slate-900/40 backdrop-blur px-6 flex items-center justify-between">
+      {/* Main Content Area - Independently Scrollable */}
+      <main className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto">
+        <header className="h-14 border-b border-slate-800 bg-slate-900/40 backdrop-blur px-6 flex items-center justify-between shrink-0 sticky top-0 z-20">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <Link href="/admin" className="hover:text-slate-200">Admin</Link>
             <span>/</span>
@@ -135,7 +135,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">{children}</div>
+        <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">{children}</div>
       </main>
     </div>
   );
