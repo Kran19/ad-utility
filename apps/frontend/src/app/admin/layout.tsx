@@ -70,7 +70,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav className={`flex-1 p-3 space-y-1 overflow-y-auto ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
+        <nav className={`flex-1 p-3 space-y-1 overflow-y-auto no-scrollbar ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
           {visibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -117,8 +117,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content Area - Independently Scrollable */}
-      <main className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto">
+      {/* Main Content Area - Independently Scrollable with Hidden Scrollbar */}
+      <main className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto no-scrollbar">
         <header className="h-14 border-b border-slate-800 bg-slate-900/40 backdrop-blur px-6 flex items-center justify-between shrink-0 sticky top-0 z-20">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <Link href="/admin" className="hover:text-slate-200">Admin</Link>

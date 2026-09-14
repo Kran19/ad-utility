@@ -48,3 +48,14 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Hide scrollbars cleanly while preserving scrolling functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0px;
+  background: transparent;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
