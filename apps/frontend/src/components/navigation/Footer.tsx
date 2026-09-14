@@ -78,7 +78,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-3">
               {/* LinkedIn */}
               <a
-                href="https://www.linkedin.com/company/emperorbrains"
+                href="https://www.linkedin.com/company/emperor-smart-solutions/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 flex items-center justify-center transition-colors"
@@ -90,7 +90,7 @@ export const Footer: React.FC = () => {
               </a>
               {/* Instagram */}
               <a
-                href="https://www.instagram.com/emperorbrains"
+                href="https://www.instagram.com/emperorsmartsolutions/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-pink-50 text-slate-600 hover:text-pink-600 flex items-center justify-center transition-colors"
@@ -102,7 +102,7 @@ export const Footer: React.FC = () => {
               </a>
               {/* Facebook */}
               <a
-                href="https://www.facebook.com/emperorbrains"
+                href="https://www.facebook.com/emperorsmartsolutions/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors"
