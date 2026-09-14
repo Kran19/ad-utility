@@ -242,10 +242,10 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
       <AdSlot placement="TOP_CONTENT" />
 
       {/* Hero Section */}
-      <section className="relative pt-6 sm:pt-10 pb-8 sm:pb-16 text-center max-w-4xl mx-auto px-4 overflow-hidden">
+      <section className="relative pt-6 sm:pt-10 pb-8 sm:pb-16 text-center max-w-4xl mx-auto px-4">
         {/* Playful Hand-drawn Annotation: Left */}
-        <div className="hidden lg:block absolute left-[-40px] top-12 -rotate-6 text-slate-700 pointer-events-none select-none">
-          <div className="relative font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide">
+        <div className="hidden xl:block absolute -left-10 top-10 -rotate-6 text-slate-700 pointer-events-none select-none z-10">
+          <div className="relative font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide text-left whitespace-nowrap">
             <span className="text-red-500 text-xs font-black absolute -top-2.5 -right-3">✦</span>
             Simple Tools
             <br />
@@ -254,14 +254,14 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </div>
 
         {/* Playful Hand-drawn Annotation: Right with Curved Arrow */}
-        <div className="hidden lg:block absolute right-[-50px] top-8 rotate-3 text-slate-700 pointer-events-none select-none">
-          <div className="font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide">
+        <div className="hidden xl:block absolute -right-10 top-6 rotate-3 text-slate-700 pointer-events-none select-none z-10 text-right">
+          <div className="font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide whitespace-nowrap">
             Powerful tools
             <br />
             for everyday tasks
           </div>
           <svg
-            className="w-16 h-12 text-slate-600 mt-1 ml-4"
+            className="w-16 h-12 text-slate-600 mt-1 ml-auto mr-2"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.7"
