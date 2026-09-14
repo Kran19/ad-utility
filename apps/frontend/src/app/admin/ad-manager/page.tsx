@@ -85,6 +85,30 @@ export default function AdminAdManagerPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterCampaign, setFilterCampaign] = useState('');
 
+  // Helper for category metadata icon
+  const getCategoryIcon = (slug?: string) => {
+    switch (slug) {
+      case 'image':
+        return '🖼️';
+      case 'pdf':
+        return '📄';
+      case 'text':
+        return '✍️';
+      case 'developer':
+        return '💻';
+      case 'ai':
+        return '✨';
+      case 'video':
+        return '🎬';
+      case 'audio':
+        return '🎵';
+      case 'qr-barcode':
+        return '📱';
+      default:
+        return '⚡';
+    }
+  };
+
   // Manage Ads Drawer / Utility View
   const [selectedUtility, setSelectedUtility] = useState<MatrixItem | null>(null);
   const [rules, setRules] = useState<TargetingRule[]>([]);
@@ -555,12 +579,95 @@ export default function AdminAdManagerPage() {
         )}
       </div>
 
+      {/* Category Wise Quick Filter Bar */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              📁 Category Wise Utilities
+            </span>
+            <span className="text-[11px] text-slate-500">
+              (Click any category to filter ad allocations)
+            </span>
+          </div>
+          {filterCategory && (
+            <button
+              onClick={() => setFilterCategory('')}
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold hover:underline flex items-center gap-1"
+            >
+              <span>View All Categories</span> &rarr;
+            </button>
+          )}
+        </div>
+
+        {/* Category Cards / Pills Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
+          {/* All Button */}
+          <button
+            type="button"
+            onClick={() => setFilterCategory('')}
+            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+              !filterCategory
+                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-2 ring-indigo-500/30'
+                : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div className="text-base mb-1">🌐</div>
+            <div>
+              <div className="text-xs font-bold truncate">All Categories</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                {matrix.length} tools
+              </div>
+            </div>
+          </button>
+
+          {categories.map((c) => {
+            const isSelected = filterCategory === c.id;
+            const icon = getCategoryIcon(c.slug);
+            const count = (c.utilities && c.utilities.length) || c.utilityCount || (c._count?.utilities) || 0;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  if (isSelected) {
+                    setFilterCategory('');
+                  } else {
+                    setFilterCategory(c.id);
+                  }
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                  isSelected
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-2 ring-indigo-500/30'
+                    : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className="text-base mb-1">{icon}</div>
+                <div>
+                  <div className="text-xs font-bold truncate">{c.name}</div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    {count > 0 ? `${count} tools` : 'Explore'}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Main Layout: Matrix Table & Selected Utility Management */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Matrix Table (7 cols on large, 12 if no utility selected) */}
         <div className={`${selectedUtility ? 'lg:col-span-7' : 'lg:col-span-12'} bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg transition-all`}>
           <div className="px-4 py-3 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-slate-300">Utility Ad Allocation Matrix</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase text-slate-300">Utility Ad Allocation Matrix</span>
+              {filterCategory && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  {categories.find((c) => c.id === filterCategory)?.name || 'Filtered'}
+                </span>
+              )}
+            </div>
             <span className="text-[11px] text-slate-500 font-mono">{matrix.length} utilities</span>
           </div>
 
@@ -607,11 +714,16 @@ export default function AdminAdManagerPage() {
                         }}
                       >
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-white">{u.name}</div>
+                          <div className="font-semibold text-white flex items-center gap-1.5">
+                            <span>{getCategoryIcon(u.category?.slug)}</span>
+                            <span>{u.name}</span>
+                          </div>
                           <div className="text-[11px] text-indigo-400 font-mono">/{u.slug}</div>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-[11px] text-slate-400">{u.category?.name || '—'}</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/80 text-[11px] text-slate-300 border border-slate-700/60">
+                            {u.category?.name || '—'}
+                          </span>
                         </td>
                         <td className="px-3 py-3 text-center">
                           <span

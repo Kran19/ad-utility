@@ -26,6 +26,37 @@ interface UtilityItem {
   adCounts?: UtilityAdCounts;
 }
 
+const getCategoryIcon = (slug?: string) => {
+  switch (slug) {
+    case 'image-tools':
+    case 'image':
+      return '🖼️';
+    case 'pdf-tools':
+    case 'pdf':
+      return '📄';
+    case 'text-tools':
+    case 'text':
+      return '✍️';
+    case 'developer-tools':
+    case 'dev':
+      return '💻';
+    case 'ai-tools':
+    case 'ai':
+      return '✨';
+    case 'video-tools':
+    case 'video':
+      return '🎬';
+    case 'audio-tools':
+    case 'audio':
+      return '🎵';
+    case 'qr-barcode-tools':
+    case 'qr':
+      return '📱';
+    default:
+      return '⚡';
+  }
+};
+
 export default function AdminUtilitiesPage() {
   const [utilities, setUtilities] = useState<UtilityItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -33,6 +64,7 @@ export default function AdminUtilitiesPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingUtility, setEditingUtility] = useState<UtilityItem | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -52,9 +84,10 @@ export default function AdminUtilitiesPage() {
   const loadData = async () => {
     setLoading(true);
     setError(null);
-    let path = '/admin/utilities?page=1&pageSize=50';
+    let path = '/admin/utilities?page=1&pageSize=100';
     if (search) path += `&search=${encodeURIComponent(search)}`;
     if (statusFilter) path += `&status=${encodeURIComponent(statusFilter)}`;
+    if (categoryFilter) path += `&categoryId=${encodeURIComponent(categoryFilter)}`;
 
     const [uRes, cRes] = await Promise.all([
       adminApiFetch(path),
@@ -78,7 +111,7 @@ export default function AdminUtilitiesPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter]);
+  }, [search, statusFilter, categoryFilter]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,24 +218,130 @@ export default function AdminUtilitiesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-slate-900 p-4 rounded-xl border border-slate-800">
-        <input
-          type="text"
-          placeholder="Search utilities..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-72 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full sm:w-48 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
-        >
-          <option value="">All Statuses</option>
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="DISABLED">DISABLED</option>
-          <option value="DRAFT">DRAFT</option>
-        </select>
+      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <input
+            type="text"
+            placeholder="Search utilities by name, slug or description..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="DISABLED">DISABLED</option>
+            <option value="DRAFT">DRAFT</option>
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">All Categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {(search || statusFilter || categoryFilter) && (
+          <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-800/60 text-slate-400">
+            <span>Active filters applied</span>
+            <button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('');
+                setCategoryFilter('');
+              }}
+              className="text-indigo-400 hover:text-indigo-300 font-medium"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Category Wise Quick Filter Bar */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              📁 Category Wise Utilities
+            </span>
+            <span className="text-[11px] text-slate-500">
+              (Click any category to filter registry utilities)
+            </span>
+          </div>
+          {categoryFilter && (
+            <button
+              onClick={() => setCategoryFilter('')}
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold hover:underline flex items-center gap-1"
+            >
+              <span>View All Categories</span> &rarr;
+            </button>
+          )}
+        </div>
+
+        {/* Category Cards / Pills Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
+          {/* All Button */}
+          <button
+            type="button"
+            onClick={() => setCategoryFilter('')}
+            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+              !categoryFilter
+                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-2 ring-indigo-500/30'
+                : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div className="text-base mb-1">🌐</div>
+            <div>
+              <div className="text-xs font-bold truncate">All Categories</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                {utilities.length} tools
+              </div>
+            </div>
+          </button>
+
+          {categories.map((c) => {
+            const isSelected = categoryFilter === c.id;
+            const icon = getCategoryIcon(c.slug);
+            const count = (c.utilities && c.utilities.length) || c.utilityCount || (c._count?.utilities) || 0;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  if (isSelected) {
+                    setCategoryFilter('');
+                  } else {
+                    setCategoryFilter(c.id);
+                  }
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                  isSelected
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-2 ring-indigo-500/30'
+                    : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className="text-base mb-1">{icon}</div>
+                <div>
+                  <div className="text-xs font-bold truncate">{c.name}</div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    {count > 0 ? `${count} tools` : 'Explore'}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table */}
@@ -240,6 +379,7 @@ export default function AdminUtilitiesPage() {
                 {utilities.map((u) => {
                   const adCounts = u.adCounts;
                   const hasAds = adCounts && adCounts.total > 0;
+                  const catIcon = getCategoryIcon(u.category?.slug);
                   return (
                     <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="px-4 py-3">
@@ -252,7 +392,21 @@ export default function AdminUtilitiesPage() {
                         </button>
                         <div className="text-[11px] text-indigo-400 font-mono">/{u.slug}</div>
                       </td>
-                      <td className="px-4 py-3">{u.category?.name || '—'}</td>
+                      <td className="px-4 py-3">
+                        {u.category ? (
+                          <button
+                            type="button"
+                            onClick={() => setCategoryFilter(u.category!.id === categoryFilter ? '' : u.category!.id)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-indigo-300 transition-colors cursor-pointer text-[11px]"
+                            title={`Filter by category: ${u.category.name}`}
+                          >
+                            <span>{catIcon}</span>
+                            <span>{u.category.name}</span>
+                          </button>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-mono text-[11px] text-slate-400">{u.implementationMode}</td>
                       
                       {/* Ads Column */}
