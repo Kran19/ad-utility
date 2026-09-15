@@ -140,6 +140,8 @@ export default function AdminCreativesPage() {
         targetUrl: '',
         width: 728,
         height: 90,
+        sizeOrientation: 'horizontal',
+        sizePreset: 'medium',
         altText: '',
         customHtml: '',
         isGlobalFallback: false,
