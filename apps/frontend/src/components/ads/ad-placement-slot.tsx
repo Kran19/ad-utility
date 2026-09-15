@@ -121,7 +121,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
             placement="SIDEBAR"
             utilitySlug={utilitySlug}
             categorySlug={categorySlug}
-            className="w-full min-h-[250px]"
+            className="w-full"
           />
         </div>
       );

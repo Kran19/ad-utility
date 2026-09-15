@@ -227,7 +227,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           onClick={handleAdClick}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full transition-opacity hover:opacity-95"
+          className="flex items-center justify-center w-full transition-opacity hover:opacity-95"
         >
           <img
             src={adCreative.mediaUrl}
@@ -235,7 +235,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
             style={{
               maxHeight: adCreative.height ? `${adCreative.height}px` : undefined,
             }}
-            className="w-full h-auto object-cover block rounded-2xl"
+            className="w-full h-auto object-contain block rounded-2xl"
             loading="lazy"
           />
         </a>
