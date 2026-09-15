@@ -15,6 +15,13 @@ COPY packages/shared ./packages/shared
 COPY apps/frontend ./apps/frontend
 RUN mkdir -p ./apps/frontend/public
 
+ARG NEXT_PUBLIC_BASE_PATH
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN pnpm --filter @ad-utility/shared build
 RUN pnpm --filter @ad-utility/frontend build
 
