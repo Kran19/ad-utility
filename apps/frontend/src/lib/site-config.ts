@@ -60,7 +60,8 @@ export function getClientApiUrl(): string {
   // Browser execution
   if (typeof window !== 'undefined') {
     if (process.env.NODE_ENV === 'production') {
-      return '/api/v1';
+      const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || '').replace(/\/+$/, '');
+      return `${basePath}/api/v1`;
     }
     // Local dev: map 3001 frontend port to 4001 backend port
     const port = window.location?.port;
