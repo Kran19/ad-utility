@@ -18,12 +18,14 @@ import {
 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface VideoWorkspaceProps {
   utility: UtilityPublicDto;
 }
 
 export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const isDownloader = utility.slug === 'video-downloader';
 
   // URL Downloader State
@@ -46,6 +48,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
   // Settings
   const [targetQuality, setTargetQuality] = useState<'low' | 'medium' | 'high'>('medium');
@@ -70,6 +73,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
   // --- Handlers for URL Downloader ---
   const handleUrlDownload = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!requireAuth(() => handleUrlDownload(), `Sign in or register to download videos`)) return;
     const cleanUrl = videoUrl.trim();
     if (!cleanUrl) {
       setErrorMsg('Please enter a valid video URL.');
@@ -173,6 +177,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
   };
 
   const handleProcess = async () => {
+    if (!requireAuth(handleProcess, `Sign in or create a free account to process videos with ${utility.name}`)) return;
     if (!selectedFile || !fileBase64) return;
 
     setIsLoading(true);
@@ -425,14 +430,32 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
           {/* Upload Dropzone */}
           {!selectedFile && (
             <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  handleFileSelect(e.dataTransfer.files[0]);
+                }
+              }}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3 group"
+              className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3 group ${
+                isDragOver
+                  ? 'border-blue-500 bg-blue-50/60 scale-[0.99] ring-4 ring-blue-500/10'
+                  : 'border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30'
+              }`}
             >
               <div className="w-14 h-14 mx-auto rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-blue-600 shadow-xs group-hover:scale-105 transition-transform">
                 <Upload className="w-7 h-7" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Click or drag a video to upload</h3>
+                <h3 className="text-base font-bold text-slate-900">
+                  Drag & drop your video here, or <span className="text-blue-600 underline">browse</span>
+                </h3>
                 <p className="text-xs text-slate-500 mt-1">Supports MP4, WebM, MOV (Max 50MB)</p>
               </div>
               <input

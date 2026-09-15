@@ -9,6 +9,8 @@ import {
 import dynamic from 'next/dynamic';
 import { trackToolStart, trackToolComplete, trackToolError } from '../../lib/analytics';
 import { getClientApiUrl } from '../../lib/site-config';
+import { useUserAuth } from '../../context/user-auth-context';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 const WorkspaceLoading = () => (
   <div className="w-full h-64 rounded-3xl bg-slate-50 border border-slate-200 animate-pulse flex items-center justify-center text-slate-400 text-sm font-medium">
@@ -56,64 +58,122 @@ interface ToolRunnerProps {
 }
 
 export const ToolRunner: React.FC<ToolRunnerProps> = ({ utility }) => {
-  // 1. QR / Barcode Workspace
-  if (utility.categorySlug === 'qr-barcode' || ['qr-code-generator', 'barcode-generator'].includes(utility.slug)) {
-    return <QrWorkspace utility={utility} />;
-  }
+  const { isAuthenticated, openAuthModal } = useUserAuth();
 
-  // 2. Video Workspace
-  if (
-    utility.categorySlug === 'video' ||
-    ['video-compressor', 'video-converter', 'video-to-gif', 'video-to-jpg', 'mp4-to-mp3', 'video-trimmer', 'video-downloader'].includes(
-      utility.slug,
-    )
-  ) {
-    return <VideoWorkspace utility={utility} />;
-  }
+  const renderWorkspace = () => {
+    // 1. QR / Barcode Workspace
+    if (utility.categorySlug === 'qr-barcode' || ['qr-code-generator', 'barcode-generator'].includes(utility.slug)) {
+      return <QrWorkspace utility={utility} />;
+    }
 
-  // 3. Audio Workspace
-  if (utility.categorySlug === 'audio' || ['audio-compressor', 'audio-converter', 'audio-cutter'].includes(utility.slug)) {
-    return <AudioWorkspace utility={utility} />;
-  }
+    // 2. Video Workspace
+    if (
+      utility.categorySlug === 'video' ||
+      ['video-compressor', 'video-converter', 'video-to-gif', 'video-to-jpg', 'mp4-to-mp3', 'video-trimmer', 'video-downloader'].includes(
+        utility.slug,
+      )
+    ) {
+      return <VideoWorkspace utility={utility} />;
+    }
 
-  // 4. Image Workspace
-  if (
-    utility.categorySlug === 'image' ||
-    ['jpg-to-png', 'png-to-jpg', 'image-compressor', 'image-to-pdf', 'image-resizer', 'image-cropper', 'webp-to-jpg', 'jpg-to-webp', 'png-to-webp'].includes(utility.slug)
-  ) {
-    return <ImageWorkspace utility={utility} />;
-  }
+    // 3. Audio Workspace
+    if (utility.categorySlug === 'audio' || ['audio-compressor', 'audio-converter', 'audio-cutter'].includes(utility.slug)) {
+      return <AudioWorkspace utility={utility} />;
+    }
 
-  // 5. PDF Workspace
-  if (
-    utility.categorySlug === 'pdf' ||
-    ['pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg', 'pdf-to-png', 'pdf-to-text', 'pdf-page-extractor', 'pdf-rotator', 'pdf-reorder-pages', 'pdf-watermark', 'pdf-metadata-remover'].includes(utility.slug)
-  ) {
-    return <PdfWorkspace utility={utility} />;
-  }
+    // 4. Image Workspace
+    if (
+      utility.categorySlug === 'image' ||
+      ['jpg-to-png', 'png-to-jpg', 'image-compressor', 'image-to-pdf', 'image-resizer', 'image-cropper', 'webp-to-jpg', 'jpg-to-webp', 'png-to-webp'].includes(utility.slug)
+    ) {
+      return <ImageWorkspace utility={utility} />;
+    }
 
-  // 6. Text Workspace
-  if (['text-cleaner', 'case-converter'].includes(utility.slug)) {
-    return <TextWorkspace utility={utility} />;
-  }
+    // 5. PDF Workspace
+    if (
+      utility.categorySlug === 'pdf' ||
+      ['pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg', 'pdf-to-png', 'pdf-to-text', 'pdf-page-extractor', 'pdf-rotator', 'pdf-reorder-pages', 'pdf-watermark', 'pdf-metadata-remover'].includes(utility.slug)
+    ) {
+      return <PdfWorkspace utility={utility} />;
+    }
 
-  // 7. AI Workspace
-  if (utility.categorySlug === 'ai' || ['ai-humanizer', 'ai-paraphraser', 'ai-grammar-checker'].includes(utility.slug)) {
-    return <AiWorkspace utility={utility} />;
-  }
+    // 6. Text Workspace
+    if (['text-cleaner', 'case-converter'].includes(utility.slug)) {
+      return <TextWorkspace utility={utility} />;
+    }
 
-  // 8. Generic fallback workspace for reference utilities (json-formatter, word-counter, text-hash, ai-summarizer)
-  return <GenericToolWorkspace utility={utility} />;
+    // 7. AI Workspace
+    if (utility.categorySlug === 'ai' || ['ai-humanizer', 'ai-paraphraser', 'ai-grammar-checker'].includes(utility.slug)) {
+      return <AiWorkspace utility={utility} />;
+    }
+
+    // 8. Generic fallback workspace for reference utilities (json-formatter, word-counter, text-hash, ai-summarizer)
+    return <GenericToolWorkspace utility={utility} />;
+  };
+
+  return (
+    <div className="space-y-4">
+      {!isAuthenticated && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-blue-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs shadow-blue-500/20">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">
+                Tool Exploration Mode
+              </p>
+              <p className="text-[11px] text-slate-600">
+                You are previewing this tool. Create a free account or sign in to execute and process unlimited files.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={() => openAuthModal({ title: `Sign in to use ${utility.name}`, initialTab: 'login' })}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-blue-600 hover:bg-white transition-all cursor-pointer"
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthModal({ title: `Unlock ${utility.name}`, initialTab: 'signup' })}
+              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs shadow-blue-500/25 transition-all active:scale-95 cursor-pointer"
+            >
+              Free Sign Up
+            </button>
+          </div>
+        </div>
+      )}
+
+      {renderWorkspace()}
+    </div>
+  );
 };
 
 const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const [inputVal, setInputVal] = useState<string>('');
   const [outputVal, setOutputVal] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [stats, setStats] = useState<{ executionTimeMs?: number; mode?: string } | null>(null);
 
+  const handleDropFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        setInputVal(content);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleExecute = async () => {
+    if (!requireAuth(handleExecute, `Sign in or register to execute ${utility.name}`)) return;
     setErrorMsg(null);
     setOutputVal('');
     setIsLoading(true);
@@ -228,18 +288,52 @@ const GenericToolWorkspace: React.FC<ToolRunnerProps> = ({ utility }) => {
         )}
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="tool-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-          Input Text / Data
-        </label>
-        <textarea
-          id="tool-input"
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-          placeholder={`Paste or type input for ${utility.name}...`}
-          rows={6}
-          className="w-full px-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-        />
+      <div 
+        className={`space-y-2 relative rounded-2xl transition-all ${isDragOver ? 'ring-2 ring-blue-500 bg-blue-50/20' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragOver(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragOver(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) {
+            handleDropFile(file);
+          }
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <label htmlFor="tool-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Input Text / Data
+          </label>
+          <span className="text-[11px] text-slate-400 font-medium">or drag & drop a file (.txt, .json, .csv)</span>
+        </div>
+        <div className="relative">
+          <textarea
+            id="tool-input"
+            value={inputVal}
+            onChange={(e) => setInputVal(e.target.value)}
+            placeholder={`Paste, type, or drag & drop file here for ${utility.name}...`}
+            rows={6}
+            className="w-full px-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
+          {isDragOver && (
+            <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-[1px] border-2 border-dashed border-blue-500 rounded-2xl flex flex-col items-center justify-center pointer-events-none z-10 animate-in fade-in duration-150">
+              <svg className="w-8 h-8 text-blue-600 mb-1 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-xs font-bold text-blue-700">Drop file to load contents</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end gap-3">

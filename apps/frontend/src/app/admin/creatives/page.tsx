@@ -1,7 +1,22 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { adminApiFetch } from '../../../lib/admin-api';
+import { PhotoGalleryModal, GalleryPhoto } from '../../../components/admin/PhotoGalleryModal';
+
+const BANNER_SIZES = {
+  horizontal: {
+    small: { label: 'Small', dimensions: '468 × 60 px', width: 468, height: 60, desc: 'Compact Banner' },
+    medium: { label: 'Medium', dimensions: '728 × 90 px', width: 728, height: 90, desc: 'Standard Leaderboard' },
+    large: { label: 'Large', dimensions: '970 × 250 px', width: 970, height: 250, desc: 'Large Billboard' },
+  },
+  vertical: {
+    small: { label: 'Small', dimensions: '200 × 200 px', width: 200, height: 200, desc: 'Square / QR' },
+    medium: { label: 'Medium', dimensions: '300 × 250 px', width: 300, height: 250, desc: 'Medium Card / Box' },
+    large: { label: 'Large', dimensions: '300 × 600 px', width: 300, height: 600, desc: 'Tall Skyscraper' },
+  },
+};
 
 export default function AdminCreativesPage() {
   const [creatives, setCreatives] = useState<any[]>([]);
@@ -9,6 +24,7 @@ export default function AdminCreativesPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [newCreative, setNewCreative] = useState({
     name: '',
     type: 'IMAGE',
@@ -16,10 +32,76 @@ export default function AdminCreativesPage() {
     targetUrl: '',
     width: 728,
     height: 90,
+    sizeOrientation: 'horizontal' as 'horizontal' | 'vertical',
+    sizePreset: 'medium' as 'small' | 'medium' | 'large',
     altText: '',
     customHtml: '',
     isGlobalFallback: false,
   });
+  const [isDragging, setIsDragging] = useState(false);
+  const [imageInputMethod, setImageInputMethod] = useState<'upload' | 'url'>('upload');
+
+  const handleSelectFromGallery = (photo: GalleryPhoto) => {
+    const isSquareOrVertical = (photo.height || 1) >= (photo.width || 1) * 0.75;
+    const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
+    const autoPreset = isSquareOrVertical ? 'small' : 'medium';
+    const defaultDimensions = isSquareOrVertical
+      ? BANNER_SIZES.vertical.small
+      : BANNER_SIZES.horizontal.medium;
+
+    setNewCreative((prev) => ({
+      ...prev,
+      mediaUrl: photo.mediaUrl,
+      name: prev.name || photo.name,
+      altText: prev.altText || photo.altText || photo.name,
+      targetUrl: prev.targetUrl || photo.targetUrl || 'https://example.com',
+      sizeOrientation: autoOrientation,
+      sizePreset: autoPreset,
+      width: photo.width || defaultDimensions.width,
+      height: photo.height || defaultDimensions.height,
+    }));
+  };
+
+  const handleImageFileSelect = (file: File | null | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (PNG, JPG, JPEG, WebP, SVG, GIF).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB limit. Please upload an optimized banner image.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
+      const testImg = new window.Image();
+      testImg.onload = () => {
+        const isSquareOrVertical = testImg.naturalHeight >= testImg.naturalWidth * 0.75;
+        const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
+        const autoPreset = isSquareOrVertical ? 'small' : 'medium';
+        const defaultDimensions = isSquareOrVertical
+          ? BANNER_SIZES.vertical.small
+          : BANNER_SIZES.horizontal.medium;
+
+        setNewCreative((prev) => ({
+          ...prev,
+          mediaUrl: dataUrl,
+          name: prev.name || cleanName,
+          altText: prev.altText || cleanName,
+          sizeOrientation: autoOrientation,
+          sizePreset: autoPreset,
+          width: defaultDimensions.width,
+          height: defaultDimensions.height,
+        }));
+      };
+      testImg.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const loadCreatives = async () => {
     setLoading(true);
@@ -85,12 +167,20 @@ export default function AdminCreativesPage() {
           <h1 className="text-2xl font-bold text-white tracking-tight">Creative Asset Gallery</h1>
           <p className="text-xs text-slate-400 mt-1">Manage display banners, videos, HTML snippets, and global fallbacks</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 self-start sm:self-auto"
-        >
-          <span>+</span> Upload Creative
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/gallery"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 font-medium text-xs rounded-xl border border-slate-700 shadow-md transition-colors flex items-center gap-2"
+          >
+            <span>📸</span> Photo Gallery
+          </Link>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 self-start sm:self-auto"
+          >
+            <span>+</span> Upload Creative
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -175,13 +265,19 @@ export default function AdminCreativesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
               <h2 className="text-base font-bold text-white">Create New Creative</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white text-sm">✕</button>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-white text-sm p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
             </div>
-            <form onSubmit={handleCreate} className="space-y-3">
+            <form id="create-creative-form" onSubmit={handleCreate} className="p-5 overflow-y-auto space-y-3.5 flex-1 overscroll-contain">
               <div>
                 <label className="text-xs font-semibold text-slate-300">Creative Name</label>
                 <input
@@ -218,16 +314,121 @@ export default function AdminCreativesPage() {
               </div>
 
               {newCreative.type === 'IMAGE' && (
-                <div>
-                  <label className="text-xs font-semibold text-slate-300">Media URL (https://...)</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://example.com/banner.png"
-                    value={newCreative.mediaUrl}
-                    onChange={(e) => setNewCreative({ ...newCreative, mediaUrl: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white"
-                  />
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Banner Image Source</label>
+                    <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setImageInputMethod('upload')}
+                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                          imageInputMethod === 'upload'
+                            ? 'bg-indigo-600 text-white font-medium'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        📁 Upload
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageInputMethod('url')}
+                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                          imageInputMethod === 'url'
+                            ? 'bg-indigo-600 text-white font-medium'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        🔗 URL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGalleryModal(true)}
+                        className="px-2 py-0.5 rounded-md bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors font-medium border border-indigo-500/30"
+                      >
+                        📸 Gallery
+                      </button>
+                    </div>
+                  </div>
+
+                  {imageInputMethod === 'upload' ? (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleImageFileSelect(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.getElementById('creative-file-input');
+                        if (input) input.click();
+                      }}
+                      className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                        isDragging
+                          ? 'border-indigo-500 bg-indigo-500/10'
+                          : newCreative.mediaUrl
+                          ? 'border-emerald-500/40 bg-emerald-950/10'
+                          : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="creative-file-input"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleImageFileSelect(e.target.files[0]);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-sm text-indigo-400">
+                        {newCreative.mediaUrl ? '✓' : '☁️'}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-white">
+                          {newCreative.mediaUrl ? 'Click or drag new image to replace' : 'Click to select image or drag & drop here'}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WebP, SVG, GIF (Up to 10MB)</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <input
+                      type="url"
+                      placeholder="https://example.com/banner.png"
+                      value={newCreative.mediaUrl}
+                      onChange={(e) => setNewCreative({ ...newCreative, mediaUrl: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white font-mono"
+                    />
+                  )}
+
+                  {newCreative.mediaUrl && (
+                    <div className="rounded-lg border border-slate-800 bg-slate-950 p-2.5 flex flex-col items-center justify-center gap-1.5">
+                      <div className="w-full flex items-center justify-between text-[10px] text-slate-400 pb-1 border-b border-slate-800 font-mono">
+                        <span className="text-emerald-400 font-semibold">● Preview</span>
+                        <button
+                          type="button"
+                          onClick={() => setNewCreative({ ...newCreative, mediaUrl: '' })}
+                          className="text-rose-400 hover:text-rose-300"
+                        >
+                          ✕ Remove
+                        </button>
+                      </div>
+                      <img
+                        src={newCreative.mediaUrl}
+                        alt="Creative preview"
+                        className="max-h-24 max-w-full object-contain rounded"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -254,6 +455,86 @@ export default function AdminCreativesPage() {
                   className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white"
                 />
               </div>
+
+              {newCreative.type === 'IMAGE' && (
+                <div className="space-y-2 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-200">📐 Size & Orientation Presets</label>
+                    <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dims = BANNER_SIZES.horizontal[newCreative.sizePreset];
+                          setNewCreative((prev) => ({
+                            ...prev,
+                            sizeOrientation: 'horizontal',
+                            width: dims.width,
+                            height: dims.height,
+                          }));
+                        }}
+                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                          newCreative.sizeOrientation === 'horizontal'
+                            ? 'bg-indigo-600 text-white font-medium'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ↔ Horizontal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dims = BANNER_SIZES.vertical[newCreative.sizePreset];
+                          setNewCreative((prev) => ({
+                            ...prev,
+                            sizeOrientation: 'vertical',
+                            width: dims.width,
+                            height: dims.height,
+                          }));
+                        }}
+                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                          newCreative.sizeOrientation === 'vertical'
+                            ? 'bg-indigo-600 text-white font-medium'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ↕ Vertical / Square
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    {(['small', 'medium', 'large'] as const).map((key) => {
+                      const opt = BANNER_SIZES[newCreative.sizeOrientation][key];
+                      const isSelected = newCreative.sizePreset === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setNewCreative((prev) => ({
+                              ...prev,
+                              sizePreset: key,
+                              width: opt.width,
+                              height: opt.height,
+                            }));
+                          }}
+                          className={`p-1.5 rounded-lg border text-left transition-all ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500/15 text-white ring-1 ring-indigo-500/50'
+                              : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-white">
+                            <span>{opt.label}</span>
+                            {isSelected && <span className="text-indigo-400 text-[9px]">✓</span>}
+                          </div>
+                          <div className="text-[10px] font-mono text-indigo-300">{opt.dimensions}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -287,25 +568,34 @@ export default function AdminCreativesPage() {
                 <label htmlFor="fallback" className="text-xs text-slate-300">Set as Global Fallback Creative</label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium"
-                >
-                  Save Creative
-                </button>
-              </div>
             </form>
+
+            <div className="px-5 py-3.5 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0 bg-slate-900">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-3.5 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="create-creative-form"
+                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-500/20 transition-colors"
+              >
+                Save Creative
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Photo Gallery Selector Modal */}
+      <PhotoGalleryModal
+        isOpen={showGalleryModal}
+        onClose={() => setShowGalleryModal(false)}
+        onSelectPhoto={handleSelectFromGallery}
+      />
     </div>
   );
 }

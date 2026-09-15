@@ -145,6 +145,10 @@ export class AdDeliveryService {
   ): Promise<AdClickResponseDto> {
     const decoded = this.trackingToken.verifyToken(dto.trackingToken);
     const deviceType = dto.device || decoded.deviceType || 'DESKTOP';
+    const ipHash = ip
+      ? createHash('sha256').update(ip).digest('hex').substring(0, 32)
+      : undefined;
+    const normalizedUtilitySlug = (dto.utilitySlug || decoded.utilitySlug || 'home').replace(/^\//, '');
 
     if (decoded.provider) {
       if (!decoded.externalTargetUrl) {
@@ -165,7 +169,7 @@ export class AdDeliveryService {
           data: {
             eventType: 'AD_CLICK',
             placementCode: decoded.placementCode,
-            utilitySlug: dto.utilitySlug || decoded.utilitySlug,
+            utilitySlug: normalizedUtilitySlug,
             sessionToken: dto.sessionId,
             metadata: {
               provider: decoded.provider,
@@ -205,27 +209,74 @@ export class AdDeliveryService {
       throw new BadRequestException('Invalid or dangerous target URL scheme');
     }
 
-    const ipHash = ip ? createHash('sha256').update(ip).digest('hex').substring(0, 32) : undefined;
-
-    // 3. Asynchronously record click event
-    this.prisma.adClick
-      .create({
+    // 3. Record click event and invalidate analytics cache immediately
+    try {
+      await this.prisma.adClick.create({
         data: {
           creativeId: decoded.creativeId,
           campaignId: decoded.campaignId,
           placementId: decoded.placementId,
-          utilitySlug: dto.utilitySlug || decoded.utilitySlug,
+          utilitySlug: normalizedUtilitySlug,
           deviceType: deviceType as any,
           country: dto.country,
           ipHash,
           sessionToken: dto.sessionId,
         },
-      })
-      .catch((err) => {
-        this.logger.warn(`Failed to persist ad click in database: ${err.message}`);
       });
+      await this.redisCache.invalidateCache('admin:monetization:intel:*').catch(() => {});
+    } catch (err: any) {
+      this.logger.warn(`Failed to persist ad click in database: ${err.message}`);
+    }
 
     return { destinationUrl: targetUrl };
+  }
+
+  /**
+   * Direct click recording for testing and administration telemetry
+   */
+  async recordDirectClick(dto: {
+    utilitySlug?: string;
+    creativeId: string;
+    placementCode?: string;
+  }): Promise<{ recorded: boolean }> {
+    const creative = await this.prisma.adCreative.findUnique({
+      where: { id: dto.creativeId },
+      include: {
+        targetingRules: {
+          include: { placement: true, campaign: true },
+        },
+      },
+    });
+
+    if (!creative) {
+      throw new NotFoundException('Creative not found');
+    }
+
+    const matchedRule =
+      creative.targetingRules.find((r) =>
+        dto.utilitySlug ? r.utilitySlugs?.includes(dto.utilitySlug) : true,
+      ) || creative.targetingRules[0];
+
+    const placementId =
+      matchedRule?.placementId || (await this.prisma.adPlacement.findFirst())?.id;
+    const campaignId =
+      matchedRule?.campaignId || (await this.prisma.adCampaign.findFirst())?.id;
+
+    if (placementId && campaignId) {
+      await this.prisma.adClick.create({
+        data: {
+          creativeId: creative.id,
+          campaignId,
+          placementId,
+          utilitySlug: dto.utilitySlug || 'home',
+          deviceType: 'DESKTOP',
+        },
+      });
+
+      await this.redisCache.invalidateCache('admin:monetization:intel:*').catch(() => {});
+    }
+
+    return { recorded: true };
   }
 
   private generateSessionId(ip?: string, userAgent?: string): string {

@@ -16,6 +16,7 @@ html, body {
   overflow-x: hidden;
   max-width: 100vw;
   width: 100%;
+  touch-action: manipulation;
 }
 
 body {
@@ -27,16 +28,71 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle ambient background glow meshes */
+/* Dynamic ambient background glow meshes */
 .bg-mesh-gradient {
   background-color: #fafbfd;
   background-image: 
-    radial-gradient(circle at 8% 12%, rgba(254, 226, 226, 0.45) 0%, transparent 35%),
-    radial-gradient(circle at 92% 16%, rgba(254, 243, 199, 0.5) 0%, transparent 35%),
-    radial-gradient(circle at 50% 2%, rgba(238, 242, 255, 0.6) 0%, transparent 40%),
-    radial-gradient(circle at 90% 85%, rgba(254, 226, 226, 0.35) 0%, transparent 40%),
-    radial-gradient(circle at 10% 90%, rgba(240, 253, 244, 0.4) 0%, transparent 40%);
+    radial-gradient(circle at 8% 12%, rgba(254, 226, 226, 0.5) 0%, transparent 35%),
+    radial-gradient(circle at 92% 16%, rgba(254, 243, 199, 0.55) 0%, transparent 35%),
+    radial-gradient(circle at 50% 2%, rgba(238, 242, 255, 0.65) 0%, transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(254, 226, 226, 0.4) 0%, transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(240, 253, 244, 0.45) 0%, transparent 40%);
   background-attachment: fixed;
+}
+
+/* Card hover physics & micro-animations */
+.tool-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+.tool-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(37, 99, 235, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+}
+
+.tool-card:active {
+  transform: scale(0.985) translateY(-2px);
+  transition-duration: 0.1s;
+}
+
+/* Interactive button press & ripple feedback */
+.btn-interactive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.btn-interactive:hover {
+  transform: translateY(-1px);
+}
+
+.btn-interactive:active {
+  transform: scale(0.96);
+  transition-duration: 0.1s;
+}
+
+/* Shimmer overlay for loading/featured badges */
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2.5s infinite;
 }
 
 /* Hand-drawn style decorative font simulation */
@@ -49,6 +105,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Stagger animation utilities */
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+
 /* Hide scrollbars cleanly while preserving scrolling functionality */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -59,3 +122,91 @@ html {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+/* Sleek dark-mode custom scrollbars for ALL admin panels, tables, sidebars, modals, and containers */
+.admin-scope,
+.admin-scope *,
+.admin-root,
+.admin-root *,
+[data-admin-panel],
+[data-admin-panel] *,
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(71, 85, 105, 0.75) rgba(15, 23, 42, 0.75);
+}
+
+.admin-scope::-webkit-scrollbar,
+.admin-scope *::-webkit-scrollbar,
+.admin-root::-webkit-scrollbar,
+.admin-root *::-webkit-scrollbar,
+[data-admin-panel]::-webkit-scrollbar,
+[data-admin-panel] *::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-scope::-webkit-scrollbar-track,
+.admin-scope *::-webkit-scrollbar-track,
+.admin-root::-webkit-scrollbar-track,
+.admin-root *::-webkit-scrollbar-track,
+[data-admin-panel]::-webkit-scrollbar-track,
+[data-admin-panel] *::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 9999px;
+}
+
+.admin-scope::-webkit-scrollbar-thumb,
+.admin-scope *::-webkit-scrollbar-thumb,
+.admin-root::-webkit-scrollbar-thumb,
+.admin-root *::-webkit-scrollbar-thumb,
+[data-admin-panel]::-webkit-scrollbar-thumb,
+[data-admin-panel] *::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.75);
+  border-radius: 9999px;
+  border: 2px solid rgba(15, 23, 42, 0.75);
+  transition: background-color 0.2s ease;
+}
+
+.admin-scope::-webkit-scrollbar-thumb:hover,
+.admin-scope *::-webkit-scrollbar-thumb:hover,
+.admin-root::-webkit-scrollbar-thumb:hover,
+.admin-root *::-webkit-scrollbar-thumb:hover,
+[data-admin-panel]::-webkit-scrollbar-thumb:hover,
+[data-admin-panel] *::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.85);
+}
+
+.admin-scope::-webkit-scrollbar-corner,
+.admin-scope *::-webkit-scrollbar-corner,
+.admin-root::-webkit-scrollbar-corner,
+.admin-root *::-webkit-scrollbar-corner,
+[data-admin-panel]::-webkit-scrollbar-corner,
+[data-admin-panel] *::-webkit-scrollbar-corner,
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+/* Smooth mobile drawer accordion & backdrop transition */
+.mobile-drawer-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: translateY(-10px);
+  will-change: grid-template-rows, opacity, transform;
+}
+
+.mobile-drawer-wrapper.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-drawer-content {
+  overflow: hidden;
+}
+

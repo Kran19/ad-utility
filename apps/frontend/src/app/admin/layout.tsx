@@ -37,6 +37,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const navItems = [
     { label: 'Dashboard', href: '/admin', icon: '📊', requiredPermission: null },
     { label: 'Ad Manager', href: '/admin/ad-manager', icon: '🎛️', requiredPermission: 'campaigns:read' },
+    { label: 'Photo Gallery', href: '/admin/gallery', icon: '📸', requiredPermission: 'creatives:read' },
     { label: 'Campaigns', href: '/admin/campaigns', icon: '🎯', requiredPermission: 'campaigns:read' },
     { label: 'Creatives', href: '/admin/creatives', icon: '🖼️', requiredPermission: 'creatives:read' },
     { label: 'Placements', href: '/admin/placements', icon: '📍', requiredPermission: 'placements:read' },
@@ -54,7 +55,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const visibleNavItems = navItems.filter((item) => !item.requiredPermission || hasPermission(item.requiredPermission));
 
   return (
-    <div className="min-h-screen md:h-screen md:overflow-hidden bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
+    <div data-admin-panel="true" className="admin-scope admin-root min-h-screen md:h-screen md:overflow-hidden bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
       {/* Sidebar - Sticky / Fixed on Desktop */}
       <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 md:h-screen md:sticky md:top-0 z-30">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between shrink-0">

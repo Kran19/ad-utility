@@ -4,17 +4,31 @@ import React, { useState } from 'react';
 import { UtilityPublicDto, defaultUtilityRegistry } from '@ad-utility/shared';
 import { Type, Copy, Check, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface TextWorkspaceProps {
   utility: UtilityPublicDto;
 }
 
 export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const [inputText, setInputText] = useState<string>('');
   const [outputText, setOutputText] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleDropFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        setInputText(content);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Cleaner options
   const [trimWhitespace, setTrimWhitespace] = useState<boolean>(true);
@@ -29,6 +43,7 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
   const isCaseConverter = utility.slug === 'case-converter';
 
   const handleExecute = async (overrideCase?: string) => {
+    if (!requireAuth(() => handleExecute(overrideCase), `Sign in or register to execute ${utility.name}`)) return;
     if (!inputText) return;
     setErrorMsg(null);
     setIsLoading(true);
@@ -203,18 +218,44 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
       {/* Dual Pane Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Input Pane */}
-        <div className="space-y-2">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+              handleDropFile(e.dataTransfer.files[0]);
+            }
+          }}
+          className="space-y-2 relative"
+        >
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span className="font-bold uppercase tracking-wider text-slate-700">Input Text</span>
             <span className="font-mono">{inputText.length} chars &bull; {inputText.trim().split(/\s+/).filter(Boolean).length} words</span>
           </div>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Type or paste your text here..."
-            rows={10}
-            className="w-full px-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y"
-          />
+          <div className="relative">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Type, paste, or drag & drop text/code file here..."
+              rows={10}
+              className={`w-full px-4 py-3 rounded-2xl border text-slate-900 placeholder-slate-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y ${
+                isDragOver
+                  ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/20'
+                  : 'bg-slate-50/80 border-slate-200'
+              }`}
+            />
+            {isDragOver && (
+              <div className="absolute inset-0 rounded-2xl bg-blue-50/80 backdrop-blur-xs border-2 border-dashed border-blue-500 flex flex-col items-center justify-center pointer-events-none text-blue-700 font-bold text-xs gap-1">
+                <span>📄</span>
+                <span>Drop text file to import</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Output Pane */}

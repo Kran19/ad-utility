@@ -95,4 +95,21 @@ export class AdsController {
       },
     };
   }
+
+  @Public()
+  @Post('click/direct')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Record a direct ad click for telemetry' })
+  async recordDirectClick(
+    @Body() body: { utilitySlug?: string; creativeId: string; placementCode?: string },
+  ): Promise<ApiEnvelope<{ recorded: boolean }>> {
+    const data = await this.adDeliveryService.recordDirectClick(body);
+    return {
+      success: true,
+      data,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
 }

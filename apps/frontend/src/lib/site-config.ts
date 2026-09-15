@@ -63,12 +63,9 @@ export function getClientApiUrl(): string {
       const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || '').replace(/\/+$/, '');
       return `${basePath}/api/v1`;
     }
-    // Local dev: map 3001 frontend port to 4001 backend port
-    const port = window.location?.port;
-    if (port === '3001') {
-      return 'http://localhost:4001/api/v1';
-    }
-    return 'http://localhost:4000/api/v1';
+    const hostname = window.location?.hostname || 'localhost';
+    const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || '4000';
+    return `http://${hostname}:${backendPort}/api/v1`;
   }
 
   // SSR fallback
@@ -81,7 +78,8 @@ export function getClientApiUrl(): string {
     return 'http://backend:4000/api/v1';
   }
 
-  return 'http://localhost:4001/api/v1';
+  const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || '4000';
+  return `http://localhost:${backendPort}/api/v1`;
 }
 
 /**

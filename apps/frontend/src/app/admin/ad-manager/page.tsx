@@ -4,6 +4,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { adminApiFetch } from '../../../lib/admin-api';
+import { PhotoGalleryModal, GalleryPhoto } from '../../../components/admin/PhotoGalleryModal';
+import { useResizableColumns, ResizableTh } from '../../../components/admin/ResizableTable';
 
 interface MatrixItem {
   id: string;
@@ -34,15 +36,18 @@ interface CampaignItem {
 
 interface CreativeItem {
   id: string;
-  campaignId: string;
+  campaignId?: string;
   name: string;
   type: string;
+  mediaUrl?: string;
+  targetUrl?: string;
   width?: number;
   height?: number;
   headline?: string;
   body?: string;
   callToAction?: string;
   assetUrl?: string;
+  altText?: string;
 }
 
 interface TargetingRule {
@@ -59,12 +64,39 @@ interface TargetingRule {
   isActive: boolean;
   campaign?: { id: string; name: string; status: string };
   placement?: { id: string; code: string; name: string };
-  creative?: { id: string; name: string; type: string; width?: number; height?: number };
+  creative?: {
+    id: string;
+    name: string;
+    type: string;
+    mediaUrl?: string;
+    targetUrl?: string;
+    altText?: string;
+    width?: number;
+    height?: number;
+  };
 }
 
 export default function AdminAdManagerPage() {
   const searchParams = useSearchParams();
   const initialUtilityParam = searchParams.get('utility');
+
+  // Resizable Columns for Ad Matrix
+  const {
+    widths: matrixWidths,
+    activeColumn: matrixActiveColumn,
+    handleMouseDown: handleMatrixResizeStart,
+    resetColumnWidth: resetMatrixColumnWidth,
+    resetAllWidths: resetAllMatrixWidths,
+    getColStyle: getMatrixColStyle,
+  } = useResizableColumns('admin_ad_matrix_table', {
+    utility: 220,
+    category: 140,
+    desktop: 80,
+    tablet: 80,
+    mobile: 80,
+    total: 80,
+    actions: 120,
+  });
 
   // Matrix State
   const [matrix, setMatrix] = useState<MatrixItem[]>([]);
@@ -109,6 +141,19 @@ export default function AdminAdManagerPage() {
     }
   };
 
+  const BANNER_SIZES = {
+    horizontal: {
+      small: { label: 'Small', dimensions: '468 × 60 px', width: 468, height: 60, desc: 'Compact Banner' },
+      medium: { label: 'Medium', dimensions: '728 × 90 px', width: 728, height: 90, desc: 'Standard Leaderboard' },
+      large: { label: 'Large', dimensions: '970 × 250 px', width: 970, height: 250, desc: 'Large Billboard' },
+    },
+    vertical: {
+      small: { label: 'Small', dimensions: '200 × 200 px', width: 200, height: 200, desc: 'Square / QR' },
+      medium: { label: 'Medium', dimensions: '300 × 250 px', width: 300, height: 250, desc: 'Medium Card / Box' },
+      large: { label: 'Large', dimensions: '300 × 600 px', width: 300, height: 600, desc: 'Tall Skyscraper' },
+    },
+  };
+
   // Manage Ads Drawer / Utility View
   const [selectedUtility, setSelectedUtility] = useState<MatrixItem | null>(null);
   const [rules, setRules] = useState<TargetingRule[]>([]);
@@ -120,7 +165,16 @@ export default function AdminAdManagerPage() {
   const [assignForm, setAssignForm] = useState({
     campaignId: '',
     placementId: '',
+    adMode: 'custom_image' as 'custom_image' | 'library',
     creativeId: '',
+    creativeName: '',
+    mediaUrl: '',
+    targetUrl: '',
+    altText: '',
+    sizeOrientation: 'horizontal' as 'horizontal' | 'vertical',
+    sizePreset: 'medium' as 'small' | 'medium' | 'large',
+    width: 728,
+    height: 90,
     deviceTypes: ['DESKTOP', 'MOBILE'] as string[],
     priorityOverride: '',
     weight: 100,
@@ -133,7 +187,16 @@ export default function AdminAdManagerPage() {
   const [editingRule, setEditingRule] = useState<TargetingRule | null>(null);
   const [editForm, setEditForm] = useState({
     placementId: '',
+    adMode: 'custom_image' as 'custom_image' | 'library',
     creativeId: '',
+    creativeName: '',
+    mediaUrl: '',
+    targetUrl: '',
+    altText: '',
+    sizeOrientation: 'horizontal' as 'horizontal' | 'vertical',
+    sizePreset: 'medium' as 'small' | 'medium' | 'large',
+    width: 728,
+    height: 90,
     deviceTypes: ['DESKTOP', 'MOBILE'] as string[],
     priorityOverride: '',
     weight: 100,
@@ -150,6 +213,101 @@ export default function AdminAdManagerPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewResult, setPreviewResult] = useState<any | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  // Drag & Drop / File Select State
+  const [isDraggingAssign, setIsDraggingAssign] = useState(false);
+  const [isDraggingEdit, setIsDraggingEdit] = useState(false);
+  const [imageInputMethodAssign, setImageInputMethodAssign] = useState<'upload' | 'url'>('upload');
+  const [imageInputMethodEdit, setImageInputMethodEdit] = useState<'upload' | 'url'>('upload');
+  const [showGalleryFor, setShowGalleryFor] = useState<'assign' | 'edit' | null>(null);
+
+  const handleSelectPhotoFromGallery = (photo: GalleryPhoto, isEdit: boolean) => {
+    const isSquareOrVertical = (photo.height || 1) >= (photo.width || 1) * 0.75;
+    const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
+    const autoPreset = isSquareOrVertical ? 'small' : 'medium';
+    const defaultDimensions = isSquareOrVertical
+      ? BANNER_SIZES.vertical.small
+      : BANNER_SIZES.horizontal.medium;
+
+    if (isEdit) {
+      setEditForm((prev) => ({
+        ...prev,
+        mediaUrl: photo.mediaUrl,
+        altText: prev.altText || photo.altText || photo.name,
+        creativeName: prev.creativeName || photo.name,
+        sizeOrientation: autoOrientation,
+        sizePreset: autoPreset,
+        width: photo.width || defaultDimensions.width,
+        height: photo.height || defaultDimensions.height,
+      }));
+    } else {
+      setAssignForm((prev) => ({
+        ...prev,
+        mediaUrl: photo.mediaUrl,
+        altText: prev.altText || photo.altText || photo.name,
+        creativeName: prev.creativeName || photo.name,
+        sizeOrientation: autoOrientation,
+        sizePreset: autoPreset,
+        width: photo.width || defaultDimensions.width,
+        height: photo.height || defaultDimensions.height,
+      }));
+    }
+  };
+
+  const handleImageFileSelect = (file: File | null | undefined, isEdit: boolean) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (PNG, JPG, JPEG, WebP, SVG, GIF).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB limit. Please upload an optimized banner image.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+
+      // Pre-calculate image proportions
+      const testImg = new window.Image();
+      testImg.onload = () => {
+        const isSquareOrVertical = testImg.naturalHeight >= testImg.naturalWidth * 0.75;
+        const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
+        const autoPreset = isSquareOrVertical ? 'small' : 'medium';
+        const defaultDimensions = isSquareOrVertical
+          ? BANNER_SIZES.vertical.small
+          : BANNER_SIZES.horizontal.medium;
+
+        if (isEdit) {
+          setEditForm((prev) => ({
+            ...prev,
+            mediaUrl: dataUrl,
+            altText: prev.altText || cleanName,
+            creativeName: prev.creativeName || cleanName,
+            sizeOrientation: autoOrientation,
+            sizePreset: autoPreset,
+            width: defaultDimensions.width,
+            height: defaultDimensions.height,
+          }));
+        } else {
+          setAssignForm((prev) => ({
+            ...prev,
+            mediaUrl: dataUrl,
+            altText: prev.altText || cleanName,
+            creativeName: prev.creativeName || cleanName,
+            sizeOrientation: autoOrientation,
+            sizePreset: autoPreset,
+            width: defaultDimensions.width,
+            height: defaultDimensions.height,
+          }));
+        }
+      };
+      testImg.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Load Metadata (placements, campaigns, creatives, categories)
   useEffect(() => {
@@ -291,16 +449,53 @@ export default function AdminAdManagerPage() {
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUtility) return;
-    if (!assignForm.campaignId || !assignForm.placementId || !assignForm.creativeId) {
-      alert('Please select a campaign, inventory placement slot, and creative asset.');
+    if (!assignForm.campaignId || !assignForm.placementId) {
+      alert('Please select a campaign and an inventory placement slot.');
       return;
     }
 
     setAssignSubmitting(true);
+    let finalCreativeId = assignForm.creativeId;
+
+    if (assignForm.adMode === 'custom_image') {
+      if (!assignForm.mediaUrl || !assignForm.targetUrl) {
+        alert('Please provide both the Ad Image URL and the Redirect Page URL.');
+        setAssignSubmitting(false);
+        return;
+      }
+
+      const placementObj = placements.find((p) => p.id === assignForm.placementId);
+      const creativeRes = await adminApiFetch('/admin/ads/creatives', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: assignForm.creativeName || `${selectedUtility.name} ${placementObj?.code || 'Banner'} Ad`,
+          type: 'IMAGE',
+          mediaUrl: assignForm.mediaUrl,
+          targetUrl: assignForm.targetUrl,
+          altText: assignForm.altText || assignForm.creativeName || `${selectedUtility.name} Advertisement`,
+          width: Number(assignForm.width) || 728,
+          height: Number(assignForm.height) || 90,
+        }),
+      });
+
+      if (!creativeRes.success || !creativeRes.data?.id) {
+        alert(creativeRes.error || 'Failed to create image creative asset');
+        setAssignSubmitting(false);
+        return;
+      }
+      finalCreativeId = creativeRes.data.id;
+    } else {
+      if (!assignForm.creativeId) {
+        alert('Please select a creative asset from the library.');
+        setAssignSubmitting(false);
+        return;
+      }
+    }
+
     const payload: any = {
       campaignId: assignForm.campaignId,
       placementId: assignForm.placementId,
-      creativeId: assignForm.creativeId,
+      creativeId: finalCreativeId,
       deviceTypes: assignForm.deviceTypes,
       utilitySlugs: [selectedUtility.slug],
       weight: Number(assignForm.weight) || 100,
@@ -321,7 +516,16 @@ export default function AdminAdManagerPage() {
       setAssignForm({
         campaignId: '',
         placementId: '',
+        adMode: 'custom_image',
         creativeId: '',
+        creativeName: '',
+        mediaUrl: '',
+        targetUrl: '',
+        altText: '',
+        sizeOrientation: 'horizontal',
+        sizePreset: 'medium',
+        width: 728,
+        height: 90,
         deviceTypes: ['DESKTOP', 'MOBILE'],
         priorityOverride: '',
         weight: 100,
@@ -337,9 +541,23 @@ export default function AdminAdManagerPage() {
   // Handle Open Edit Modal
   const handleOpenEditModal = (rule: TargetingRule) => {
     setEditingRule(rule);
+    const existingCreative = rule.creative || creatives.find((c) => c.id === rule.creativeId);
+    const isVertical = Boolean(existingCreative?.height && existingCreative?.width && existingCreative.height >= existingCreative.width * 0.75);
+    const crWidth = existingCreative?.width || (isVertical ? 200 : 728);
+    const crHeight = existingCreative?.height || (isVertical ? 200 : 90);
+
     setEditForm({
       placementId: rule.placementId || rule.placement?.id || '',
+      adMode: existingCreative?.type === 'IMAGE' || !rule.creativeId ? 'custom_image' : 'library',
       creativeId: rule.creativeId || rule.creative?.id || '',
+      creativeName: existingCreative?.name || `${selectedUtility?.name} Ad`,
+      mediaUrl: existingCreative?.mediaUrl || '',
+      targetUrl: existingCreative?.targetUrl || '',
+      altText: existingCreative?.altText || existingCreative?.name || '',
+      sizeOrientation: isVertical ? 'vertical' : 'horizontal',
+      sizePreset: (crWidth === 468 || crWidth === 200) ? 'small' : (crWidth === 970 || crHeight === 600) ? 'large' : 'medium',
+      width: crWidth,
+      height: crHeight,
       deviceTypes: rule.deviceTypes && rule.deviceTypes.length > 0 ? [...rule.deviceTypes] : ['DESKTOP', 'TABLET', 'MOBILE'],
       priorityOverride: rule.priorityOverride !== null && rule.priorityOverride !== undefined ? String(rule.priorityOverride) : '',
       weight: rule.weight || 100,
@@ -351,9 +569,9 @@ export default function AdminAdManagerPage() {
   // Handle Save Edited Rule
   const handleSaveEditedRule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingRule) return;
-    if (!editForm.placementId || !editForm.creativeId) {
-      alert('Please select both an inventory placement slot and a creative asset.');
+    if (!editingRule || !selectedUtility) return;
+    if (!editForm.placementId) {
+      alert('Please select an inventory placement slot.');
       return;
     }
     if (editForm.deviceTypes.length === 0) {
@@ -362,9 +580,69 @@ export default function AdminAdManagerPage() {
     }
 
     setEditSubmitting(true);
+    let finalCreativeId = editForm.creativeId;
+
+    if (editForm.adMode === 'custom_image') {
+      if (!editForm.mediaUrl || !editForm.targetUrl) {
+        alert('Please provide both the Ad Image URL and the Redirect Page URL.');
+        setEditSubmitting(false);
+        return;
+      }
+
+      // If existing rule had an attached creative and it was an IMAGE creative, update it
+      const currentCreativeId = editingRule.creativeId || editingRule.creative?.id;
+      if (currentCreativeId && editingRule.creative?.type === 'IMAGE') {
+        const updateCrRes = await adminApiFetch(`/admin/ads/creatives/${currentCreativeId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: editForm.creativeName || editingRule.creative?.name || `${selectedUtility.name} Banner Ad`,
+            type: 'IMAGE',
+            mediaUrl: editForm.mediaUrl,
+            targetUrl: editForm.targetUrl,
+            altText: editForm.altText || editForm.creativeName || `${selectedUtility.name} Advertisement`,
+            width: Number(editForm.width) || 728,
+            height: Number(editForm.height) || 90,
+          }),
+        });
+        if (!updateCrRes.success) {
+          alert(updateCrRes.error || 'Failed to update creative asset');
+          setEditSubmitting(false);
+          return;
+        }
+        finalCreativeId = currentCreativeId;
+      } else {
+        // Create new Image Creative
+        const placementObj = placements.find((p) => p.id === editForm.placementId);
+        const createCrRes = await adminApiFetch('/admin/ads/creatives', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: editForm.creativeName || `${selectedUtility.name} ${placementObj?.code || 'Banner'} Ad`,
+            type: 'IMAGE',
+            mediaUrl: editForm.mediaUrl,
+            targetUrl: editForm.targetUrl,
+            altText: editForm.altText || editForm.creativeName || `${selectedUtility.name} Advertisement`,
+            width: Number(editForm.width) || 728,
+            height: Number(editForm.height) || 90,
+          }),
+        });
+        if (!createCrRes.success || !createCrRes.data?.id) {
+          alert(createCrRes.error || 'Failed to create image creative asset');
+          setEditSubmitting(false);
+          return;
+        }
+        finalCreativeId = createCrRes.data.id;
+      }
+    } else {
+      if (!editForm.creativeId) {
+        alert('Please select a creative asset from the library.');
+        setEditSubmitting(false);
+        return;
+      }
+    }
+
     const payload: any = {
       placementId: editForm.placementId,
-      creativeId: editForm.creativeId,
+      creativeId: finalCreativeId,
       deviceTypes: editForm.deviceTypes,
       weight: Number(editForm.weight) || 100,
       isActive: editForm.isActive,
@@ -380,7 +658,7 @@ export default function AdminAdManagerPage() {
     if (res.success) {
       setShowEditModal(false);
       setEditingRule(null);
-      if (selectedUtility) loadUtilityRules(selectedUtility.slug);
+      loadUtilityRules(selectedUtility.slug);
       loadMatrix();
     } else {
       alert(res.error || 'Failed to update ad rule');
@@ -723,7 +1001,17 @@ export default function AdminAdManagerPage() {
                 </span>
               )}
             </div>
-            <span className="text-[11px] text-slate-500 font-mono">{matrix.length} utilities</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={resetAllMatrixWidths}
+                title="Reset column widths to default"
+                className="text-[10px] px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 rounded-lg transition-colors flex items-center gap-1 font-medium"
+              >
+                <span>↔️</span> Reset
+              </button>
+              <span className="text-[11px] text-slate-500 font-mono">{matrix.length} utilities</span>
+            </div>
           </div>
 
           {loadingMatrix ? (
@@ -742,16 +1030,79 @@ export default function AdminAdManagerPage() {
             <div className="py-20 text-center text-xs text-slate-400">No utilities match the selected criteria.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
+              <table className="w-full text-left text-xs text-slate-300 table-fixed">
                 <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
                   <tr>
-                    <th className="px-4 py-3">Utility</th>
-                    <th className="px-3 py-3">Category</th>
-                    <th className="px-3 py-3 text-center">Desktop</th>
-                    <th className="px-3 py-3 text-center">Tablet</th>
-                    <th className="px-3 py-3 text-center">Mobile</th>
-                    <th className="px-3 py-3 text-center">Total</th>
-                    <th className="px-3 py-3 text-right">Actions</th>
+                    <ResizableTh
+                      colKey="utility"
+                      width={matrixWidths.utility}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'utility'}
+                      className="px-4 py-3"
+                    >
+                      Utility
+                    </ResizableTh>
+                    <ResizableTh
+                      colKey="category"
+                      width={matrixWidths.category}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'category'}
+                      className="px-3 py-3"
+                    >
+                      Category
+                    </ResizableTh>
+                    <ResizableTh
+                      colKey="desktop"
+                      width={matrixWidths.desktop}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'desktop'}
+                      className="px-3 py-3 text-center"
+                    >
+                      Desktop
+                    </ResizableTh>
+                    <ResizableTh
+                      colKey="tablet"
+                      width={matrixWidths.tablet}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'tablet'}
+                      className="px-3 py-3 text-center"
+                    >
+                      Tablet
+                    </ResizableTh>
+                    <ResizableTh
+                      colKey="mobile"
+                      width={matrixWidths.mobile}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'mobile'}
+                      className="px-3 py-3 text-center"
+                    >
+                      Mobile
+                    </ResizableTh>
+                    <ResizableTh
+                      colKey="total"
+                      width={matrixWidths.total}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'total'}
+                      className="px-3 py-3 text-center"
+                    >
+                      Total
+                    </ResizableTh>
+                    <ResizableTh
+                      colKey="actions"
+                      width={matrixWidths.actions}
+                      onResizeStart={handleMatrixResizeStart}
+                      onDoubleClickResize={resetMatrixColumnWidth}
+                      isActive={matrixActiveColumn === 'actions'}
+                      className="px-3 py-3 text-right"
+                    >
+                      Actions
+                    </ResizableTh>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -768,19 +1119,19 @@ export default function AdminAdManagerPage() {
                           setPreviewUtilitySlug(u.slug);
                         }}
                       >
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-white flex items-center gap-1.5">
+                        <td style={getMatrixColStyle('utility')} className="px-4 py-3 overflow-hidden">
+                          <div className="font-semibold text-white flex items-center gap-1.5 truncate" title={u.name}>
                             <span>{getCategoryIcon(u.category?.slug)}</span>
-                            <span>{u.name}</span>
+                            <span className="truncate">{u.name}</span>
                           </div>
-                          <div className="text-[11px] text-indigo-400 font-mono">/{u.slug}</div>
+                          <div className="text-[11px] text-indigo-400 font-mono truncate">/{u.slug}</div>
                         </td>
-                        <td className="px-3 py-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/80 text-[11px] text-slate-300 border border-slate-700/60">
+                        <td style={getMatrixColStyle('category')} className="px-3 py-3 overflow-hidden">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/80 text-[11px] text-slate-300 border border-slate-700/60 truncate max-w-full" title={u.category?.name || '—'}>
                             {u.category?.name || '—'}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td style={getMatrixColStyle('desktop')} className="px-3 py-3 text-center overflow-hidden">
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
                               u.desktop > 0 ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-600'
@@ -789,7 +1140,7 @@ export default function AdminAdManagerPage() {
                             {u.desktop}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td style={getMatrixColStyle('tablet')} className="px-3 py-3 text-center overflow-hidden">
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
                               u.tablet > 0 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'text-slate-600'
@@ -798,7 +1149,7 @@ export default function AdminAdManagerPage() {
                             {u.tablet}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td style={getMatrixColStyle('mobile')} className="px-3 py-3 text-center overflow-hidden">
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
                               u.mobile > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-slate-600'
@@ -807,10 +1158,10 @@ export default function AdminAdManagerPage() {
                             {u.mobile}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td style={getMatrixColStyle('total')} className="px-3 py-3 text-center overflow-hidden">
                           <span className="font-mono text-slate-300 font-semibold">{u.total}</span>
                         </td>
-                        <td className="px-3 py-3 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                        <td style={getMatrixColStyle('actions')} className="px-3 py-3 text-right space-x-1.5 whitespace-nowrap overflow-hidden" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => {
                               setSelectedUtility(u);
@@ -1018,9 +1369,25 @@ export default function AdminAdManagerPage() {
 
                     {/* Creative Details */}
                     {r.creative && (
-                      <div className="bg-slate-900/60 rounded-lg p-2 text-[11px] text-slate-300 flex items-center justify-between">
-                        <span>Creative: <strong className="text-white">{r.creative.name}</strong></span>
-                        <span className="font-mono text-slate-400">{r.creative.type}</span>
+                      <div className="bg-slate-900/60 rounded-lg p-2.5 text-[11px] text-slate-300 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span>Creative: <strong className="text-white">{r.creative.name}</strong></span>
+                          <span className="font-mono text-slate-400 text-[10px] px-1.5 py-0.5 rounded bg-slate-800">{r.creative.type}</span>
+                        </div>
+                        {r.creative.type === 'IMAGE' && r.creative.mediaUrl && (
+                          <div className="flex items-center gap-3 pt-1 border-t border-slate-800/40">
+                            <img
+                              src={r.creative.mediaUrl}
+                              alt={r.creative.altText || r.creative.name}
+                              className="h-10 w-24 object-cover rounded bg-slate-950 border border-slate-800 shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[10px] text-slate-400 truncate">
+                                Target: <a href={r.creative.targetUrl || '#'} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">{r.creative.targetUrl || 'No redirect URL'}</a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1070,17 +1437,27 @@ export default function AdminAdManagerPage() {
 
       {/* Assign Ad Modal */}
       {showAssignModal && selectedUtility && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
               <div>
-                <h2 className="text-base font-bold text-white">Assign Ad to Utility</h2>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>➕</span> Assign Ad to Utility
+                </h2>
                 <p className="text-xs text-slate-400">Targeting for <strong className="text-indigo-400">{selectedUtility.name}</strong></p>
               </div>
-              <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-white text-sm">✕</button>
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                className="text-slate-400 hover:text-white text-sm p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
             </div>
 
-            <form onSubmit={handleCreateAssignment} className="space-y-3">
+            {/* Scrollable Form Body */}
+            <form id="assign-ad-form" onSubmit={handleCreateAssignment} className="p-5 overflow-y-auto space-y-4 flex-1 overscroll-contain">
               {/* Campaign */}
               <div>
                 <label className="text-xs font-semibold text-slate-300">Select Campaign</label>
@@ -1097,7 +1474,7 @@ export default function AdminAdManagerPage() {
                 </select>
               </div>
 
-              {/* Placement (Dynamically Loaded) */}
+              {/* Placement */}
               <div>
                 <label className="text-xs font-semibold text-slate-300">Inventory Placement Slot</label>
                 <select
@@ -1113,21 +1490,338 @@ export default function AdminAdManagerPage() {
                 </select>
               </div>
 
-              {/* Creative */}
-              <div>
-                <label className="text-xs font-semibold text-slate-300">Creative Asset</label>
-                <select
-                  required
-                  value={assignForm.creativeId}
-                  onChange={(e) => setAssignForm({ ...assignForm, creativeId: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">{creatives.length === 0 ? '-- No Creatives Available --' : '-- Choose Creative Asset --'}</option>
-                  {creatives.map((cr) => (
-                    <option key={cr.id} value={cr.id}>{cr.name} ({cr.type})</option>
-                  ))}
-                </select>
+              {/* Ad Content Source Tabs */}
+              <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                <label className="text-xs font-semibold text-slate-300">Ad Creative Configuration</label>
+                <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setAssignForm({ ...assignForm, adMode: 'custom_image' })}
+                    className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-colors flex items-center justify-center gap-1.5 ${
+                      assignForm.adMode === 'custom_image'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>🖼️ Custom Image Ad</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignForm({ ...assignForm, adMode: 'library' })}
+                    className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-colors flex items-center justify-center gap-1.5 ${
+                      assignForm.adMode === 'library'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>📚 Choose from Library</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Custom Image Ad Fields */}
+              {assignForm.adMode === 'custom_image' ? (
+                <div className="space-y-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl p-4">
+                  {/* 1. Image Dropzone / File Selector / URL Input */}
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                      <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                        <span>🖼️</span> Ad Banner Image
+                      </label>
+                      <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMethodAssign('upload')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            imageInputMethodAssign === 'upload'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          📁 Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMethodAssign('url')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            imageInputMethodAssign === 'url'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          🔗 URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowGalleryFor('assign')}
+                          className="px-2.5 py-1 rounded-md bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors font-semibold border border-indigo-500/30 flex items-center gap-1"
+                        >
+                          <span>📸</span> Photo Gallery
+                        </button>
+                      </div>
+                    </div>
+
+                    {imageInputMethodAssign === 'upload' ? (
+                      /* Drag and Drop Zone */
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingAssign(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingAssign(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingAssign(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleImageFileSelect(e.dataTransfer.files[0], false);
+                          }
+                        }}
+                        onClick={() => {
+                          const input = document.getElementById('assign-file-input');
+                          if (input) input.click();
+                        }}
+                        className={`relative border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                          isDraggingAssign
+                            ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
+                            : assignForm.mediaUrl
+                            ? 'border-emerald-500/40 bg-emerald-950/10 hover:border-emerald-500/60'
+                            : 'border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="assign-file-input"
+                          accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleImageFileSelect(e.target.files[0], false);
+                            }
+                          }}
+                          className="hidden"
+                        />
+
+                        <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-sm text-indigo-400">
+                          {assignForm.mediaUrl ? '✓' : '☁️'}
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold text-white">
+                            {assignForm.mediaUrl ? 'Click or drag new image to replace' : 'Click to select image or drag & drop here'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                            PNG, JPG, WebP, SVG, GIF (Up to 10MB)
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Direct URL Input */
+                      <div>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/images/ad-banner.png"
+                          value={assignForm.mediaUrl}
+                          onChange={(e) => setAssignForm({ ...assignForm, mediaUrl: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Live Banner Preview Box */}
+                  {assignForm.mediaUrl && (
+                    <div className="relative rounded-xl border border-slate-800 bg-slate-950 p-3 overflow-hidden flex flex-col items-center justify-center min-h-[90px] space-y-2">
+                      <div className="w-full flex items-center justify-between text-[10px] text-slate-400 pb-1 border-b border-slate-800/60 font-mono">
+                        <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                          <span>●</span> Live Preview ({assignForm.width} × {assignForm.height}px)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAssignForm({ ...assignForm, mediaUrl: '' });
+                          }}
+                          className="text-rose-400 hover:text-rose-300 font-medium"
+                        >
+                          ✕ Remove Image
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-center p-2 w-full bg-slate-900/50 rounded-lg border border-slate-800/60">
+                        <img
+                          src={assignForm.mediaUrl}
+                          alt="Ad preview"
+                          style={{
+                            maxHeight: assignForm.sizeOrientation === 'vertical'
+                              ? assignForm.sizePreset === 'small' ? '120px' : '160px'
+                              : assignForm.sizePreset === 'small' ? '45px' : assignForm.sizePreset === 'large' ? '110px' : '65px',
+                            maxWidth: '100%',
+                          }}
+                          className="w-auto h-auto object-contain rounded-md shadow-xs"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Banner Orientation & Size Selector */}
+                  <div className="space-y-2.5 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                        <span>📐</span> Banner Size & Orientation
+                      </label>
+                      {/* Orientation Switcher */}
+                      <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px] self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const dims = BANNER_SIZES.horizontal[assignForm.sizePreset];
+                            setAssignForm((prev) => ({
+                              ...prev,
+                              sizeOrientation: 'horizontal',
+                              width: dims.width,
+                              height: dims.height,
+                            }));
+                          }}
+                          className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 ${
+                            assignForm.sizeOrientation === 'horizontal'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <span>↔</span> Horizontal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const dims = BANNER_SIZES.vertical[assignForm.sizePreset];
+                            setAssignForm((prev) => ({
+                              ...prev,
+                              sizeOrientation: 'vertical',
+                              width: dims.width,
+                              height: dims.height,
+                            }));
+                          }}
+                          className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 ${
+                            assignForm.sizeOrientation === 'vertical'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <span>↕</span> Vertical / Square
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Size Options (Small, Medium, Large) */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['small', 'medium', 'large'] as const).map((key) => {
+                        const opt = BANNER_SIZES[assignForm.sizeOrientation][key];
+                        const isSelected = assignForm.sizePreset === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              setAssignForm((prev) => ({
+                                ...prev,
+                                sizePreset: key,
+                                width: opt.width,
+                                height: opt.height,
+                              }));
+                            }}
+                            className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'border-indigo-500 bg-indigo-500/15 text-white shadow-sm ring-1 ring-indigo-500/50'
+                                : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-semibold text-white">{opt.label}</span>
+                              {isSelected && <span className="text-[10px] text-indigo-400 font-bold">✓</span>}
+                            </div>
+                            <div className="text-[10px] font-mono text-indigo-300 font-medium mt-0.5">{opt.dimensions}</div>
+                            <div className="text-[9px] text-slate-400 mt-0.5 truncate">{opt.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. Redirect Page URL */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <span>🔗</span> Redirect Page URL (When user clicks on ad)
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://example.com/landing-page"
+                      value={assignForm.targetUrl}
+                      onChange={(e) => setAssignForm({ ...assignForm, targetUrl: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Visitors who click on this ad banner will be redirected to this landing page.
+                    </p>
+                  </div>
+
+                  {/* 4. Ad Title / Alt Text */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300">Ad Title / Alt Text (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder={`e.g. ${selectedUtility.name} Sponsor Banner`}
+                      value={assignForm.altText}
+                      onChange={(e) => setAssignForm({ ...assignForm, altText: e.target.value, creativeName: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Choose from Library */
+                <div className="space-y-3 bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300">Select Creative Asset</label>
+                    <select
+                      required
+                      value={assignForm.creativeId}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const found = creatives.find((c) => c.id === selectedId);
+                        setAssignForm({
+                          ...assignForm,
+                          creativeId: selectedId,
+                          mediaUrl: found?.mediaUrl || '',
+                          targetUrl: found?.targetUrl || '',
+                          creativeName: found?.name || '',
+                          altText: found?.altText || found?.name || '',
+                        });
+                      }}
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">{creatives.length === 0 ? '-- No Creatives Available --' : '-- Choose Creative Asset --'}</option>
+                      {creatives.map((cr) => (
+                        <option key={cr.id} value={cr.id}>{cr.name} ({cr.type})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {assignForm.mediaUrl && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                      <div className="text-[11px] text-slate-400">
+                        Image: <span className="font-mono text-indigo-400 truncate block">{assignForm.mediaUrl}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Redirect: <span className="font-mono text-emerald-400 truncate block">{assignForm.targetUrl || 'No target URL configured'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Device Targeting */}
               <div>
@@ -1191,37 +1885,40 @@ export default function AdminAdManagerPage() {
                   onChange={(e) => setAssignForm({ ...assignForm, isActive: e.target.checked })}
                   className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="assignActive" className="text-xs text-slate-300">
+                <label htmlFor="assignActive" className="text-xs text-slate-300 cursor-pointer">
                   Mark assignment ACTIVE immediately
                 </label>
               </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAssignModal(false)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={assignSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium"
-                >
-                  {assignSubmitting ? 'Creating...' : 'Save Assignment'}
-                </button>
-              </div>
             </form>
+
+            {/* Modal Fixed Footer */}
+            <div className="px-5 py-3.5 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0 bg-slate-900">
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                className="px-3.5 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="assign-ad-form"
+                disabled={assignSubmitting}
+                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium shadow-md shadow-indigo-500/20 transition-colors"
+              >
+                {assignSubmitting ? 'Creating...' : 'Save Assignment'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Edit Ad Rule Modal */}
       {showEditModal && editingRule && selectedUtility && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <span>✏️</span> Edit Ad Rule
@@ -1231,17 +1928,19 @@ export default function AdminAdManagerPage() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingRule(null);
                 }}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-slate-400 hover:text-white text-sm p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditedRule} className="space-y-3">
+            {/* Scrollable Form Body */}
+            <form id="edit-ad-form" onSubmit={handleSaveEditedRule} className="p-5 overflow-y-auto space-y-4 flex-1 overscroll-contain">
               {/* Campaign (Parent entity, read-only display) */}
               <div>
                 <label className="text-xs font-semibold text-slate-300">Campaign</label>
@@ -1277,23 +1976,340 @@ export default function AdminAdManagerPage() {
                 </select>
               </div>
 
-              {/* Creative Asset */}
-              <div>
-                <label className="text-xs font-semibold text-slate-300">Creative Asset</label>
-                <select
-                  required
-                  value={editForm.creativeId}
-                  onChange={(e) => setEditForm({ ...editForm, creativeId: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">{creatives.length === 0 ? '-- No Creatives Available --' : '-- Choose Creative Asset --'}</option>
-                  {creatives.map((cr) => (
-                    <option key={cr.id} value={cr.id}>
-                      {cr.name} ({cr.type})
-                    </option>
-                  ))}
-                </select>
+              {/* Ad Creative Mode / Source Tabs */}
+              <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                <label className="text-xs font-semibold text-slate-300">Ad Creative Configuration</label>
+                <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, adMode: 'custom_image' })}
+                    className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-colors flex items-center justify-center gap-1.5 ${
+                      editForm.adMode === 'custom_image'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>🖼️ Custom Image Ad</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, adMode: 'library' })}
+                    className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-colors flex items-center justify-center gap-1.5 ${
+                      editForm.adMode === 'library'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>📚 Choose from Library</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Custom Image Ad Fields */}
+              {editForm.adMode === 'custom_image' ? (
+                <div className="space-y-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl p-4">
+                  {/* 1. Image Dropzone / File Selector / URL Input */}
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                      <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                        <span>🖼️</span> Ad Banner Image
+                      </label>
+                      <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMethodEdit('upload')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            imageInputMethodEdit === 'upload'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          📁 Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMethodEdit('url')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            imageInputMethodEdit === 'url'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          🔗 URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowGalleryFor('edit')}
+                          className="px-2.5 py-1 rounded-md bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors font-semibold border border-indigo-500/30 flex items-center gap-1"
+                        >
+                          <span>📸</span> Photo Gallery
+                        </button>
+                      </div>
+                    </div>
+
+                    {imageInputMethodEdit === 'upload' ? (
+                      /* Drag and Drop Zone */
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingEdit(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingEdit(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingEdit(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleImageFileSelect(e.dataTransfer.files[0], true);
+                          }
+                        }}
+                        onClick={() => {
+                          const input = document.getElementById('edit-file-input');
+                          if (input) input.click();
+                        }}
+                        className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                          isDraggingEdit
+                            ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
+                            : editForm.mediaUrl
+                            ? 'border-emerald-500/40 bg-emerald-950/10 hover:border-emerald-500/60'
+                            : 'border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="edit-file-input"
+                          accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleImageFileSelect(e.target.files[0], true);
+                            }
+                          }}
+                          className="hidden"
+                        />
+
+                        <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-lg text-indigo-400">
+                          {editForm.mediaUrl ? '✓' : '☁️'}
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold text-white">
+                            {editForm.mediaUrl ? 'Click or drag new image to replace' : 'Click to select image or drag & drop here'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                            PNG, JPG, WebP, SVG, GIF (Up to 10MB)
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Direct URL Input */
+                      <div>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/images/ad-banner.png"
+                          value={editForm.mediaUrl}
+                          onChange={(e) => setEditForm({ ...editForm, mediaUrl: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Live Banner Preview Box */}
+                  {editForm.mediaUrl && (
+                    <div className="relative rounded-xl border border-slate-800 bg-slate-950 p-3 overflow-hidden flex flex-col items-center justify-center min-h-[90px] space-y-2">
+                      <div className="w-full flex items-center justify-between text-[10px] text-slate-400 pb-1 border-b border-slate-800/60 font-mono">
+                        <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                          <span>●</span> Live Preview ({editForm.width} × {editForm.height}px)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditForm({ ...editForm, mediaUrl: '' });
+                          }}
+                          className="text-rose-400 hover:text-rose-300 font-medium"
+                        >
+                          ✕ Remove Image
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-center p-2 w-full bg-slate-900/50 rounded-lg border border-slate-800/60">
+                        <img
+                          src={editForm.mediaUrl}
+                          alt="Ad preview"
+                          style={{
+                            maxHeight: editForm.sizeOrientation === 'vertical'
+                              ? editForm.sizePreset === 'small' ? '120px' : '160px'
+                              : editForm.sizePreset === 'small' ? '45px' : editForm.sizePreset === 'large' ? '110px' : '65px',
+                            maxWidth: '100%',
+                          }}
+                          className="w-auto h-auto object-contain rounded-md shadow-xs"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Banner Orientation & Size Selector */}
+                  <div className="space-y-2.5 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                        <span>📐</span> Banner Size & Orientation
+                      </label>
+                      {/* Orientation Switcher */}
+                      <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px] self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const dims = BANNER_SIZES.horizontal[editForm.sizePreset];
+                            setEditForm((prev) => ({
+                              ...prev,
+                              sizeOrientation: 'horizontal',
+                              width: dims.width,
+                              height: dims.height,
+                            }));
+                          }}
+                          className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 ${
+                            editForm.sizeOrientation === 'horizontal'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <span>↔</span> Horizontal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const dims = BANNER_SIZES.vertical[editForm.sizePreset];
+                            setEditForm((prev) => ({
+                              ...prev,
+                              sizeOrientation: 'vertical',
+                              width: dims.width,
+                              height: dims.height,
+                            }));
+                          }}
+                          className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 ${
+                            editForm.sizeOrientation === 'vertical'
+                              ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <span>↕</span> Vertical / Square
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Size Options (Small, Medium, Large) */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['small', 'medium', 'large'] as const).map((key) => {
+                        const opt = BANNER_SIZES[editForm.sizeOrientation][key];
+                        const isSelected = editForm.sizePreset === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              setEditForm((prev) => ({
+                                ...prev,
+                                sizePreset: key,
+                                width: opt.width,
+                                height: opt.height,
+                              }));
+                            }}
+                            className={`p-2 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'border-indigo-500 bg-indigo-500/15 text-white shadow-sm ring-1 ring-indigo-500/50'
+                                : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-semibold text-white">{opt.label}</span>
+                              {isSelected && <span className="text-[10px] text-indigo-400 font-bold">✓</span>}
+                            </div>
+                            <div className="text-[10px] font-mono text-indigo-300 font-medium mt-0.5">{opt.dimensions}</div>
+                            <div className="text-[9px] text-slate-400 mt-0.5 truncate">{opt.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. Redirect Page URL */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <span>🔗</span> Redirect Page URL (When user clicks on ad)
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://example.com/landing-page"
+                      value={editForm.targetUrl}
+                      onChange={(e) => setEditForm({ ...editForm, targetUrl: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Visitors who click on this ad banner will be redirected to this landing page.
+                    </p>
+                  </div>
+
+                  {/* 3. Ad Title / Alt Text */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300">Ad Title / Alt Text (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder={`e.g. ${selectedUtility.name} Sponsor Banner`}
+                      value={editForm.altText}
+                      onChange={(e) => setEditForm({ ...editForm, altText: e.target.value, creativeName: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Choose from Library */
+                <div className="space-y-3 bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300">Select Creative Asset</label>
+                    <select
+                      required
+                      value={editForm.creativeId}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const found = creatives.find((c) => c.id === selectedId);
+                        setEditForm({
+                          ...editForm,
+                          creativeId: selectedId,
+                          mediaUrl: found?.mediaUrl || '',
+                          targetUrl: found?.targetUrl || '',
+                          creativeName: found?.name || '',
+                          altText: found?.altText || found?.name || '',
+                        });
+                      }}
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">{creatives.length === 0 ? '-- No Creatives Available --' : '-- Choose Creative Asset --'}</option>
+                      {creatives.map((cr) => (
+                        <option key={cr.id} value={cr.id}>
+                          {cr.name} ({cr.type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {editForm.mediaUrl && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                      <div className="text-[11px] text-slate-400">
+                        Image: <span className="font-mono text-indigo-400 truncate block">{editForm.mediaUrl}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Redirect: <span className="font-mono text-emerald-400 truncate block">{editForm.targetUrl || 'No target URL configured'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Device Targeting */}
               <div>
@@ -1362,26 +2378,29 @@ export default function AdminAdManagerPage() {
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingRule(null);
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium"
-                >
-                  {editSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
             </form>
+
+            {/* Modal Fixed Footer */}
+            <div className="px-5 py-3.5 border-t border-slate-800 flex items-center justify-end gap-2 shrink-0 bg-slate-900">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingRule(null);
+                }}
+                className="px-3.5 py-1.5 rounded-lg border border-slate-800 text-slate-300 text-xs hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="edit-ad-form"
+                disabled={editSubmitting}
+                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium shadow-md shadow-indigo-500/20 transition-colors"
+              >
+                {editSubmitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1527,18 +2546,28 @@ export default function AdminAdManagerPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-slate-950/50 border border-dashed border-slate-800 rounded-xl p-6 text-center space-y-1">
-                    <p className="text-xs font-semibold text-rose-400">No ad selected</p>
-                    <p className="text-[11px] text-slate-500">
-                      No active targeting rules, category rules, or house ads matched this placement slot on {previewDevice}.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                    <div className="bg-slate-950/50 border border-dashed border-slate-800 rounded-xl p-6 text-center space-y-1">
+                      <p className="text-xs font-semibold text-rose-400">No ad selected</p>
+                      <p className="text-[11px] text-slate-500">
+                        No active targeting rules, category rules, or house ads matched this placement slot on {previewDevice}.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+      {/* Photo Gallery Selector Modal */}
+      <PhotoGalleryModal
+        isOpen={showGalleryFor !== null}
+        onClose={() => setShowGalleryFor(null)}
+        onSelectPhoto={(photo) => {
+          handleSelectPhotoFromGallery(photo, showGalleryFor === 'edit');
+          setShowGalleryFor(null);
+        }}
+      />
     </div>
   );
 }

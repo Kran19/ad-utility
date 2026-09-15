@@ -13,11 +13,77 @@ export default function AdminAnalyticsPage() {
   const [journeyData, setJourneyData] = useState<any>(null);
   const [seoData, setSeoData] = useState<any>(null);
   const [personalizationData, setPersonalizationData] = useState<any>(null);
+  const [creativeLibrary, setCreativeLibrary] = useState<any[]>([]);
+  const [targetingRulesList, setTargetingRulesList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState('30');
   const [activeTab, setActiveTab] = useState<TabKey>('personalization');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [toolAdFilter, setToolAdFilter] = useState<string>('ALL');
+  const [toolAdSearch, setToolAdSearch] = useState<string>('');
+  const [tablePage, setTablePage] = useState<number>(1);
+  const [tablePageSize, setTablePageSize] = useState<number>(10);
+  const [sortColumn, setSortColumn] = useState<string>('clicks');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [previewModalImage, setPreviewModalImage] = useState<{
+    url: string;
+    title: string;
+    targetUrl?: string;
+    creativeId?: string;
+    utilitySlug?: string;
+    placementCode?: string;
+  } | null>(null);
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const topScrollRef = React.useRef<HTMLDivElement>(null);
+
+  const reloadAnalytics = async () => {
+    try {
+      const [growthRes, overviewRes, monetizationRes, biRes, journeyRes, seoRes, persRes, creativesRes, targetingRes] = await Promise.all([
+        adminApiFetch(`/admin/analytics/growth?days=${days}`),
+        adminApiFetch(`/admin/analytics/overview?days=${days}`),
+        adminApiFetch(`/admin/analytics/monetization?days=${days}`),
+        adminApiFetch(`/admin/analytics/business-intelligence?days=${days}`),
+        adminApiFetch(`/admin/analytics/journey?days=${days}`),
+        adminApiFetch(`/admin/analytics/seo?days=${days}`),
+        adminApiFetch(`/admin/analytics/personalization?days=${days}`),
+        adminApiFetch('/admin/ads/creatives?pageSize=100').catch(() => ({ success: false })),
+        adminApiFetch('/admin/ads/targeting').catch(() => ({ success: false })),
+      ]);
+
+      if (growthRes.success && growthRes.data) setData(growthRes.data);
+      if (overviewRes.success && overviewRes.data) setOverviewData(overviewRes.data);
+      if (monetizationRes.success && monetizationRes.data) setMonetizationData(monetizationRes.data);
+      if (biRes.success && biRes.data) setBiData(biRes.data);
+      if (journeyRes.success && journeyRes.data) setJourneyData(journeyRes.data);
+      if (seoRes.success && seoRes.data) setSeoData(seoRes.data);
+      if (persRes.success && persRes.data) setPersonalizationData(persRes.data);
+      if (creativesRes.success && creativesRes.data?.items) setCreativeLibrary(creativesRes.data.items);
+      if (targetingRes.success && Array.isArray(targetingRes.data)) setTargetingRulesList(targetingRes.data);
+    } catch {}
+  };
+
+  const handleDirectClick = async (item: { utilitySlug?: string; creativeId?: string; placementCode?: string; targetUrl?: string }) => {
+    if (item.creativeId) {
+      try {
+        await adminApiFetch('/ads/click/direct', {
+          method: 'POST',
+          body: JSON.stringify({
+            utilitySlug: item.utilitySlug,
+            creativeId: item.creativeId,
+            placementCode: item.placementCode,
+          }),
+        });
+        await reloadAnalytics();
+        setTimeout(() => {
+          reloadAnalytics();
+        }, 500);
+      } catch {}
+    }
+    if (item.targetUrl && item.targetUrl !== '#') {
+      window.open(item.targetUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const handleSyncRevenue = async () => {
     setSyncing(true);
@@ -29,10 +95,7 @@ export default function AdminAnalyticsPage() {
       });
       if (res.success && res.data) {
         setSyncMessage(`Sync complete: ${res.data.recordsIngested} ingested, ${res.data.duplicatesSkipped} skipped ($${res.data.totalRevenue})`);
-        const updated = await adminApiFetch(`/admin/analytics/monetization?days=${days}`);
-        if (updated.success && updated.data) {
-          setMonetizationData(updated.data);
-        }
+        await reloadAnalytics();
       } else {
         setSyncMessage(res.error || 'Failed to synchronize revenue');
       }
@@ -46,7 +109,7 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [growthRes, overviewRes, monetizationRes, biRes, journeyRes, seoRes, persRes] = await Promise.all([
+      const [growthRes, overviewRes, monetizationRes, biRes, journeyRes, seoRes, persRes, creativesRes, targetingRes] = await Promise.all([
         adminApiFetch(`/admin/analytics/growth?days=${days}`),
         adminApiFetch(`/admin/analytics/overview?days=${days}`),
         adminApiFetch(`/admin/analytics/monetization?days=${days}`),
@@ -54,6 +117,8 @@ export default function AdminAnalyticsPage() {
         adminApiFetch(`/admin/analytics/journey?days=${days}`),
         adminApiFetch(`/admin/analytics/seo?days=${days}`),
         adminApiFetch(`/admin/analytics/personalization?days=${days}`),
+        adminApiFetch('/admin/ads/creatives?pageSize=100').catch(() => ({ success: false })),
+        adminApiFetch('/admin/ads/targeting').catch(() => ({ success: false })),
       ]);
 
       if (growthRes.success && growthRes.data) {
@@ -77,9 +142,47 @@ export default function AdminAnalyticsPage() {
       if (persRes.success && persRes.data) {
         setPersonalizationData(persRes.data);
       }
+      if (creativesRes.success && creativesRes.data?.items) {
+        setCreativeLibrary(creativesRes.data.items);
+      }
+      if (targetingRes.success && Array.isArray(targetingRes.data)) {
+        setTargetingRulesList(targetingRes.data);
+      }
       setLoading(false);
     }
     load();
+  }, [days]);
+
+  // Real-time synchronization across browser tabs and live periodic polling
+  useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        bc = new BroadcastChannel('ad_analytics_sync');
+        bc.onmessage = () => {
+          reloadAnalytics();
+        };
+      } catch {}
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'ad_analytics_click_event') {
+        reloadAnalytics();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    const liveInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        reloadAnalytics();
+      }
+    }, 3000);
+
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(liveInterval);
+    };
   }, [days]);
 
   const funnel = data?.funnel;
@@ -112,6 +215,9 @@ export default function AdminAnalyticsPage() {
   const seoInternalLinks = seo?.internalLinks || [];
   const seoContentCoverage = seo?.contentCoverage || [];
   const seoSitemap = seo?.sitemap;
+  const pageHealthList = seo?.pageHealth || [];
+  const internalLinkOpportunities = seo?.internalLinkOpportunities || [];
+  const contentCoverage = seo?.contentCoverage || [];
 
   const pers = personalizationData;
   const persReadiness = pers?.readinessScore ?? 80;
@@ -123,9 +229,13 @@ export default function AdminAnalyticsPage() {
   const persAcquisition = pers?.acquisitionPerformance || [];
   const persRules = pers?.activeRules || [];
   const persExpCount = pers?.experimentPrecedenceCount ?? 0;
+  const personalization = personalizationData;
+  const personalizationRules = personalization?.rules || [];
+  const personalizationSegments = personalization?.segments || [];
+  const conversionOpportunities = personalization?.opportunities || [];
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto min-w-0">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -135,6 +245,10 @@ export default function AdminAnalyticsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Live Real-Time Active</span>
+          </div>
           <select
             value={days}
             onChange={(e) => setDays(e.target.value)}
@@ -1896,42 +2010,659 @@ export default function AdminAnalyticsPage() {
                 </div>
               )}
 
-              {/* Placement Yield Table */}
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Placement Yield & Optimization Matrix</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
-                      <tr>
-                        <th className="px-4 py-2.5">Placement Code</th>
-                        <th className="px-4 py-2.5">Name</th>
-                        <th className="px-4 py-2.5">Impressions</th>
-                        <th className="px-4 py-2.5">Clicks</th>
-                        <th className="px-4 py-2.5">CTR</th>
-                        <th className="px-4 py-2.5">Optimization Score</th>
-                        <th className="px-4 py-2.5">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-                      {monetization?.placementYield?.map((p: any) => (
-                        <tr key={p.placementCode} className="hover:bg-slate-800/30">
-                          <td className="px-4 py-2 font-bold text-cyan-400">{p.placementCode}</td>
-                          <td className="px-4 py-2 text-slate-300">{p.name || '—'}</td>
-                          <td className="px-4 py-2 text-slate-200">{p.impressions.toLocaleString()}</td>
-                          <td className="px-4 py-2 text-slate-200">{p.clicks.toLocaleString()}</td>
-                          <td className="px-4 py-2 font-bold text-emerald-400">{p.ctr}%</td>
-                          <td className="px-4 py-2 font-bold text-white">{p.optimizationScore}/100</td>
-                          <td className="px-4 py-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800/50">
-                              {p.status}
+              {/* Tool & Creative Ad Clicks Breakdown Section */}
+              {(() => {
+                // Build list strictly from tools/creatives that have targeting rules or explicit performance records
+                const configuredToolAds: any[] = [];
+                const seenKeys = new Set<string>();
+
+                // 1. From targeting rules configured in the database
+                for (const rule of targetingRulesList) {
+                  const cr = rule.creative || creativeLibrary.find((c: any) => c.id === rule.creativeId);
+                  if (cr && (cr.mediaUrl || cr.name)) {
+                    const slugs = rule.utilitySlugs && rule.utilitySlugs.length > 0 ? rule.utilitySlugs : ['home'];
+                    for (const uSlug of slugs) {
+                      const key = `${uSlug}::${cr.id}::${rule.placement?.code || rule.placementId || ''}`;
+                      if (!seenKeys.has(key)) {
+                        seenKeys.add(key);
+                        const isHome = uSlug === 'home';
+                        const matchedUtility = isHome ? null : utilities.find((u: any) => u.slug === uSlug);
+                        const matchedPlacement = rule.placement || {};
+                        const directMatch = (monetization?.toolCreativePerformance || []).find(
+                          (t: any) => t.utilitySlug === uSlug && (t.creativeId === cr.id || t.creativeName === cr.name) && t.placementCode === (rule.placement?.code || rule.placementId)
+                        ) || (monetization?.toolCreativePerformance || []).find(
+                          (t: any) => t.utilitySlug === uSlug && (t.creativeId === cr.id || t.creativeName === cr.name)
+                        ) || (monetization?.toolCreativePerformance || []).find(
+                          (t: any) => t.utilitySlug === uSlug
+                        );
+                        const utilityData = (utilities || []).find((u: any) => u.slug === uSlug);
+                        const impressions = directMatch?.impressions ?? (utilityData?.impressions || 0);
+                        const clicks = directMatch?.clicks ?? (utilityData?.clicks || 0);
+                        const ctr = impressions > 0 ? Number(((clicks / impressions) * 100).toFixed(2)) : (directMatch?.ctr || 0);
+
+                        configuredToolAds.push({
+                          utilitySlug: uSlug,
+                          utilityName: isHome ? 'Home / Global Page' : (matchedUtility?.name || uSlug),
+                          categorySlug: isHome ? 'global' : (matchedUtility?.category?.slug || 'tools'),
+                          creativeId: cr.id,
+                          creativeName: cr.name || `${matchedUtility?.name || uSlug} Ad Creative`,
+                          creativeType: cr.type || 'IMAGE',
+                          mediaUrl: cr.mediaUrl || '',
+                          targetUrl: cr.targetUrl || '#',
+                          altText: cr.altText || `${matchedUtility?.name || uSlug} Ad`,
+                          placementCode: matchedPlacement.code || directMatch?.placementCode || 'TOP_CONTENT',
+                          placementName: matchedPlacement.name || directMatch?.placementName || 'Top Content Banner',
+                          impressions,
+                          clicks,
+                          ctr,
+                        });
+                      }
+                    }
+                  }
+                }
+
+                // 2. From backend direct performance records (if not already captured)
+                for (const t of (monetization?.toolCreativePerformance || [])) {
+                  const key = `${t.utilitySlug}::${t.creativeId}::${t.placementCode}`;
+                  if (!seenKeys.has(key) && t.mediaUrl) {
+                    seenKeys.add(key);
+                    configuredToolAds.push(t);
+                  }
+                }
+
+                // Use backend authoritative records and reconcile with utility and creative telemetry
+                const baseToolAds = monetization?.toolCreativePerformance && monetization.toolCreativePerformance.length > 0
+                  ? monetization.toolCreativePerformance
+                  : configuredToolAds;
+
+                const toolAds = baseToolAds.map((item: any) => {
+                  const utilityData = (utilities || []).find((u: any) => u.slug === item.utilitySlug);
+                  const utilMonData = (monetization?.utilityMonetization || []).find((u: any) => u.utilitySlug === item.utilitySlug);
+                  const creativePerfData = (monetization?.creativePerformance || []).find(
+                    (c: any) => c.creativeId === item.creativeId || c.creativeName === item.creativeName
+                  );
+
+                  const directMatch = (monetization?.toolCreativePerformance || []).find(
+                    (t: any) => t.utilitySlug === item.utilitySlug && (t.creativeId === item.creativeId || t.creativeName === item.creativeName) && (t.placementCode === item.placementCode)
+                  ) || (monetization?.toolCreativePerformance || []).find(
+                    (t: any) => t.utilitySlug === item.utilitySlug && (t.creativeId === item.creativeId || t.creativeName === item.creativeName)
+                  );
+
+                  const clicks = Math.max(
+                    item.clicks || 0,
+                    directMatch?.clicks || 0,
+                    utilMonData?.clicks || 0,
+                    utilityData?.clicks || 0
+                  );
+
+                  const impressions = Math.max(
+                    item.impressions || 0,
+                    directMatch?.impressions || 0,
+                    utilMonData?.impressions || 0,
+                    utilityData?.impressions || 0,
+                    creativePerfData?.impressions || 0
+                  );
+
+                  const ctr = impressions > 0 ? Number(((clicks / impressions) * 100).toFixed(2)) : (item.ctr || 0);
+
+                  return {
+                    ...item,
+                    clicks,
+                    impressions,
+                    ctr,
+                  };
+                });
+
+                const uniqueTools: { slug: string; name: string }[] = Array.from(
+                  new Set(toolAds.map((t: any) => t.utilitySlug).filter(Boolean))
+                ).map((slug) => {
+                  const match = toolAds.find((t: any) => t.utilitySlug === slug);
+                  return { slug: slug as string, name: (match?.utilityName || slug) as string };
+                });
+
+                const filtered = toolAds.filter((item: any) => {
+                  const matchTool = toolAdFilter === 'ALL' || item.utilitySlug === toolAdFilter;
+                  const query = toolAdSearch.trim().toLowerCase();
+                  const matchSearch =
+                    !query ||
+                    item.utilityName?.toLowerCase().includes(query) ||
+                    item.utilitySlug?.toLowerCase().includes(query) ||
+                    item.creativeName?.toLowerCase().includes(query) ||
+                    item.placementCode?.toLowerCase().includes(query);
+                  return matchTool && matchSearch;
+                });
+
+                const totalClicks = toolAds.reduce((sum: number, i: any) => sum + (i.clicks || 0), 0) || monetization?.summary?.totalClicks || monetization?.totalClicks || 0;
+                const totalImps = toolAds.reduce((sum: number, i: any) => sum + (i.impressions || 0), 0) || monetization?.summary?.totalImpressions || monetization?.totalImpressions || 0;
+                const topClicked = [...toolAds].sort((a: any, b: any) => (b.clicks || 0) - (a.clicks || 0))[0];
+
+                const sorted = [...filtered].sort((a: any, b: any) => {
+                  let valA = a[sortColumn];
+                  let valB = b[sortColumn];
+                  if (typeof valA === 'string') valA = valA.toLowerCase();
+                  if (typeof valB === 'string') valB = valB.toLowerCase();
+                  if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                  if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                  return 0;
+                });
+
+                const totalPages = tablePageSize === -1 ? 1 : Math.ceil(sorted.length / tablePageSize) || 1;
+                const currentPage = Math.min(tablePage, totalPages);
+                const paginatedItems = tablePageSize === -1
+                  ? sorted
+                  : sorted.slice((currentPage - 1) * tablePageSize, currentPage * tablePageSize);
+
+                const handleSort = (column: string) => {
+                  if (sortColumn === column) {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn(column);
+                    setSortDirection('desc');
+                  }
+                };
+
+                const scrollTable = (offset: number) => {
+                  if (tableScrollRef.current) {
+                    tableScrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+                  }
+                };
+
+                return (
+                  <div className="space-y-6">
+                    {/* Tool Ad Telemetry Highlights */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tool Ad Clicks</span>
+                        <div className="text-2xl font-black text-cyan-400">{totalClicks.toLocaleString()}</div>
+                        <div className="text-[11px] text-slate-500">Across all utility pages</div>
+                      </div>
+
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Top Clicked Tool</span>
+                        <div className="text-base font-bold text-white truncate" title={topClicked?.utilityName || 'N/A'}>
+                          {topClicked?.utilityName || 'None yet'}
+                        </div>
+                        <div className="text-[11px] text-emerald-400 font-semibold">
+                          {topClicked && (topClicked.clicks || 0) > 0 ? `${topClicked.clicks} clicks (${topClicked.ctr}% CTR)` : 'No click events recorded'}
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Top Performing Creative</span>
+                        <div className="text-base font-bold text-indigo-300 truncate" title={topClicked?.creativeName || 'N/A'}>
+                          {topClicked?.creativeName || 'None yet'}
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {topClicked?.placementCode ? `Placement: ${topClicked.placementCode}` : '—'}
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Tool CTR</span>
+                        <div className="text-2xl font-black text-emerald-400">
+                          {totalImps > 0 ? ((totalClicks / totalImps) * 100).toFixed(2) : '0.00'}%
+                        </div>
+                        <div className="text-[11px] text-slate-500">From {totalImps.toLocaleString()} impressions</div>
+                      </div>
+                    </div>
+
+                    {/* Tool Ad Clicks & Image Breakdown Table */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-white tracking-wide uppercase">Tool Ad Clicks & Creative Performance</h3>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800/60">
+                              {sorted.length} Ads configured
                             </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Interactive data table with instant sorting, pagination, and multi-directional scroll
+                          </p>
+                        </div>
+
+                        {/* Search, Filter & Quick Scroll Navigation Toolbar */}
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          {/* Quick horizontal scroll nudge buttons */}
+                          <div className="flex items-center bg-slate-950/90 border border-slate-800 rounded-lg p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => scrollTable(-240)}
+                              className="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded text-xs transition-colors flex items-center gap-1"
+                              title="Scroll table left"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                              </svg>
+                              <span className="hidden sm:inline text-[10px] font-semibold">Left</span>
+                            </button>
+                            <span className="text-slate-700">|</span>
+                            <button
+                              type="button"
+                              onClick={() => scrollTable(240)}
+                              className="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded text-xs transition-colors flex items-center gap-1"
+                              title="Scroll table right"
+                            >
+                              <span className="hidden sm:inline text-[10px] font-semibold">Right</span>
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={toolAdSearch}
+                              onChange={(e) => {
+                                setToolAdSearch(e.target.value);
+                                setTablePage(1);
+                              }}
+                              placeholder="Search tool or creative..."
+                              className="w-44 sm:w-52 px-3 py-1.5 bg-slate-950/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                            />
+                            {toolAdSearch && (
+                              <button
+                                onClick={() => {
+                                  setToolAdSearch('');
+                                  setTablePage(1);
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </div>
+
+                          <select
+                            value={toolAdFilter}
+                            onChange={(e) => {
+                              setToolAdFilter(e.target.value);
+                              setTablePage(1);
+                            }}
+                            aria-label="Filter ads by tool"
+                            className="px-3 py-1.5 bg-slate-950/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                          >
+                            <option value="ALL">All Tools ({toolAds.length})</option>
+                            {uniqueTools.map((t) => (
+                              <option key={t.slug} value={t.slug}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => reloadAnalytics()}
+                            className="px-3 py-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
+                            title="Refresh real-time telemetry and ad clicks"
+                          >
+                            <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Refresh
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Main Scrollable Data Table Container with sleek dark scrollbars */}
+                      <div
+                        ref={tableScrollRef}
+                        className="overflow-auto max-h-[520px] rounded-xl border border-slate-800/80 bg-slate-950/40 shadow-inner relative custom-scrollbar"
+                      >
+                        <table className="w-full text-left text-xs text-slate-300 min-w-[1050px]">
+                          <thead className="bg-slate-950/95 backdrop-blur-md text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px] sticky top-0 z-20 shadow-xs">
+                            <tr>
+                              <th
+                                onClick={() => handleSort('utilityName')}
+                                className="px-4 py-3 min-w-[180px] cursor-pointer hover:text-white select-none transition-colors"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span>Tool Name</span>
+                                  <span className="text-[10px] text-cyan-400 font-bold">
+                                    {sortColumn === 'utilityName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </div>
+                              </th>
+                              <th className="px-4 py-3 min-w-[130px]">Ad Image / Preview</th>
+                              <th
+                                onClick={() => handleSort('creativeName')}
+                                className="px-4 py-3 min-w-[200px] cursor-pointer hover:text-white select-none transition-colors"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span>Creative Title & Target</span>
+                                  <span className="text-[10px] text-cyan-400 font-bold">
+                                    {sortColumn === 'creativeName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => handleSort('placementCode')}
+                                className="px-4 py-3 min-w-[130px] cursor-pointer hover:text-white select-none transition-colors"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span>Placement</span>
+                                  <span className="text-[10px] text-cyan-400 font-bold">
+                                    {sortColumn === 'placementCode' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => handleSort('impressions')}
+                                className="px-4 py-3 text-right min-w-[95px] cursor-pointer hover:text-white select-none transition-colors"
+                              >
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <span>Impressions</span>
+                                  <span className="text-[10px] text-cyan-400 font-bold">
+                                    {sortColumn === 'impressions' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => handleSort('clicks')}
+                                className="px-4 py-3 text-right min-w-[125px] cursor-pointer hover:text-white select-none transition-colors"
+                              >
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <span>Clicks</span>
+                                  <span className="text-[10px] text-cyan-400 font-bold">
+                                    {sortColumn === 'clicks' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => handleSort('ctr')}
+                                className="px-4 py-3 text-right min-w-[85px] cursor-pointer hover:text-white select-none transition-colors"
+                              >
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <span>CTR</span>
+                                  <span className="text-[10px] text-cyan-400 font-bold">
+                                    {sortColumn === 'ctr' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </div>
+                              </th>
+                              <th className="px-4 py-3 text-center min-w-[135px]">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                            {paginatedItems.map((item: any, idx: number) => {
+                              const hasClicks = (item.clicks || 0) > 0;
+                              return (
+                                <tr key={`${item.utilitySlug}-${item.creativeId || idx}-${item.placementCode}`} className="hover:bg-slate-800/40 transition-colors">
+                                  {/* Tool Name */}
+                                  <td className="px-4 py-3 align-middle font-sans min-w-[180px]">
+                                    <div className="font-semibold text-white text-xs flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0"></span>
+                                      <span className="font-bold text-slate-100">{item.utilityName || item.utilitySlug}</span>
+                                    </div>
+                                    <a
+                                      href={item.utilitySlug === 'home' ? '/' : `/${item.utilitySlug}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[11px] text-cyan-400/90 hover:text-cyan-300 font-mono underline inline-flex items-center gap-1 mt-1 whitespace-nowrap"
+                                    >
+                                      {item.utilitySlug === 'home' ? '/ (Home)' : `/${item.utilitySlug}`}
+                                      <svg className="w-2.5 h-2.5 inline shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  </td>
+
+                                  {/* Image Preview Thumbnail */}
+                                  <td className="px-4 py-3 align-middle min-w-[130px]">
+                                    {item.mediaUrl ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setPreviewModalImage({
+                                            url: item.mediaUrl,
+                                            title: item.creativeName,
+                                            targetUrl: item.targetUrl,
+                                            creativeId: item.creativeId,
+                                            utilitySlug: item.utilitySlug,
+                                            placementCode: item.placementCode,
+                                          })
+                                        }
+                                        className="group relative block rounded-lg overflow-hidden border border-slate-700/80 hover:border-cyan-400 bg-slate-950 transition-all p-0.5 shadow-sm"
+                                        title="Click to zoom image banner"
+                                      >
+                                        <img
+                                          src={item.mediaUrl}
+                                          alt={item.creativeName || 'Ad Banner'}
+                                          className="h-12 w-28 object-cover rounded transition-transform group-hover:scale-105"
+                                          onError={(e) => {
+                                            (e.currentTarget as HTMLImageElement).onerror = null;
+                                            (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="50" viewBox="0 0 120 50"><rect width="120" height="50" fill="%230f172a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2364748b" font-size="10" font-family="sans-serif">Custom Creative</text></svg>';
+                                          }}
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                                          <span className="text-[10px] text-white font-sans font-bold bg-cyan-600 px-2 py-0.5 rounded shadow flex items-center gap-1">
+                                            <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                                            </svg>
+                                            Zoom
+                                          </span>
+                                        </div>
+                                      </button>
+                                    ) : (
+                                      <div className="h-12 w-28 rounded bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] text-slate-500 italic">
+                                        Text / Custom
+                                      </div>
+                                    )}
+                                  </td>
+
+                                  {/* Creative Name & Target Link */}
+                                  <td className="px-4 py-3 align-middle font-sans min-w-[200px]">
+                                    <div className="font-semibold text-slate-200 text-xs truncate max-w-[220px]" title={item.creativeName}>
+                                      {item.creativeName || 'Untitled Creative'}
+                                    </div>
+                                    {item.targetUrl ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDirectClick(item)}
+                                        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-mono truncate block max-w-[220px] mt-0.5 underline text-left cursor-pointer"
+                                        title={`Click to test target: ${item.targetUrl}`}
+                                      >
+                                        {item.targetUrl}
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-500 italic">No redirect URL</span>
+                                    )}
+                                  </td>
+
+                                  {/* Placement */}
+                                  <td className="px-4 py-3 align-middle min-w-[130px]">
+                                    <span className="inline-block px-2.5 py-1 rounded text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">
+                                      {item.placementCode}
+                                    </span>
+                                  </td>
+
+                                  {/* Impressions */}
+                                  <td className="px-4 py-3 align-middle text-right text-slate-200 font-semibold min-w-[95px] whitespace-nowrap">
+                                    {(item.impressions || 0).toLocaleString()}
+                                  </td>
+
+                                  {/* Clicks (Highlighted with clean single-line badge) */}
+                                  <td className="px-4 py-3 align-middle text-right min-w-[125px]">
+                                    <span className={`inline-flex items-center justify-end gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
+                                      hasClicks
+                                        ? 'bg-cyan-950 text-cyan-300 border border-cyan-800/80 shadow-xs'
+                                        : 'bg-slate-950 text-slate-500 border border-slate-800'
+                                    }`}>
+                                      <span className="text-sm font-black text-cyan-200">{(item.clicks || 0).toLocaleString()}</span>
+                                      <span className="text-[11px] font-medium opacity-80">clicks</span>
+                                    </span>
+                                  </td>
+
+                                  {/* CTR */}
+                                  <td className="px-4 py-3 align-middle text-right min-w-[85px] whitespace-nowrap">
+                                    <span className={`font-black text-xs ${
+                                      item.ctr > 2
+                                        ? 'text-emerald-400'
+                                        : item.ctr > 0
+                                        ? 'text-cyan-400'
+                                        : 'text-slate-500'
+                                    }`}>
+                                      {item.ctr}%
+                                    </span>
+                                  </td>
+
+                                  {/* Status (Single line pill badge) */}
+                                  <td className="px-4 py-3 align-middle text-center font-sans min-w-[135px] whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shadow-xs ${
+                                      hasClicks && item.ctr >= 5
+                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                                        : hasClicks
+                                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-800/60'
+                                        : item.impressions > 0
+                                        ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                    }`}>
+                                      {hasClicks && item.ctr >= 5
+                                        ? 'High Performing'
+                                        : hasClicks
+                                        ? 'Converting'
+                                        : item.impressions > 0
+                                        ? 'Active (0 clicks)'
+                                        : 'Configured'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {paginatedItems.length === 0 && (
+                              <tr>
+                                <td colSpan={8} className="px-4 py-8 text-center text-slate-500 italic font-sans">
+                                  No tool ad click telemetry found for the selected criteria.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination & Rows Per Page Controls */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-slate-400 font-sans border-t border-slate-800/80">
+                        <div className="flex items-center gap-3">
+                          <span>
+                            Showing{' '}
+                            <strong className="text-white font-semibold">
+                              {sorted.length === 0 ? 0 : (currentPage - 1) * (tablePageSize === -1 ? sorted.length : tablePageSize) + 1}
+                            </strong>{' '}
+                            to{' '}
+                            <strong className="text-white font-semibold">
+                              {tablePageSize === -1 ? sorted.length : Math.min(currentPage * tablePageSize, sorted.length)}
+                            </strong>{' '}
+                            of <strong className="text-white font-semibold">{sorted.length}</strong> entries
+                          </span>
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-slate-500">Rows:</span>
+                            <select
+                              value={tablePageSize}
+                              onChange={(e) => {
+                                setTablePageSize(Number(e.target.value));
+                                setTablePage(1);
+                              }}
+                              className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                            >
+                              <option value={10}>10</option>
+                              <option value={20}>20</option>
+                              <option value={50}>50</option>
+                              <option value={-1}>All ({sorted.length})</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {tablePageSize !== -1 && totalPages > 1 && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={currentPage <= 1}
+                              onClick={() => setTablePage(1)}
+                              className="px-2 py-1 rounded bg-slate-950 border border-slate-800 disabled:opacity-40 hover:bg-slate-800 text-slate-200 transition-colors"
+                            >
+                              &laquo;
+                            </button>
+                            <button
+                              type="button"
+                              disabled={currentPage <= 1}
+                              onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                              className="px-2.5 py-1 rounded bg-slate-950 border border-slate-800 disabled:opacity-40 hover:bg-slate-800 text-slate-200 transition-colors"
+                            >
+                              Prev
+                            </button>
+
+                            <span className="px-3 py-1 font-semibold text-slate-200">
+                              Page {currentPage} of {totalPages}
+                            </span>
+
+                            <button
+                              type="button"
+                              disabled={currentPage >= totalPages}
+                              onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
+                              className="px-2.5 py-1 rounded bg-slate-950 border border-slate-800 disabled:opacity-40 hover:bg-slate-800 text-slate-200 transition-colors"
+                            >
+                              Next
+                            </button>
+                            <button
+                              type="button"
+                              disabled={currentPage >= totalPages}
+                              onClick={() => setTablePage(totalPages)}
+                              className="px-2 py-1 rounded bg-slate-950 border border-slate-800 disabled:opacity-40 hover:bg-slate-800 text-slate-200 transition-colors"
+                            >
+                              &raquo;
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                    {/* Placement Yield Summary Matrix */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Placement Slot Summary Matrix</h3>
+                          <p className="text-xs text-slate-500 mt-0.5">Aggregated performance across all global placement zones</p>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs text-slate-300">
+                          <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                            <tr>
+                              <th className="px-4 py-2.5">Placement Code</th>
+                              <th className="px-4 py-2.5">Name</th>
+                              <th className="px-4 py-2.5 text-right">Impressions</th>
+                              <th className="px-4 py-2.5 text-right">Clicks</th>
+                              <th className="px-4 py-2.5 text-right">CTR</th>
+                              <th className="px-4 py-2.5 text-center">Optimization Score</th>
+                              <th className="px-4 py-2.5 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                            {monetization?.placementYield?.map((p: any) => (
+                              <tr key={p.placementCode} className="hover:bg-slate-800/30">
+                                <td className="px-4 py-2 font-bold text-cyan-400">{p.placementCode}</td>
+                                <td className="px-4 py-2 text-slate-300 font-sans">{p.name || '—'}</td>
+                                <td className="px-4 py-2 text-right text-slate-200">{p.impressions.toLocaleString()}</td>
+                                <td className="px-4 py-2 text-right text-cyan-300 font-bold">{p.clicks.toLocaleString()}</td>
+                                <td className="px-4 py-2 text-right font-bold text-emerald-400">{p.ctr}%</td>
+                                <td className="px-4 py-2 text-center font-bold text-white">{p.optimizationScore}/100</td>
+                                <td className="px-4 py-2 text-center font-sans">
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800/50">
+                                    {p.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -2020,6 +2751,66 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Image Lightbox Preview Modal */}
+      {previewModalImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+          onClick={() => setPreviewModalImage(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full bg-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-wide">{previewModalImage.title || 'Ad Creative Banner'}</h3>
+                {previewModalImage.targetUrl && previewModalImage.targetUrl !== '#' && (
+                  <a
+                    href={previewModalImage.targetUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-cyan-400 hover:text-cyan-300 font-mono underline inline-flex items-center gap-1 mt-1"
+                  >
+                    Destination: {previewModalImage.targetUrl}
+                    <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModalImage(null)}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+              >
+                Close ✕
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center bg-slate-950/80 rounded-xl p-4 min-h-[220px] max-h-[70vh] overflow-hidden border border-slate-800">
+              <img
+                src={previewModalImage.url}
+                alt={previewModalImage.title || 'Creative Preview'}
+                className="max-h-[65vh] max-w-full object-contain rounded-lg shadow-lg"
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-400 pt-1 font-mono">
+              <span className="truncate max-w-[400px] text-slate-500">Asset: {previewModalImage.url.substring(0, 60)}...</span>
+              {previewModalImage.targetUrl && previewModalImage.targetUrl !== '#' && (
+                <button
+                  type="button"
+                  onClick={() => handleDirectClick(previewModalImage)}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-sans font-bold rounded-lg shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Visit Target Link &rarr;
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

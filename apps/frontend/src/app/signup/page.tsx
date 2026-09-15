@@ -25,8 +25,11 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+import { useUserAuth } from '../../context/user-auth-context';
+
 export default function SignupPage() {
   const router = useRouter();
+  const { register } = useUserAuth();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -80,40 +83,24 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const apiUrl = getClientApiUrl();
-      const res = await fetch(`${apiUrl}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Receive secure HTTP-only cookies
-        body: JSON.stringify({
-          name: formData.name.trim() || undefined,
-          email: trimmedEmail.toLowerCase(),
-          password: formData.password,
-          termsAccepted: formData.termsAccepted,
-        }),
+      const result = await register({
+        name: formData.name.trim() || undefined,
+        email: trimmedEmail.toLowerCase(),
+        password: formData.password,
+        termsAccepted: formData.termsAccepted,
       });
 
-      const json = await res.json();
-
-      if (res.ok && json.success) {
+      if (result.success) {
         setIsSuccess(true);
         // Seamless transition to account dashboard
         setTimeout(() => {
           router.push('/account');
         }, 1800);
       } else {
-        // Map backend errors into user-friendly messages
-        const msg = json.message || '';
-        if (msg.includes('already exists') || res.status === 409) {
+        if (result.alreadyExists) {
           setErrorMessage('An account with this email already exists. Try logging in instead.');
-        } else if (msg.includes('rate') || res.status === 429) {
-          setErrorMessage('Too many attempts. Please wait a moment and try again.');
-        } else if (Array.isArray(json.message)) {
-          setErrorMessage(json.message[0] || 'Validation error. Please check your information.');
         } else {
-          setErrorMessage(msg || 'Unable to create account. Please try again.');
+          setErrorMessage(result.message || 'Unable to create account. Please try again.');
         }
       }
     } catch (err: any) {

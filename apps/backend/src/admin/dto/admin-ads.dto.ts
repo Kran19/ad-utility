@@ -104,7 +104,7 @@ export class AdminCreateCreativeDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^https?:\/\//i, { message: 'mediaUrl must use http:// or https:// protocol' })
+  @Matches(/^(https?:\/\/|data:image\/)/i, { message: 'mediaUrl must use http://, https://, or data:image/ protocol' })
   mediaUrl?: string;
 
   @IsOptional()
@@ -144,7 +144,7 @@ export class AdminUpdateCreativeDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^https?:\/\//i, { message: 'mediaUrl must use http:// or https:// protocol' })
+  @Matches(/^(https?:\/\/|data:image\/)/i, { message: 'mediaUrl must use http://, https://, or data:image/ protocol' })
   mediaUrl?: string;
 
   @IsOptional()

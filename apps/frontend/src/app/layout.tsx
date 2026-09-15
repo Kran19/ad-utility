@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { UserAuthProvider } from "../context/user-auth-context";
+import { AuthModal } from "../components/auth/AuthModal";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -20,7 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="antialiased bg-[#FAFBFD] text-slate-900 min-h-screen flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
-        {children}
+        <UserAuthProvider>
+          {children}
+          <AuthModal />
+        </UserAuthProvider>
       </body>
     </html>
   );

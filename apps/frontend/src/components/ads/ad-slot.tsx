@@ -155,6 +155,18 @@ export const AdSlot: React.FC<AdSlotProps> = ({
     e.preventDefault();
     const apiUrl = getClientApiUrl();
 
+    // Broadcast real-time click notification to admin panel immediately
+    try {
+      if (typeof window !== 'undefined') {
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('ad_analytics_sync');
+          bc.postMessage({ type: 'AD_CLICK', utilitySlug, timestamp: Date.now() });
+          bc.close();
+        }
+        window.localStorage.setItem('ad_analytics_click_event', Date.now().toString());
+      }
+    } catch {}
+
     try {
       const res = await fetch(`${apiUrl}/ads/click`, {
         method: 'POST',
@@ -200,9 +212,12 @@ export const AdSlot: React.FC<AdSlotProps> = ({
       ref={slotRef}
       data-ad-placement={placement}
       data-creative-id={adCreative.creativeId}
-      className={`w-full mx-auto my-4 flex flex-col items-center justify-center relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-xs ${config.maxWidth} ${className}`}
+      style={{
+        maxWidth: adCreative.width ? `${adCreative.width}px` : undefined,
+      }}
+      className={`w-full mx-auto my-4 relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-xs ${!adCreative.width ? config.maxWidth : ''} ${className}`}
     >
-      <div className="absolute top-1.5 right-2 z-10 text-[9px] uppercase tracking-wider text-slate-400 bg-slate-100/90 px-1.5 py-0.5 rounded font-mono">
+      <div className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-wider text-white/95 bg-slate-950/75 backdrop-blur-xs px-2 py-0.5 rounded font-mono font-semibold pointer-events-none shadow-sm">
         Ad
       </div>
 
@@ -212,21 +227,28 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           onClick={handleAdClick}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full text-center transition-opacity hover:opacity-95"
+          className="block w-full transition-opacity hover:opacity-95"
         >
           <img
             src={adCreative.mediaUrl}
             alt={adCreative.altText || 'Advertisement'}
-            width={adCreative.width || 728}
-            height={adCreative.height || 90}
-            className="w-full h-auto object-cover rounded-lg mx-auto"
+            style={{
+              maxHeight: adCreative.height ? `${adCreative.height}px` : undefined,
+            }}
+            className="w-full h-auto object-cover block rounded-2xl"
             loading="lazy"
           />
         </a>
       )}
 
       {adCreative.type === 'VIDEO' && adCreative.mediaUrl && (
-        <div className="w-full text-center">
+        <a
+          href={adCreative.targetUrl || '#'}
+          onClick={handleAdClick}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full text-center cursor-pointer"
+        >
           <video
             src={adCreative.mediaUrl}
             autoPlay
@@ -235,7 +257,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
             playsInline
             className="w-full h-auto rounded-lg mx-auto"
           />
-        </div>
+        </a>
       )}
 
       {adCreative.type === 'HTML' && adCreative.customHtml && (

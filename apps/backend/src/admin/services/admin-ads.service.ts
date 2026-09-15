@@ -195,8 +195,11 @@ export class AdminAdsService {
   private validateUrlSafety(url?: string | null) {
     if (!url) return;
     const lower = url.trim().toLowerCase();
-    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:') || lower.startsWith('data:')) {
+    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:')) {
       throw new BadRequestException(`Unsafe URL scheme detected in "${url}"`);
+    }
+    if (lower.startsWith('data:') && !lower.startsWith('data:image/')) {
+      throw new BadRequestException(`Unsafe data scheme detected in "${url}". Only data:image/ is permitted.`);
     }
   }
 

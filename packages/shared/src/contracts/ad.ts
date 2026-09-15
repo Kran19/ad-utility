@@ -192,11 +192,29 @@ export interface ExperimentMonetizationDto {
   }>;
 }
 
+export interface ToolCreativePerformanceDto {
+  utilitySlug: string;
+  utilityName: string;
+  categorySlug: string;
+  creativeId: string;
+  creativeName: string;
+  creativeType: CreativeType;
+  mediaUrl: string | null;
+  targetUrl: string | null;
+  altText: string | null;
+  placementCode: string;
+  placementName: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+}
+
 export interface MonetizationIntelligenceDto {
   periodDays: number;
   summary: AdYieldSummaryDto;
   placementYield: PlacementYieldDto[];
   creativePerformance: CreativePerformanceDto[];
+  toolCreativePerformance?: ToolCreativePerformanceDto[];
   devicePerformance: DeviceYieldDto[];
   utilityMonetization: UtilityMonetizationDto[];
   recommendations: MonetizationRecommendationDto[];

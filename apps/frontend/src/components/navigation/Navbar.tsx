@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { AuthUserProfile } from '@ad-utility/shared';
 import { getClientApiUrl } from '../../lib/site-config';
+import { useUserAuth } from '../../context/user-auth-context';
+import { SearchAutocomplete } from './SearchAutocomplete';
 
 interface NavbarProps {
   categories?: Array<{
@@ -37,41 +39,16 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { user: userProfile, logout, openAuthModal } = useUserAuth();
+
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [userProfile, setUserProfile] = useState<AuthUserProfile | null>(null);
 
   const toolsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-
-  // Fetch authentication status on mount (skip when explicitly on auth pages)
-  useEffect(() => {
-    if (pathname === '/login' || pathname === '/signup') {
-      return;
-    }
-
-    async function checkAuth() {
-      try {
-        const apiUrl = getClientApiUrl();
-        const res = await fetch(`${apiUrl}/auth/me`, {
-          credentials: 'include',
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            setUserProfile(json.data);
-          }
-        }
-      } catch (err) {
-        // Unauthenticated or network error - gracefully stay in anonymous mode
-      }
-    }
-    checkAuth();
-  }, [pathname]);
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -92,15 +69,10 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
 
   const handleLogout = async () => {
     try {
-      const apiUrl = getClientApiUrl();
-      await fetch(`${apiUrl}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await logout();
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
-      setUserProfile(null);
       setIsUserMenuOpen(false);
       router.push('/login');
     }
@@ -255,12 +227,6 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
               )}
             </div>
 
-            <Link
-              href="/#tools"
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 transition-colors"
-            >
-              Blog
-            </Link>
 
             <Link
               href="/pricing"
@@ -273,19 +239,10 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
 
         {/* Right: Search + Theme Toggle + Sign in + Get Premium */}
         <div className="flex items-center gap-3">
-          {/* Search bar inside navbar */}
-          <form onSubmit={handleSearchSubmit} className="hidden lg:flex items-center relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search tools (e.g. PDF, Image, QR...)"
-              className="w-64 pl-3 pr-8 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:bg-white transition-all"
-            />
-            <button type="submit" className="absolute right-2.5 text-slate-400 hover:text-slate-600">
-              <Search className="w-3.5 h-3.5" />
-            </button>
-          </form>
+          {/* Search bar with instant autocomplete suggestions */}
+          <div className="hidden lg:block">
+            <SearchAutocomplete variant="navbar-desktop" />
+          </div>
 
           {/* Right Controls: Authenticated vs Anonymous */}
           {userProfile ? (
@@ -359,25 +316,27 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
           ) : (
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Sign in button */}
-              <Link
-                href="/login"
-                className="hidden sm:inline-block text-xs font-semibold text-slate-700 hover:text-slate-900 px-2.5 py-1.5 transition-colors"
+              <button
+                type="button"
+                onClick={() => openAuthModal({ initialTab: 'login' })}
+                className="text-xs font-semibold text-slate-700 hover:text-blue-600 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors btn-interactive cursor-pointer"
               >
                 Sign in
-              </Link>
+              </button>
 
               {/* Sign up button */}
-              <Link
-                href="/signup"
-                className="hidden sm:inline-block text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3 py-1.5 rounded-lg transition-colors"
+              <button
+                type="button"
+                onClick={() => openAuthModal({ initialTab: 'signup' })}
+                className="hidden sm:inline-block text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3 py-1.5 rounded-lg transition-colors btn-interactive shadow-2xs cursor-pointer"
               >
                 Sign up
-              </Link>
+              </button>
 
               {/* Get Premium button */}
               <Link
                 href="/pricing"
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm shadow-blue-500/25 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm shadow-blue-500/25 flex items-center gap-1.5 transition-all hover:scale-[1.03] active:scale-[0.97] btn-interactive"
               >
                 <Crown className="w-3.5 h-3.5 fill-current" />
                 <span>Get Premium</span>
@@ -388,102 +347,120 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
           {/* Mobile menu hamburger */}
           <button
             type="button"
+            aria-label="Toggle navigation menu"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
+            className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-blue-600 transition-all duration-300 active:scale-90"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <div className={`transition-transform duration-300 ease-spring ${mobileMenuOpen ? 'rotate-90' : 'rotate-0'}`}>
+              {mobileMenuOpen ? <X className="w-5 h-5 text-blue-600" /> : <Menu className="w-5 h-5" />}
+            </div>
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-3 animate-in fade-in duration-150">
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search tools (e.g. PDF, Image, QR...)"
-              className="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-800"
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className={`md:hidden fixed inset-0 top-16 bg-slate-950/25 backdrop-blur-[2px] transition-opacity duration-400 ease-spring pointer-events-none z-30 ${
+          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Mobile Smooth Accordion Drawer */}
+      <div
+        className={`md:hidden mobile-drawer-wrapper relative z-40 bg-white border-b border-slate-200 shadow-xl ${
+          mobileMenuOpen ? 'is-open' : ''
+        }`}
+      >
+        <div className="mobile-drawer-content bg-white">
+          <div className="px-4 py-4 space-y-3.5 bg-white">
+            {/* Search bar with instant autocomplete suggestions */}
+            <SearchAutocomplete
+              variant="navbar-mobile"
+              onSelect={() => setMobileMenuOpen(false)}
             />
-            <button type="submit" className="absolute right-3 top-2.5 text-slate-400">
-              <Search className="w-4 h-4" />
-            </button>
-          </form>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-            {[
-              { name: 'Image Tools', slug: 'image' },
-              { name: 'PDF Tools', slug: 'pdf' },
-              { name: 'Text Tools', slug: 'text' },
-              { name: 'Developer Tools', slug: 'developer' },
-              { name: 'AI Utilities', slug: 'ai' },
-              { name: 'Video Tools', slug: 'video' },
-              { name: 'Audio Tools', slug: 'audio' },
-              { name: 'QR & Barcode', slug: 'qr-barcode' },
-            ].map((cat) => (
-              <Link
-                key={cat.slug}
-                href={`/category/${cat.slug}`}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100"
-              >
-                {getCategoryIcon(cat.slug)}
-                <span>{cat.name}</span>
-              </Link>
-            ))}
-          </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+              {[
+                { name: 'Image Tools', slug: 'image' },
+                { name: 'PDF Tools', slug: 'pdf' },
+                { name: 'Text Tools', slug: 'text' },
+                { name: 'Developer Tools', slug: 'developer' },
+                { name: 'AI Utilities', slug: 'ai' },
+                { name: 'Video Tools', slug: 'video' },
+                { name: 'Audio Tools', slug: 'audio' },
+                { name: 'QR & Barcode', slug: 'qr-barcode' },
+              ].map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/category/${cat.slug}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 border border-slate-200/70 hover:border-blue-200/80 transition-all duration-200 active:scale-95 shadow-2xs"
+                >
+                  <div className="shrink-0">{getCategoryIcon(cat.slug)}</div>
+                  <span className="truncate">{cat.name}</span>
+                </Link>
+              ))}
+            </div>
 
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            {userProfile ? (
-              <div className="space-y-2">
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-bold text-slate-900 truncate">
-                    {userProfile.email}
+            <div className="pt-2.5 border-t border-slate-100 space-y-2.5">
+              {userProfile ? (
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {userProfile.email}
+                    </div>
+                    <div className="text-[11px] text-slate-500">Authenticated Member</div>
                   </div>
-                  <div className="text-[11px] text-slate-500">Authenticated Member</div>
+                  <div className="flex items-center justify-between">
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-xs font-semibold text-slate-700 hover:text-blue-600 transition-colors"
+                    >
+                      Account Dashboard
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="text-xs font-semibold text-rose-600 hover:text-rose-700 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <Link
-                    href="/account"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-xs font-semibold text-slate-700 hover:text-blue-600"
-                  >
-                    Account Dashboard
-                  </Link>
+              ) : (
+                <div className="flex items-center justify-between pt-1">
                   <button
+                    type="button"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      handleLogout();
+                      openAuthModal({ initialTab: 'login' });
                     }}
-                    className="text-xs font-semibold text-rose-600"
+                    className="text-xs font-semibold text-slate-700 hover:text-blue-600 py-1.5 px-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    Sign Out
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openAuthModal({ initialTab: 'signup' });
+                    }}
+                    className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3.5 py-1.5 rounded-lg transition-all duration-200 active:scale-95 shadow-2xs cursor-pointer"
+                  >
+                    Create Free Account
                   </button>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-xs font-semibold text-slate-700 hover:text-blue-600"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-xs font-bold text-blue-600"
-                >
-                  Create Free Account
-                </Link>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 };

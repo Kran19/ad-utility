@@ -123,8 +123,8 @@ function PricingContent() {
         )}
 
         {/* Hero Section */}
-        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 mb-4 shadow-xs">
+        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 animate-fade-in-up">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 mb-4 shadow-xs hover:scale-105 transition-transform cursor-default">
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
             <span>TRANSPARENT & FAIR PRICING</span>
           </div>
@@ -139,13 +139,13 @@ function PricingContent() {
 
         {/* Pricing Cards */}
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-16 animate-fade-in">
             <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch animate-fade-in-up animate-delay-100">
             {/* Free Plan Card */}
-            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
+            <div className="tool-card rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-slate-300 transition-all">
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -189,15 +189,15 @@ function PricingContent() {
               <button
                 type="button"
                 onClick={() => handleSelectPlan('FREE')}
-                className="mt-8 w-full py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition shadow-xs"
+                className="mt-8 w-full py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition shadow-xs btn-interactive"
               >
                 Use Free
               </button>
             </div>
 
             {/* Premium Plan Card */}
-            <div className="rounded-3xl bg-gradient-to-b from-blue-50/60 via-white to-white border-2 border-blue-600 p-6 sm:p-8 flex flex-col justify-between shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/15 transition-all relative">
-              <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-600 text-white shadow-md shadow-blue-500/30 flex items-center gap-1">
+            <div className="tool-card rounded-3xl bg-gradient-to-b from-blue-50/60 via-white to-white border-2 border-blue-600 p-6 sm:p-8 flex flex-col justify-between shadow-lg shadow-blue-500/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all relative">
+              <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-600 text-white shadow-md shadow-blue-500/30 flex items-center gap-1 animate-pulse">
                 <Star className="w-3 h-3 fill-current" />
                 <span>Most Popular</span>
               </div>

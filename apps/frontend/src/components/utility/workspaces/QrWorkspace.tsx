@@ -16,12 +16,14 @@ import {
   Barcode,
 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackResultDownload } from '../../../lib/analytics';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface QrWorkspaceProps {
   utility: UtilityPublicDto;
 }
 
 export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const isBarcode = utility.slug === 'barcode-generator';
 
   // --- QR / Barcode Generator State ---
@@ -159,6 +161,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
   }, [utility.slug, contentType, textVal, emailTo, emailSubject, phoneNum, wifiSsid, wifiPass, wifiType, qrSize, ecLevel, darkColor, lightColor, isBarcode]);
 
   const handleDownloadPng = () => {
+    if (!requireAuth(handleDownloadPng, 'Sign in or create a free account to download generated codes.')) return;
     if (!qrDataUrl) return;
     const link = document.createElement('a');
     link.href = qrDataUrl;
@@ -168,6 +171,7 @@ export const QrWorkspace: React.FC<QrWorkspaceProps> = ({ utility }) => {
   };
 
   const handleDownloadSvg = () => {
+    if (!requireAuth(handleDownloadSvg, 'Sign in or create a free account to download generated vector SVG.')) return;
     if (!svgString) return;
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);

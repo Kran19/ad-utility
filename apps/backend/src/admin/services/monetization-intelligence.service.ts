@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisAdCacheService } from '../../ads/services/redis-ad-cache.service';
 import {
   MonetizationIntelligenceDto,
+  ToolCreativePerformanceDto,
   AdYieldSummaryDto,
   PlacementYieldDto,
   CreativePerformanceDto,
@@ -27,25 +28,13 @@ export class MonetizationIntelligenceService {
   ) {}
 
   /**
-   * Main Monetization Intelligence Aggregator
+   * Main Monetization Intelligence Aggregator (Real-time Live Data)
    */
   async getMonetizationIntelligence(days: number = 30): Promise<MonetizationIntelligenceDto> {
     const periodDays = Math.max(1, Math.min(days, 365));
-    const cacheKey = `admin:monetization:intel:${periodDays}`;
-
-    // 1. Try Cache
-    try {
-      const cached = await this.redisCache.getJson<MonetizationIntelligenceDto>(cacheKey);
-      if (cached) {
-        return cached;
-      }
-    } catch {
-      // Fail-open: proceed with database query
-    }
-
     const cutoff = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
 
-    // 2. Parallel SQL / Relational Queries
+    // Parallel SQL / Relational Queries directly against PostgreSQL for real-time accuracy
     const [
       totalImpressionsCount,
       totalClicksCount,
@@ -57,11 +46,14 @@ export class MonetizationIntelligenceService {
       clicksByDevice,
       impressionsByUtility,
       clicksByUtility,
+      impressionsByToolAndCreative,
+      clicksByToolAndCreative,
       utilityEvents,
       placements,
       creatives,
       activeCampaigns,
       utilities,
+      targetingRules,
       experimentExposures,
       revenueRecords,
       providerHealth,
@@ -122,6 +114,18 @@ export class MonetizationIntelligenceService {
         where: { timestamp: { gte: cutoff }, utilitySlug: { not: null } },
         _count: { _all: true },
       }),
+      // Tool + Creative impressions
+      this.prisma.adImpression.groupBy({
+        by: ['utilitySlug', 'creativeId', 'placementId'],
+        where: { timestamp: { gte: cutoff } },
+        _count: { _all: true },
+      }),
+      // Tool + Creative clicks
+      this.prisma.adClick.groupBy({
+        by: ['utilitySlug', 'creativeId', 'placementId'],
+        where: { timestamp: { gte: cutoff } },
+        _count: { _all: true },
+      }),
       // Utility tool events
       this.prisma.analyticsEvent.groupBy({
         by: ['utilitySlug', 'eventType'],
@@ -130,9 +134,10 @@ export class MonetizationIntelligenceService {
       }),
       // Relational Entities
       this.prisma.adPlacement.findMany(),
-      this.prisma.adCreative.findMany(),
+      this.prisma.adCreative.findMany({ orderBy: { createdAt: 'desc' } }),
       this.prisma.adCampaign.findMany({ where: { status: 'ACTIVE' } }),
       this.prisma.utility.findMany({ include: { category: true } }),
+      this.prisma.adTargetingRule.findMany({ include: { creative: true, placement: true } }),
       // Experiment exposures
       this.prisma.analyticsEvent.findMany({
         where: {
@@ -358,9 +363,109 @@ export class MonetizationIntelligenceService {
       };
     });
 
-    utilityMonetization.sort((a, b) => b.impressions - a.impressions);
+    // 9. Tool + Image Ad Click & Impression Breakdown
+    const utilityMap = new Map<string, any>();
+    for (const u of utilities) {
+      utilityMap.set(u.slug, u);
+    }
+    const creativeMap = new Map<string, any>();
+    for (const c of creatives) {
+      creativeMap.set(c.id, c);
+    }
+    const placementMap = new Map<string, any>();
+    for (const p of placements) {
+      placementMap.set(p.id, p);
+    }
 
-    // 9. Advisory Recommendations Engine
+    const toolCrPlImpMap = new Map<string, number>();
+    const toolCrImpMap = new Map<string, number>();
+    for (const r of impressionsByToolAndCreative) {
+      const uSlug = (r.utilitySlug || 'home').replace(/^\//, '');
+      const crId = r.creativeId || 'default';
+      const plId = r.placementId || '';
+      const exactKey = `${uSlug}::${crId}::${plId}`;
+      const generalKey = `${uSlug}::${crId}`;
+      toolCrPlImpMap.set(exactKey, (toolCrPlImpMap.get(exactKey) || 0) + r._count._all);
+      toolCrImpMap.set(generalKey, (toolCrImpMap.get(generalKey) || 0) + r._count._all);
+    }
+
+    const toolCrPlClickMap = new Map<string, number>();
+    const toolCrClickMap = new Map<string, number>();
+    for (const r of clicksByToolAndCreative) {
+      const uSlug = (r.utilitySlug || 'home').replace(/^\//, '');
+      const crId = r.creativeId || 'default';
+      const plId = r.placementId || '';
+      const exactKey = `${uSlug}::${crId}::${plId}`;
+      const generalKey = `${uSlug}::${crId}`;
+      toolCrPlClickMap.set(exactKey, (toolCrPlClickMap.get(exactKey) || 0) + r._count._all);
+      toolCrClickMap.set(generalKey, (toolCrClickMap.get(generalKey) || 0) + r._count._all);
+    }
+
+    const toolCreativePerformance: ToolCreativePerformanceDto[] = [];
+    const seenToolCrKeys = new Set<string>();
+
+    // Process only configured targeting rules with valid creatives
+    for (const rule of targetingRules) {
+      const cr = rule.creative || (rule.creativeId ? creativeMap.get(rule.creativeId) : null);
+      if (!cr) continue;
+
+      const slugs = rule.utilitySlugs && rule.utilitySlugs.length > 0 ? rule.utilitySlugs : ['home'];
+      const pl = rule.placement || (rule.placementId ? placementMap.get(rule.placementId) : null);
+      const placementId = rule.placementId || pl?.id || '';
+      const placementCode = pl?.code || 'TOP_CONTENT';
+
+      for (const rawSlug of slugs) {
+        const uSlug = rawSlug.replace(/^\//, '');
+        const isHome = uSlug === 'home';
+        const key = `${uSlug}::${cr.id}::${placementCode}`;
+        if (seenToolCrKeys.has(key)) continue;
+        seenToolCrKeys.add(key);
+
+        const u = isHome ? null : utilityMap.get(uSlug);
+
+        const exactPlKey = `${uSlug}::${cr.id}::${placementId}`;
+        const genKey = `${uSlug}::${cr.id}`;
+
+        const exactPlImp = toolCrPlImpMap.get(exactPlKey);
+        const genImp = toolCrImpMap.get(genKey);
+        const imps = (exactPlImp !== undefined ? exactPlImp : (genImp !== undefined ? genImp : ((impByCreativeMap.get(cr.id) || 0) || (isHome ? 0 : (impByUtilityMap.get(uSlug) || 0)))));
+
+        const exactPlClick = toolCrPlClickMap.get(exactPlKey);
+        const genClick = toolCrClickMap.get(genKey);
+        const clks = (exactPlClick !== undefined ? exactPlClick : (genClick !== undefined ? genClick : ((clickByCreativeMap.get(cr.id) || 0) || (isHome ? 0 : (clickByUtilityMap.get(uSlug) || 0)))));
+
+        const ctr = imps > 0 ? Number(((clks / imps) * 100).toFixed(2)) : 0;
+
+        const utilityName = isHome ? 'Home / Global Page' : (u?.name || uSlug);
+        const categorySlug = isHome ? 'global' : (u?.category?.slug || 'tools');
+        const creativeName = cr.name || `${utilityName} Ad Creative`;
+        const mediaUrl = cr.mediaUrl || '';
+        const targetUrl = cr.targetUrl || '#';
+        const placementName = pl?.name || 'Top Content Banner';
+
+        toolCreativePerformance.push({
+          utilitySlug: isHome ? 'home' : uSlug,
+          utilityName,
+          categorySlug,
+          creativeId: cr.id,
+          creativeName,
+          creativeType: (cr.type || 'IMAGE') as CreativeType,
+          mediaUrl,
+          targetUrl,
+          altText: cr.altText || `${utilityName} Sponsored Advertisement`,
+          placementCode,
+          placementName,
+          impressions: imps,
+          clicks: clks,
+          ctr,
+        });
+      }
+    }
+
+    // Sort by clicks descending, then impressions descending
+    toolCreativePerformance.sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions);
+
+    // 10. Advisory Recommendations Engine
     const recommendations = this.generateRecommendations({
       placementYield,
       creativePerformance,
@@ -370,10 +475,10 @@ export class MonetizationIntelligenceService {
       activeCampaigns,
     });
 
-    // 10. Experiment Monetization Breakdown
+    // 11. Experiment Monetization Breakdown
     const experimentMonetization = this.calculateExperimentMonetization(experimentExposures, totalImpressions, totalClicks);
 
-    // 11. Top Performers Summary
+    // 12. Top Performers Summary
     const topPlacement = [...placementYield]
       .filter((p) => p.impressions >= 10)
       .sort((a, b) => b.ctr - a.ctr)[0];
@@ -400,7 +505,7 @@ export class MonetizationIntelligenceService {
       topUtilityByEngagement: topUtility ? { utilitySlug: topUtility.utilitySlug, name: topUtility.name, adEngagementRate: topUtility.adEngagementRate } : undefined,
     };
 
-    // 12. Authoritative Revenue Aggregations (Financial Data Truth Policy)
+    // 13. Authoritative Revenue Aggregations (Financial Data Truth Policy)
     let actualRevenueTotal: number | null = null;
     let actualRevenueStatus: 'ACTUAL' | 'UNAVAILABLE' = 'UNAVAILABLE';
     const revenueByPlacement: Record<string, number> = {};
@@ -442,6 +547,7 @@ export class MonetizationIntelligenceService {
       summary,
       placementYield,
       creativePerformance,
+      toolCreativePerformance,
       devicePerformance,
       utilityMonetization,
       recommendations,
@@ -456,13 +562,6 @@ export class MonetizationIntelligenceService {
       revenueByProvider,
       providerHealth,
     };
-
-    // Cache with short TTL (60s)
-    try {
-      await this.redisCache.setJson(cacheKey, result, 60);
-    } catch {
-      // Ignore cache set errors
-    }
 
     return result;
   }

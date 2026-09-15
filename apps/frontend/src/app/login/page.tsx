@@ -20,20 +20,33 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { useUserAuth } from '../../context/user-auth-context';
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/account';
+  const { login, savedCredentials } = useUserAuth();
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: savedCredentials?.email || '',
+    password: savedCredentials?.password || '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
+
+  // Sync saved credentials if available
+  React.useEffect(() => {
+    if (savedCredentials?.email && !formData.email) {
+      setFormData({
+        email: savedCredentials.email,
+        password: savedCredentials.password || '',
+      });
+    }
+  }, [savedCredentials]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -62,34 +75,12 @@ function LoginContent() {
     setLoading(true);
 
     try {
-      const apiUrl = getClientApiUrl();
-      const res = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Receive secure HTTP-only cookies
-        body: JSON.stringify({
-          email: trimmedEmail.toLowerCase(),
-          password: formData.password,
-        }),
-      });
+      const result = await login(trimmedEmail, formData.password, true);
 
-      const json = await res.json();
-
-      if (res.ok && json.success) {
-        // Successful login: redirect to requested destination or /account
+      if (result.success) {
         router.push(redirectUrl);
       } else {
-        if (res.status === 401) {
-          setErrorMessage('The email or password you entered is incorrect.');
-        } else if (res.status === 403) {
-          setErrorMessage('This account has been deactivated. Please contact support.');
-        } else if (res.status === 429) {
-          setErrorMessage('Too many attempts. Please wait a moment and try again.');
-        } else {
-          setErrorMessage(json.message || 'Unable to sign in. Please try again.');
-        }
+        setErrorMessage(result.message || 'Unable to sign in. Please try again.');
       }
     } catch (err: any) {
       setErrorMessage('We could not reach the server. Please check your connection and try again.');

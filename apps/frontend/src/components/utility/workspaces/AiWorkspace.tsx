@@ -5,12 +5,14 @@ import { UtilityPublicDto } from '@ad-utility/shared';
 import { Sparkles, Copy, Check, RefreshCw, Trash2, AlertCircle } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface AiWorkspaceProps {
   utility: UtilityPublicDto;
 }
 
 export const AiWorkspace: React.FC<AiWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const [inputText, setInputText] = useState<string>('');
   const [outputText, setOutputText] = useState<string>('');
   const [grammarResult, setGrammarResult] = useState<{
@@ -24,6 +26,7 @@ export const AiWorkspace: React.FC<AiWorkspaceProps> = ({ utility }) => {
   const [style, setStyle] = useState<string>('standard');
   const [copied, setCopied] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const isHumanizer = utility.slug === 'ai-humanizer';
@@ -32,7 +35,19 @@ export const AiWorkspace: React.FC<AiWorkspaceProps> = ({ utility }) => {
 
   const maxChars = 50000;
 
+  const handleDropFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        setInputText(content.slice(0, maxChars));
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleExecute = async () => {
+    if (!requireAuth(handleExecute, `Sign in or register to run ${utility.name}`)) return;
     if (!inputText.trim()) return;
     setIsLoading(true);
     setErrorMsg(null);
@@ -180,26 +195,52 @@ export const AiWorkspace: React.FC<AiWorkspaceProps> = ({ utility }) => {
       {/* Dual Pane Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Input Pane */}
-        <div className="space-y-2">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+              handleDropFile(e.dataTransfer.files[0]);
+            }
+          }}
+          className="space-y-2 relative"
+        >
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span className="font-bold uppercase tracking-wider text-slate-700">Input Text</span>
             <span className="font-mono">
               {inputText.length.toLocaleString()} / {maxChars.toLocaleString()} chars
             </span>
           </div>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value.slice(0, maxChars))}
-            placeholder={
-              isHumanizer
-                ? 'Paste AI draft or text here to improve natural flow...'
-                : isParaphraser
-                ? 'Paste text to rewrite in a fresh phrasing...'
-                : 'Paste text to inspect for grammar and spelling...'
-            }
-            rows={10}
-            className="w-full px-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-y"
-          />
+          <div className="relative">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value.slice(0, maxChars))}
+              placeholder={
+                isHumanizer
+                  ? 'Paste AI draft, type text, or drag & drop a file here...'
+                  : isParaphraser
+                  ? 'Paste text, type, or drag & drop a file to rewrite...'
+                  : 'Paste text, type, or drag & drop a file to inspect grammar...'
+              }
+              rows={10}
+              className={`w-full px-4 py-3 rounded-2xl border text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-y ${
+                isDragOver
+                  ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20'
+                  : 'bg-slate-50/80 border-slate-200'
+              }`}
+            />
+            {isDragOver && (
+              <div className="absolute inset-0 rounded-2xl bg-amber-50/80 backdrop-blur-xs border-2 border-dashed border-amber-500 flex flex-col items-center justify-center pointer-events-none text-amber-800 font-bold text-xs gap-1">
+                <span>✨</span>
+                <span>Drop document to load text into AI</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Output Pane */}

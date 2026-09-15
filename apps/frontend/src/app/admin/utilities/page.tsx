@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { adminApiFetch } from '../../../lib/admin-api';
+import { useResizableColumns, ResizableTh } from '../../../components/admin/ResizableTable';
 
 interface UtilityAdCounts {
   desktop: number;
@@ -68,6 +69,18 @@ export default function AdminUtilitiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUtility, setEditingUtility] = useState<UtilityItem | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Excel-like Column Resizing Hook
+  const { widths, activeColumn, handleMouseDown, resetColumnWidth, resetAllWidths, getColStyle } =
+    useResizableColumns('admin_utilities_table', {
+      name: 260,
+      category: 180,
+      mode: 120,
+      ads: 230,
+      status: 130,
+      featured: 130,
+      actions: 160,
+    });
 
   const [newUtility, setNewUtility] = useState({
     slug: '',
@@ -202,6 +215,14 @@ export default function AdminUtilitiesPage() {
           <p className="text-xs text-slate-400 mt-1">Manage database metadata, categories, ad allocations, SEO tags, and publication statuses</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={resetAllWidths}
+            title="Reset all column widths to default"
+            className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-medium text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+          >
+            <span>↔️</span> Reset Columns
+          </button>
           <Link
             href="/admin/ad-manager"
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-1.5"
@@ -217,97 +238,46 @@ export default function AdminUtilitiesPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          <input
-            type="text"
-            placeholder="Search utilities by name, slug or description..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="DISABLED">DISABLED</option>
-            <option value="DRAFT">DRAFT</option>
-          </select>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {(search || statusFilter || categoryFilter) && (
-          <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-800/60 text-slate-400">
-            <span>Active filters applied</span>
-            <button
-              onClick={() => {
-                setSearch('');
-                setStatusFilter('');
-                setCategoryFilter('');
-              }}
-              className="text-indigo-400 hover:text-indigo-300 font-medium"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Category Wise Quick Filter Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-md">
-        <div className="flex items-center justify-between">
+      {/* Clean Category Quick Filter Bar */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              📁 Category Wise Utilities
+            <span className="text-sm font-bold text-white flex items-center gap-1.5">
+              <span>📁</span> Categories
             </span>
-            <span className="text-[11px] text-slate-500">
-              (Click any category to filter registry utilities)
+            <span className="text-xs text-slate-400">
+              Filter utilities by category
             </span>
           </div>
           {categoryFilter && (
             <button
               onClick={() => setCategoryFilter('')}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold hover:underline flex items-center gap-1"
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 self-start sm:self-auto"
             >
-              <span>View All Categories</span> &rarr;
+              <span>Show All ({utilities.length} tools)</span> &rarr;
             </button>
           )}
         </div>
 
-        {/* Category Cards / Pills Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
-          {/* All Button */}
+        {/* Category Pills (Clean, Spacious Flex-Wrap) */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          {/* All Categories Pill */}
           <button
             type="button"
             onClick={() => setCategoryFilter('')}
-            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 border ${
               !categoryFilter
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-2 ring-indigo-500/30'
-                : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20'
+                : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700'
             }`}
           >
-            <div className="text-base mb-1">🌐</div>
-            <div>
-              <div className="text-xs font-bold truncate">All Categories</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                {utilities.length} tools
-              </div>
-            </div>
+            <span>🌐</span>
+            <span>All Tools</span>
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${
+              !categoryFilter ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {utilities.length}
+            </span>
           </button>
 
           {categories.map((c) => {
@@ -325,54 +295,181 @@ export default function AdminUtilitiesPage() {
                     setCategoryFilter(c.id);
                   }
                 }}
-                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 border whitespace-nowrap ${
                   isSelected
-                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-2 ring-indigo-500/30'
-                    : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20'
+                    : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700'
                 }`}
               >
-                <div className="text-base mb-1">{icon}</div>
-                <div>
-                  <div className="text-xs font-bold truncate">{c.name}</div>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                    {count > 0 ? `${count} tools` : 'Explore'}
-                  </div>
-                </div>
+                <span>{icon}</span>
+                <span>{c.name}</span>
+                {count > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${
+                    isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+      {/* Filter & Search Bar */}
+      <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-md">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-2.5 text-xs text-slate-500">🔍</span>
+            <input
+              type="text"
+              placeholder="Search utilities by name, slug or keyword..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 min-w-[130px]"
+            >
+              <option value="">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="DISABLED">Disabled</option>
+              <option value="DRAFT">Draft</option>
+            </select>
+
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 min-w-[160px]"
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {(search || statusFilter || categoryFilter) && (
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800 text-slate-400">
+            <span>Filtered results: <strong className="text-white">{utilities.length}</strong> matching tools</span>
+            <button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('');
+                setCategoryFilter('');
+              }}
+              className="text-indigo-400 hover:text-indigo-300 font-medium"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         {loading ? (
-          <div className="py-20 text-center text-xs text-slate-400">Loading utilities...</div>
+          <div className="py-24 text-center text-xs text-slate-400 animate-pulse">Loading utilities catalog...</div>
         ) : error ? (
-          <div className="py-16 text-center text-xs text-rose-400 px-4">
+          <div className="py-20 text-center text-xs text-rose-400 px-4">
             <p className="font-semibold text-rose-300 mb-1">Failed to load utilities</p>
             <p className="text-slate-400 mb-4">{error}</p>
             <button
               onClick={loadData}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs transition-colors border border-slate-700"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs transition-colors border border-slate-700"
             >
               Retry
             </button>
           </div>
         ) : utilities.length === 0 ? (
-          <div className="py-20 text-center text-xs text-slate-400">No utilities found.</div>
+          <div className="py-24 text-center text-xs text-slate-400 space-y-2">
+            <div className="text-3xl">🔍</div>
+            <p className="font-semibold text-white">No utilities found matching your filters.</p>
+            <p className="text-slate-500">Try clearing filters or search term.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300 table-fixed">
+              <thead className="bg-slate-950/80 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
                 <tr>
-                  <th className="px-4 py-3">Tool Name & Slug</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Execution Mode</th>
-                  <th className="px-4 py-3">Ads Assigned</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Featured</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <ResizableTh
+                    colKey="name"
+                    width={widths.name}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'name'}
+                    className="px-5 py-3.5"
+                  >
+                    Tool Name & Slug
+                  </ResizableTh>
+                  <ResizableTh
+                    colKey="category"
+                    width={widths.category}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'category'}
+                    className="px-5 py-3.5"
+                  >
+                    Category
+                  </ResizableTh>
+                  <ResizableTh
+                    colKey="mode"
+                    width={widths.mode}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'mode'}
+                    className="px-5 py-3.5"
+                  >
+                    Execution
+                  </ResizableTh>
+                  <ResizableTh
+                    colKey="ads"
+                    width={widths.ads}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'ads'}
+                    className="px-5 py-3.5"
+                  >
+                    Ads Allocation
+                  </ResizableTh>
+                  <ResizableTh
+                    colKey="status"
+                    width={widths.status}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'status'}
+                    className="px-5 py-3.5"
+                  >
+                    Status
+                  </ResizableTh>
+                  <ResizableTh
+                    colKey="featured"
+                    width={widths.featured}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'featured'}
+                    className="px-5 py-3.5"
+                  >
+                    Featured
+                  </ResizableTh>
+                  <ResizableTh
+                    colKey="actions"
+                    width={widths.actions}
+                    onResizeStart={handleMouseDown}
+                    onDoubleClickResize={resetColumnWidth}
+                    isActive={activeColumn === 'actions'}
+                    className="px-5 py-3.5 text-right"
+                  >
+                    Actions
+                  </ResizableTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -381,103 +478,122 @@ export default function AdminUtilitiesPage() {
                   const hasAds = adCounts && adCounts.total > 0;
                   const catIcon = getCategoryIcon(u.category?.slug);
                   return (
-                    <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-4 py-3">
+                    <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                      {/* Tool Name & Slug */}
+                      <td style={getColStyle('name')} className="px-5 py-4 overflow-hidden">
                         <button
                           onClick={() => setEditingUtility(u)}
-                          className="text-left font-semibold text-white hover:text-indigo-400 transition-colors cursor-pointer group flex items-center gap-1.5"
+                          className="text-left font-bold text-white hover:text-indigo-400 transition-colors cursor-pointer group flex items-center gap-1.5 truncate max-w-full"
+                          title={u.name}
                         >
-                          <span>{u.name}</span>
-                          <span className="text-[10px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
+                          <span className="text-sm truncate">{u.name}</span>
+                          <span className="text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✏️</span>
                         </button>
-                        <div className="text-[11px] text-indigo-400 font-mono">/{u.slug}</div>
+                        <div className="text-[11px] text-indigo-400 font-mono mt-0.5 truncate">/{u.slug}</div>
                       </td>
-                      <td className="px-4 py-3">
+
+                      {/* Category */}
+                      <td style={getColStyle('category')} className="px-5 py-4 whitespace-nowrap overflow-hidden">
                         {u.category ? (
                           <button
                             type="button"
                             onClick={() => setCategoryFilter(u.category!.id === categoryFilter ? '' : u.category!.id)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-indigo-300 transition-colors cursor-pointer text-[11px]"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-indigo-300 transition-colors cursor-pointer text-xs font-medium max-w-full truncate"
                             title={`Filter by category: ${u.category.name}`}
                           >
                             <span>{catIcon}</span>
-                            <span>{u.category.name}</span>
+                            <span className="truncate">{u.category.name}</span>
                           </button>
                         ) : (
-                          '—'
+                          <span className="text-slate-600">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 font-mono text-[11px] text-slate-400">{u.implementationMode}</td>
-                      
+
+                      {/* Execution Mode */}
+                      <td style={getColStyle('mode')} className="px-5 py-4 whitespace-nowrap overflow-hidden">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono font-semibold text-slate-400">
+                          {u.implementationMode}
+                        </span>
+                      </td>
+
                       {/* Ads Column */}
-                      <td className="px-4 py-3">
+                      <td style={getColStyle('ads')} className="px-5 py-4 whitespace-nowrap overflow-hidden">
                         {hasAds ? (
                           <Link
                             href={`/admin/ad-manager?utility=${u.slug}`}
-                            className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 transition-colors bg-indigo-950/40 border border-indigo-800/40 px-2 py-1 rounded-md"
-                            title="Manage ads for this utility"
+                            className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white transition-colors bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-800/50 px-3 py-1.5 rounded-xl font-medium shadow-xs max-w-full"
+                            title="Manage active ads for this utility"
                           >
-                            <span className="font-medium">
+                            <span>🎯</span>
+                            <span className="truncate">
                               Desktop {adCounts.desktop} · Mobile {adCounts.mobile}
-                              {adCounts.tablet > 0 ? ` · Tablet ${adCounts.tablet}` : ''}
+                              {adCounts.tablet > 0 ? ` · Tab ${adCounts.tablet}` : ''}
                             </span>
-                            <span className="text-[10px] text-indigo-400">&rarr;</span>
+                            <span className="text-indigo-400 shrink-0">&rarr;</span>
                           </Link>
                         ) : (
                           <Link
                             href={`/admin/ad-manager?utility=${u.slug}`}
-                            className="text-slate-500 hover:text-slate-300 text-xs italic transition-colors"
-                            title="Assign an ad"
+                            className="inline-flex items-center gap-1 text-slate-500 hover:text-indigo-300 text-xs transition-colors py-1 hover:underline"
+                            title="Assign an ad in Ad Manager"
                           >
-                            No ads configured &rarr;
+                            <span>No ads configured</span>
+                            <span>&rarr;</span>
                           </Link>
                         )}
                       </td>
 
                       {/* Status Column */}
-                      <td className="px-4 py-3">
+                      <td style={getColStyle('status')} className="px-5 py-4 whitespace-nowrap overflow-hidden">
                         <button
                           onClick={() => handleToggleStatus(u.id, u.status)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono cursor-pointer transition-colors ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all ${
                             u.status === 'ACTIVE'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
                               : u.status === 'DISABLED'
                               ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
                               : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
                           }`}
-                          title={`Click to toggle ${u.status === 'ACTIVE' ? 'to DISABLED' : 'to ACTIVE'}`}
+                          title={`Click to toggle status`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'ACTIVE' ? 'bg-emerald-400' : u.status === 'DISABLED' ? 'bg-rose-400' : 'bg-amber-400'}`}></span>
-                          {u.status} ⟳
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${u.status === 'ACTIVE' ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : u.status === 'DISABLED' ? 'bg-rose-400' : 'bg-amber-400'}`}></span>
+                          <span>{u.status}</span>
                         </button>
                       </td>
 
                       {/* Featured Column */}
-                      <td className="px-4 py-3">
+                      <td style={getColStyle('featured')} className="px-5 py-4 whitespace-nowrap overflow-hidden">
                         <button
                           onClick={() => handleToggleFeatured(u.id, u.isFeatured)}
-                          className={`text-xs ${u.isFeatured ? 'text-amber-400' : 'text-slate-600'}`}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
+                            u.isFeatured
+                              ? 'text-amber-300 bg-amber-500/10 border border-amber-500/20'
+                              : 'text-slate-500 hover:text-slate-300 bg-slate-950 border border-slate-800'
+                          }`}
                         >
-                          {u.isFeatured ? '★ Featured' : '☆ Standard'}
+                          <span>{u.isFeatured ? '★' : '☆'}</span>
+                          <span>{u.isFeatured ? 'Featured' : 'Standard'}</span>
                         </button>
                       </td>
 
-                      {/* Actions Column */}
-                      <td className="px-4 py-3 text-right space-x-2">
-                        <button
-                          onClick={() => setEditingUtility(u)}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] transition-colors border border-slate-700"
-                        >
-                          Edit
-                        </button>
-                        <a
-                          href={`/${u.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] transition-colors inline-block"
-                        >
-                          View &rarr;
-                        </a>
+                      {/* Actions Column (Clean, Spacious Inline Buttons) */}
+                      <td style={getColStyle('actions')} className="px-5 py-4 text-right whitespace-nowrap overflow-hidden">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => setEditingUtility(u)}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-200 rounded-xl text-xs font-semibold transition-all border border-slate-700 shadow-sm flex items-center gap-1"
+                          >
+                            <span>✏️</span> Edit
+                          </button>
+                          <a
+                            href={`/${u.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-colors border border-slate-800 shadow-sm inline-flex items-center gap-1"
+                          >
+                            <span>↗</span> View
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   );

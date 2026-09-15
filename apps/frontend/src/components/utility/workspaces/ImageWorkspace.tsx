@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface ImageWorkspaceProps {
   utility: UtilityPublicDto;
@@ -36,6 +37,7 @@ interface CropState {
 }
 
 export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -220,6 +222,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
   };
 
   const handleProcess = async () => {
+    if (!requireAuth(handleProcess, `Sign in or create a free account to process images with ${utility.name}`)) return;
     if (!selectedFile || !filePreview) return;
 
     setIsLoading(true);

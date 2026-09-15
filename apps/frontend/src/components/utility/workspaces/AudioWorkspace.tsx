@@ -2,15 +2,17 @@
 
 import React, { useState, useRef } from 'react';
 import { UtilityPublicDto } from '@ad-utility/shared';
-import { Music, Upload, Download, RefreshCw, AlertCircle, Scissors, Sliders, Check } from 'lucide-react';
+import { Music, Upload, Download, RefreshCw, AlertCircle, Scissors, Sliders, Check, Volume2 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface AudioWorkspaceProps {
   utility: UtilityPublicDto;
 }
 
 export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
   const [bitrate, setBitrate] = useState<'64k' | '128k' | '192k' | '256k'>('192k');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [resultData, setResultData] = useState<{
     dataUrl: string;
@@ -59,6 +62,7 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
   };
 
   const handleProcess = async () => {
+    if (!requireAuth(handleProcess, `Sign in or create a free account to process audio with ${utility.name}`)) return;
     if (!selectedFile || !fileBase64) return;
 
     setIsLoading(true);
@@ -75,9 +79,13 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
         filename: selectedFile.name,
       };
 
-      if (utility.slug === 'audio-cutter') {
-        payload.startTimeSec = startTimeSec;
-        payload.endTimeSec = endTimeSec;
+      if (utility.slug === 'audio-compressor') {
+        payload.targetBitrate = bitrate;
+      } else if (utility.slug === 'audio-cutter') {
+        payload.startTime = startTimeSec;
+        payload.endTime = endTimeSec;
+      } else if (utility.slug === 'audio-converter') {
+        payload.format = 'mp3';
       }
 
       const res = await fetch(`${apiUrl}/utilities/${utility.slug}/execute`, {
@@ -88,42 +96,46 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || json.error?.message || 'Audio processing failed');
+        throw new Error(json.message || json.error?.message || 'Processing audio failed');
       }
 
-      const output = json.data.result;
+      const result = json.data.result;
       setResultData({
-        dataUrl: output.dataUrl,
-        filename: output.filename || 'processed-audio.mp3',
-        sizeBytes: output.sizeBytes,
-        durationSec: output.durationSec,
+        dataUrl: result.dataUrl || result.audioData || result.outputUrl,
+        filename: result.filename || `output_${selectedFile.name.replace(/\.[^/.]+$/, '')}.mp3`,
+        sizeBytes: result.sizeBytes,
+        durationSec: result.durationSec,
       });
 
-      trackToolComplete(utility.slug, Math.round(performance.now() - startTime));
+      const elapsed = Math.round(performance.now() - startTime);
+      trackToolComplete(utility.slug, elapsed);
     } catch (err: any) {
-      setErrorMsg(err.message || 'An error occurred during audio processing');
-      trackToolError(utility.slug, err.message || 'Audio processing error');
+      const msg = err.message || 'Audio execution failed';
+      setErrorMsg(msg);
+      trackToolError(utility.slug, msg);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDownload = () => {
-    if (!resultData) return;
-    const link = document.createElement('a');
-    link.href = resultData.dataUrl;
-    link.download = resultData.filename;
-    link.click();
-    trackResultDownload(utility.slug, { mimeType: 'audio/mp3' });
+    if (!resultData?.dataUrl) return;
+    trackResultDownload(utility.slug, { filename: resultData.filename });
+    const a = document.createElement('a');
+    a.href = resultData.dataUrl;
+    a.download = resultData.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
     <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+      {/* Workspace Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
-            {utility.slug === 'audio-cutter' ? <Scissors className="w-5 h-5" /> : <Music className="w-5 h-5" />}
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600 shadow-xs">
+            <Volume2 className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
@@ -137,15 +149,33 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
 
       {!selectedFile && (
         <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+              handleFileSelect(e.dataTransfer.files[0]);
+            }
+          }}
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3 group"
+          className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all space-y-3 group ${
+            isDragOver
+              ? 'border-blue-500 bg-blue-50/60 scale-[0.99] ring-4 ring-blue-500/10'
+              : 'border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30'
+          }`}
         >
           <div className="w-14 h-14 mx-auto rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-blue-600 shadow-xs group-hover:scale-105 transition-transform">
             <Upload className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">Click or drag an audio file to upload</h3>
-            <p className="text-xs text-slate-500 mt-1">Supports MP3, WAV, OGG, M4A (Max 30MB)</p>
+            <h3 className="text-base font-bold text-slate-900">
+              Drag & drop your audio file here, or <span className="text-blue-600 underline">browse</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">Supports MP3, WAV, OGG, M4A, AAC (Max 30MB)</p>
           </div>
           <input
             ref={fileInputRef}

@@ -10,18 +10,48 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadMetrics() {
-      setLoading(true);
-      const res = await adminApiFetch<AdminDashboardMetricsDto>('/admin/dashboard');
-      if (res.success && res.data) {
-        setMetrics(res.data);
-      } else {
-        setError(res.error || 'Failed to load dashboard metrics');
-      }
-      setLoading(false);
+  const loadMetrics = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    const res = await adminApiFetch<AdminDashboardMetricsDto>('/admin/dashboard');
+    if (res.success && res.data) {
+      setMetrics(res.data);
+    } else if (!isBackground) {
+      setError(res.error || 'Failed to load dashboard metrics');
     }
+    if (!isBackground) setLoading(false);
+  };
+
+  useEffect(() => {
     loadMetrics();
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        bc = new BroadcastChannel('ad_analytics_sync');
+        bc.onmessage = () => {
+          loadMetrics(true);
+        };
+      } catch {}
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'ad_analytics_click_event') {
+        loadMetrics(true);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadMetrics(true);
+      }
+    }, 3000);
+
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading) {

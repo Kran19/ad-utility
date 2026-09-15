@@ -202,11 +202,11 @@ export default async function UtilityPage({ params }: PageProps) {
           {/* Main Primary Content Column */}
           <div className="flex-1 min-w-0 w-full space-y-8">
             {/* Hero & Utility Header */}
-            <section className="space-y-3 text-center sm:text-left bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
+            <section className="space-y-3 text-center sm:text-left bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs animate-fade-in-up hover:shadow-md transition-shadow">
               <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
                 <Link
                   href={`/category/${utility.categorySlug}`}
-                  className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 uppercase tracking-wider hover:bg-blue-100 transition-colors"
+                  className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 uppercase tracking-wider hover:bg-blue-100 transition-colors btn-interactive"
                 >
                   {utility.categoryName}
                 </Link>
@@ -214,7 +214,7 @@ export default async function UtilityPage({ params }: PageProps) {
                   v{utility.version}
                 </span>
                 {utility.isFeatured && (
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-600 border border-amber-200 shadow-2xs">
                     ★ Featured
                   </span>
                 )}
@@ -235,7 +235,7 @@ export default async function UtilityPage({ params }: PageProps) {
             />
 
             {/* Primary Interactive Workspace */}
-            <section className="w-full">
+            <section className="w-full animate-fade-in-up animate-delay-100">
               <ToolRunner utility={utility} />
             </section>
 
@@ -247,7 +247,7 @@ export default async function UtilityPage({ params }: PageProps) {
             />
 
             {/* How-to Guide & Documentation Section */}
-            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs">
+            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs animate-fade-in-up animate-delay-200 hover:shadow-md transition-shadow">
               <h2 className="text-xl font-bold text-slate-900">How to Use {utility.name}</h2>
               <div className="text-slate-600 space-y-3 text-sm leading-relaxed">
                 <p>
@@ -274,19 +274,19 @@ export default async function UtilityPage({ params }: PageProps) {
 
             {/* Frequently Asked Questions (FAQ) Section */}
             {hasFaqs && (
-              <section className="space-y-4">
+              <section className="space-y-4 animate-fade-in-up animate-delay-300">
                 <h2 className="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
                 <div className="space-y-3">
                   {utility.faqContent.map((faq, idx) => (
                     <details
                       key={idx}
-                      className="group bg-white border border-slate-200/80 rounded-2xl p-4 open:shadow-xs transition-all"
+                      className="group bg-white border border-slate-200/80 rounded-2xl p-4 open:shadow-md transition-all duration-300"
                     >
                       <summary className="font-semibold text-slate-800 text-sm cursor-pointer list-none flex items-center justify-between">
                         <span>{faq.question}</span>
-                        <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                        <span className="text-slate-400 group-open:rotate-180 transition-transform duration-300">▼</span>
                       </summary>
-                      <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                      <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3 animate-fade-in">
                         {faq.answer}
                       </p>
                     </details>
@@ -296,12 +296,14 @@ export default async function UtilityPage({ params }: PageProps) {
             )}
 
             {/* Personalized Related Utilities Section */}
-            <PersonalizedRelatedUtilities
-              utilitySlug={utility.slug}
-              categorySlug={utility.categorySlug}
-              categoryName={utility.categoryName}
-              initialRelatedSlugs={utility.relatedSlugs || []}
-            />
+            <div className="animate-fade-in-up animate-delay-400">
+              <PersonalizedRelatedUtilities
+                utilitySlug={utility.slug}
+                categorySlug={utility.categorySlug}
+                categoryName={utility.categoryName}
+                initialRelatedSlugs={utility.relatedSlugs || []}
+              />
+            </div>
 
             {/* Canonical Placement #5: BOTTOM_CONTENT (Below Related Utilities, Above Footer) */}
             <AdPlacementSlot

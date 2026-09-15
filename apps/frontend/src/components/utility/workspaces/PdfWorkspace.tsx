@@ -21,12 +21,14 @@ import {
 } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
+import { useUserAuth } from '../../../context/user-auth-context';
 
 interface PdfWorkspaceProps {
   utility: UtilityPublicDto;
 }
 
 export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
+  const { requireAuth } = useUserAuth();
   // Single file state (for compressor, split, pdf-to-jpg, rotator, watermark, etc.)
   const [singleFile, setSingleFile] = useState<{ file: File; base64: string } | null>(null);
 
@@ -92,6 +94,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
     removedFields?: string[];
   } | null>(null);
 
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -168,6 +171,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
   };
 
   const handleExecute = async () => {
+    if (!requireAuth(handleExecute, `Sign in or create a free account to execute ${utility.name}`)) return;
     setErrorMsg(null);
     setResultData(null);
     setCopiedText(false);
@@ -380,8 +384,24 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
       {/* Upload Zone */}
       {(!isMerge && !singleFile) || (isMerge && mergeFiles.length === 0) ? (
         <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (e.dataTransfer.files) {
+              handleFilesAdded(e.dataTransfer.files);
+            }
+          }}
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all group"
+          className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all group ${
+            isDragOver
+              ? 'border-blue-500 bg-blue-50/60 scale-[0.99] ring-4 ring-blue-500/10'
+              : 'border-slate-300/80 hover:border-blue-500/80 bg-slate-50/60 hover:bg-blue-50/30'
+          }`}
         >
           <input
             ref={fileInputRef}
@@ -395,7 +415,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             <Upload className="w-7 h-7" />
           </div>
           <h3 className="text-base font-bold text-slate-900 mb-1">
-            {isMerge ? 'Select multiple PDF files to merge' : 'Drag & drop your PDF file, or browse'}
+            {isMerge ? 'Drag & drop multiple PDF files, or browse' : 'Drag & drop your PDF file here, or browse'}
           </h3>
           <p className="text-xs text-slate-500">
             {isMerge ? 'Add up to 10 files (max 50MB combined)' : 'PDF documents up to 25MB'}

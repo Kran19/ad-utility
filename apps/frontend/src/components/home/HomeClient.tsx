@@ -30,6 +30,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { AdPlacementSlot } from '../ads/ad-placement-slot';
+import { SearchAutocomplete } from '../navigation/SearchAutocomplete';
 
 interface HomeClientProps {
   categories: CategoryPublicDto[];
@@ -239,14 +240,14 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
   return (
     <div className="w-full">
       {/* Placement 1: TOP_CONTENT */}
-      <AdSlot placement="TOP_CONTENT" />
+      <AdPlacementSlot placement="TOP_CONTENT" />
 
       {/* Hero Section */}
       <section className="relative pt-6 sm:pt-10 pb-8 sm:pb-16 text-center max-w-4xl mx-auto px-4">
         {/* Playful Hand-drawn Annotation: Left */}
-        <div className="hidden xl:block absolute -left-10 top-10 -rotate-6 text-slate-700 pointer-events-none select-none z-10">
+        <div className="hidden xl:block absolute -left-10 top-10 -rotate-6 text-slate-700 pointer-events-none select-none z-10 animate-float">
           <div className="relative font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide text-left whitespace-nowrap">
-            <span className="text-red-500 text-xs font-black absolute -top-2.5 -right-3">✦</span>
+            <span className="text-red-500 text-xs font-black absolute -top-2.5 -right-3 animate-pulse">✦</span>
             Simple Tools
             <br />
             Big Possibilities
@@ -254,7 +255,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </div>
 
         {/* Playful Hand-drawn Annotation: Right with Curved Arrow */}
-        <div className="hidden xl:block absolute -right-10 top-6 rotate-3 text-slate-700 pointer-events-none select-none z-10 text-right">
+        <div className="hidden xl:block absolute -right-10 top-6 rotate-3 text-slate-700 pointer-events-none select-none z-10 text-right animate-float-slow">
           <div className="font-handwriting text-sm leading-tight text-slate-800 font-bold tracking-wide whitespace-nowrap">
             Powerful tools
             <br />
@@ -274,52 +275,39 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
           </svg>
         </div>
 
-        {/* Pill Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-600 text-xs font-bold shadow-xs mb-3 sm:mb-4">
-          <span className="text-amber-500 text-xs">✨</span>
+        {/* Pill Badge with subtle glow */}
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-600 text-xs font-bold shadow-xs mb-3 sm:mb-4 animate-fade-in hover:scale-105 transition-transform cursor-default">
+          <span className="text-amber-500 text-xs animate-spin-slow">✨</span>
           <span>{totalTools > 0 ? `${totalTools}+ FREE TOOLS` : '38+ FREE TOOLS'}</span>
         </div>
 
         {/* Main Hero Headline */}
-        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.15] break-words">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.15] break-words animate-fade-in-up">
           Free, Fast & Secure <br />
-          <span className="text-blue-600 font-extrabold inline-block mt-1">
+          <span className="text-blue-600 font-extrabold inline-block mt-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">
             Online Web Utilities
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed mt-2.5 sm:mt-4 font-normal px-2">
+        <p className="text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed mt-2.5 sm:mt-4 font-normal px-2 animate-fade-in-up animate-delay-100">
           Everyday utilities for images, PDFs, text, and AI writing. Zero software installation required. Direct
           in-browser and server-accelerated processing with total privacy.
         </p>
 
-        {/* Hero Search Box */}
-        <div className="mt-5 sm:mt-8 max-w-2xl mx-auto">
-          <div className="relative bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl p-1.5 sm:p-2.5 flex items-center ring-4 ring-slate-100/80 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
-            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 ml-2 sm:ml-2.5 mr-2 sm:mr-3 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search 38+ tools (e.g. merge PDF, resize, QR)..."
-              className="w-full bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 shrink-0 mr-1"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+        {/* Hero Search Box with Instant Autocomplete */}
+        <div className="mt-5 sm:mt-8 max-w-2xl mx-auto animate-fade-in-up animate-delay-200">
+          <SearchAutocomplete
+            variant="hero"
+            placeholder="Search 38+ tools (e.g. merge PDF, resize, QR, AI)..."
+            initialQuery={searchQuery}
+            onQueryChange={(val) => setSearchQuery(val)}
+          />
         </div>
 
         {/* Value Props Row: Seamless 3-item responsive grid */}
-        <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto text-center sm:text-left animate-fade-in-up animate-delay-300">
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-200 hover:shadow-md transition-all duration-300">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
@@ -329,7 +317,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs hover:border-purple-200 hover:shadow-md transition-all duration-300">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
               <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
@@ -339,7 +327,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2.5 bg-white/90 backdrop-blur-xs p-2 sm:px-3.5 sm:py-2 rounded-2xl border border-slate-200/80 shadow-xs hover:border-pink-200 hover:shadow-md transition-all duration-300">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0">
               <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
@@ -358,7 +346,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
           <button
             type="button"
             onClick={() => setSelectedCategory(null)}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 btn-interactive"
           >
             <span>View All</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -380,13 +368,13 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                     setSelectedCategory(cat.slug);
                   }
                 }}
-                className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between group cursor-pointer ${
+                className={`p-3.5 rounded-2xl border text-left transition-all duration-300 flex flex-col justify-between group cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-50/90 border-blue-500 shadow-sm ring-2 ring-blue-500/20'
-                    : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-md'
+                    ? 'bg-blue-50/90 border-blue-500 shadow-md ring-2 ring-blue-500/20 scale-[1.02]'
+                    : 'bg-white border-slate-200/80 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1'
                 }`}
               >
-                <div className={`w-9 h-9 rounded-xl ${meta.bg} ${meta.border} border flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}>
+                <div className={`w-9 h-9 rounded-xl ${meta.bg} ${meta.border} border flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
                   {meta.icon}
                 </div>
                 <div>
@@ -416,7 +404,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </div>
 
         {filteredCategories.length === 0 ? (
-          <div className="py-16 text-center space-y-3 bg-white border border-slate-200 rounded-2xl">
+          <div className="py-16 text-center space-y-3 bg-white border border-slate-200 rounded-2xl animate-fade-in">
             <p className="text-base font-semibold text-slate-700">No matching utilities found</p>
             <p className="text-xs text-slate-500">Try searching with a different term like &ldquo;PDF&rdquo;, &ldquo;Image&rdquo;, or &ldquo;QR&rdquo;.</p>
             <button
@@ -425,7 +413,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                 setSearchQuery('');
                 setSelectedCategory(null);
               }}
-              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
+              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm btn-interactive"
             >
               Clear Filters
             </button>
@@ -438,7 +426,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                 {/* Category Header Bar */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-xl ${meta.bg} ${meta.border} border flex items-center justify-center shrink-0`}>
+                    <div className={`w-8 h-8 rounded-xl ${meta.bg} ${meta.border} border flex items-center justify-center shrink-0 shadow-2xs`}>
                       {meta.badgeIcon}
                     </div>
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
@@ -448,7 +436,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                   </div>
                   <Link
                     href={`/category/${cat.slug}`}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 btn-interactive"
                   >
                     <span>View All</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -463,10 +451,10 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                       <Link
                         key={util.slug}
                         href={`/${util.slug}`}
-                        className="group p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5 transition-all flex items-start gap-3.5"
+                        className="tool-card group p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:bg-gradient-to-br hover:from-white hover:to-blue-50/20 flex items-start gap-3.5"
                       >
                         {/* Tool Icon Box */}
-                        <div className={`w-10 h-10 rounded-xl ${toolIconMeta.bg} border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                        <div className={`w-10 h-10 rounded-xl ${toolIconMeta.bg} border flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-2xs`}>
                           {toolIconMeta.icon}
                         </div>
 
@@ -477,12 +465,12 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                               {util.name}
                             </h4>
                             {util.isFeatured && (
-                              <span className="text-[10px] font-semibold text-amber-500 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded-full shrink-0">
+                              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded-full shrink-0 shadow-2xs">
                                 ★ Featured
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5">
+                          <p className="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5 group-hover:text-slate-600 transition-colors">
                             {util.description}
                           </p>
                         </div>
