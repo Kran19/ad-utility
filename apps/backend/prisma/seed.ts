@@ -8,7 +8,8 @@ import {
   CampaignStatus,
   DeviceType,
 } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import * as bcryptModule from 'bcryptjs';
+const bcrypt = (bcryptModule as any).default || bcryptModule;
 
 const prisma = new PrismaClient();
 
