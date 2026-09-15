@@ -1,5 +1,14 @@
 # Changelog
 
+## [Phase 31] - 2026-09-15
+### Added
+- Standardized minimum 4 Core Ad Placement Opportunities (`HEADER_BANNER`, `TOP_CONTENT`, `AFTER_TOOL`, `BOTTOM_CONTENT`) on all 38+ individual utility pages.
+- Asynchronous non-blocking ad loading architecture preventing interference with interactive tool runners, file upload dropzones, processing tasks, or download triggers.
+- Fail-open independent slot isolation across all 4 core placements.
+- Admin Ad Manager Core 4-Ad Monetization Inventory coverage tracking indicator (`X/4 Core Covered`).
+- Automated test suite `apps/backend/test/utility-ad-density.spec.ts`.
+- Documentation: `docs/utility-ad-density.md`, `docs/ADR-031-utility-ad-density.md`, and `docs/PHASE_31_VERIFICATION_REPORT.md`.
+
 ## [Phase 30] - 2026-09-15
 ### Added
 - Standardized `AdPlacementSlot` frontend component enforcing canonical 8-placement inventory across Desktop, Tablet, and Mobile.

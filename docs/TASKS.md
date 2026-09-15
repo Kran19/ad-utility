@@ -1,11 +1,10 @@
-## Phase 30 Tasks — Standardized Ad Placement Inventory
-- [x] Audit existing `AdSelectorService`, `AdDeliveryService`, `AdSlot`, `AdPlacement`, and page layouts.
-- [x] Enforce canonical 8-placement inventory: `HEADER_BANNER`, `TOP_CONTENT`, `AFTER_TOOL`, `MID_CONTENT`, `BOTTOM_CONTENT`, `SIDEBAR`, `MOBILE_STICKY`, `DESKTOP_STICKY`.
-- [x] Implement `AdPlacementSlot` frontend wrapper standardizing responsive visibility, layout reservations, and CSS classes.
-- [x] Standardize Utility Tool Page layout (`apps/frontend/src/app/[slug]/page.tsx`) with 2-column Desktop Sidebar, Mobile Sticky, and Desktop Sticky.
-- [x] Standardize Category Page layout (`apps/frontend/src/app/category/[categorySlug]/page.tsx`).
-- [x] Standardize Homepage layout (`apps/frontend/src/components/home/HomeClient.tsx`).
-- [x] Add Canonical Placement Inventory Device Matrix guide to Admin Ad Manager (`apps/frontend/src/app/admin/ad-manager/page.tsx`).
-- [x] Preserve strict tool-level targeting rules in backend `AdSelectorService` (unassigned tools return `hasAd: false`).
-- [x] Write automated test suite `apps/backend/test/ad-placement-inventory.spec.ts`.
-- [x] Generate ADR-030, verification report, and canonical placement inventory documentation.
+## Phase 31 Tasks — Utility Page 4-Ad Minimum Monetization Inventory
+- [x] Audit individual utility page templates, `AdPlacementSlot`, `AdSlot`, and `AdSelectorService`.
+- [x] Enforce 4 core ad placement opportunities on every utility page (`HEADER_BANNER`, `TOP_CONTENT`, `AFTER_TOOL`, `BOTTOM_CONTENT`).
+- [x] Maintain supplemental optional placements (`MID_CONTENT`, `SIDEBAR`, `MOBILE_STICKY`, `DESKTOP_STICKY`).
+- [x] Ensure asynchronous, non-blocking ad loading that never hinders tool processing, uploads, or downloads.
+- [x] Maintain fail-open isolation across all slots (failure of one slot does not impact other slots or tool execution).
+- [x] Maintain strict premium subscriber ad-free entitlement (`hasAd: false`, `reason: 'PREMIUM_AD_FREE'`).
+- [x] Add `Core 4-Ad Monetization Inventory` coverage tracking card (`X/4 Core Covered`) in Admin Ad Manager drawer.
+- [x] Write automated test suite `apps/backend/test/utility-ad-density.spec.ts`.
+- [x] Generate ADR-031, verification report, and utility ad density specification documentation.
