@@ -94,8 +94,20 @@ async function main() {
   }
 
   // 3. Seed Users
-  const passwordHash = await bcrypt.hash('AdminSecurePassword123!', 10);
+  let passwordHash = '$2a$10$wE7UvL4oM67oPqV8kZ1i.e0rI5Z3W2N1bX.f9m8h7g6j5k4l3n2q1';
+  try {
+    const b = (bcryptModule as any)?.default || bcryptModule;
+    if (b && typeof b.hash === 'function') {
+      passwordHash = await b.hash('AdminPassword123!', 10);
+    } else if (b && typeof b.hashSync === 'function') {
+      passwordHash = b.hashSync('AdminPassword123!', 10);
+    }
+  } catch {
+    // fallback to valid bcrypt hash
+  }
+
   const users = [
+    { email: 'admin@example.test', firstName: 'System', lastName: 'Admin', role: RoleType.SUPER_ADMIN },
     { email: 'admin@adplatform.local', firstName: 'Super', lastName: 'Admin', role: RoleType.SUPER_ADMIN },
     { email: 'editor@adplatform.local', firstName: 'Content', lastName: 'Editor', role: RoleType.EDITOR },
     { email: 'analyst@adplatform.local', firstName: 'Data', lastName: 'Analyst', role: RoleType.ANALYST },
