@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { UtilityPublicDto, ApiEnvelope } from '@ad-utility/shared';
 import { getSiteOrigin, getInternalApiUrl, siteConfig } from '../../lib/site-config';
-import { AdSlot } from '../../components/ads/ad-slot';
+import { AdPlacementSlot } from '../../components/ads/ad-placement-slot';
 import { ToolRunner } from '../../components/utility/tool-runner';
 import { Breadcrumbs } from '../../components/navigation/Breadcrumbs';
 import { JsonLd } from '../../components/seo/JsonLd';
@@ -181,141 +181,160 @@ export default async function UtilityPage({ params }: PageProps) {
       {/* Top Navigation Bar */}
       <Navbar />
 
-      {/* Main Content Container */}
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 space-y-8 w-full">
-        {/* Breadcrumbs bar */}
-        <div className="flex items-center justify-between">
-          <Breadcrumbs items={breadcrumbs} />
-        </div>
-
-        {/* Placement 1: HEADER_BANNER */}
-        <AdSlot
+      {/* Canonical Placement #1: HEADER_BANNER (Below Navbar, Above Breadcrumbs) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 w-full">
+        <AdPlacementSlot
           placement="HEADER_BANNER"
           utilitySlug={utility.slug}
           categorySlug={utility.categorySlug}
         />
+      </div>
 
-        {/* Hero & Utility Header */}
-        <section className="space-y-3 text-center sm:text-left bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-            <Link
-              href={`/category/${utility.categorySlug}`}
-              className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 uppercase tracking-wider hover:bg-blue-100 transition-colors"
-            >
-              {utility.categoryName}
-            </Link>
-            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              v{utility.version}
-            </span>
-            {utility.isFeatured && (
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-                ★ Featured
-              </span>
-            )}
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-            {utility.name}
-          </h1>
-          <p className="text-base text-slate-600 max-w-3xl leading-relaxed">
-            {utility.description}
-          </p>
-        </section>
+      {/* Main Content Container with Desktop Sidebar Support */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-16 w-full">
+        {/* Breadcrumbs bar */}
+        <div className="mb-6 flex items-center justify-between">
+          <Breadcrumbs items={breadcrumbs} />
+        </div>
 
-        {/* Placement 2: TOP_CONTENT */}
-        <AdSlot
-          placement="TOP_CONTENT"
-          utilitySlug={utility.slug}
-          categorySlug={utility.categorySlug}
-        />
-
-        {/* Primary Interactive Workspace */}
-        <section className="w-full">
-          <ToolRunner utility={utility} />
-        </section>
-
-        {/* Placement 3: AFTER_TOOL */}
-        <AdSlot
-          placement="AFTER_TOOL"
-          utilitySlug={utility.slug}
-          categorySlug={utility.categorySlug}
-        />
-
-        {/* How-to Guide & Documentation Section */}
-        <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs">
-          <h2 className="text-xl font-bold text-slate-900">How to Use {utility.name}</h2>
-          <div className="text-slate-600 space-y-3 text-sm leading-relaxed">
-            <p>
-              This utility is designed for maximum speed, precision, and privacy. Follow these simple steps:
-            </p>
-            <ol className="list-decimal list-inside space-y-2 text-slate-700 font-medium">
-              <li>Upload your source file or enter text in the workspace above.</li>
-              <li>Configure desired settings (e.g. compression quality, angle, size, or style).</li>
-              <li>Click &ldquo;Run {utility.name}&rdquo; to process instantly.</li>
-              <li>Download your processed file or copy the result directly to your clipboard.</li>
-            </ol>
-            <p className="text-xs text-slate-500 pt-3 border-t border-slate-100">
-              Zero storage retention: Operations process entirely in-browser or inside isolated memory containers with zero disk retention.
-            </p>
-          </div>
-        </section>
-
-        {/* Placement 4: MID_CONTENT */}
-        <AdSlot
-          placement="MID_CONTENT"
-          utilitySlug={utility.slug}
-          categorySlug={utility.categorySlug}
-        />
-
-        {/* Frequently Asked Questions (FAQ) Section */}
-        {hasFaqs && (
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
-            <div className="space-y-3">
-              {utility.faqContent.map((faq, idx) => (
-                <details
-                  key={idx}
-                  className="group bg-white border border-slate-200/80 rounded-2xl p-4 open:shadow-xs transition-all"
+        {/* 2-Column Responsive Layout: Main Content + Desktop Sidebar */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          {/* Main Primary Content Column */}
+          <div className="flex-1 min-w-0 w-full space-y-8">
+            {/* Hero & Utility Header */}
+            <section className="space-y-3 text-center sm:text-left bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <Link
+                  href={`/category/${utility.categorySlug}`}
+                  className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 uppercase tracking-wider hover:bg-blue-100 transition-colors"
                 >
-                  <summary className="font-semibold text-slate-800 text-sm cursor-pointer list-none flex items-center justify-between">
-                    <span>{faq.question}</span>
-                    <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
-                  </summary>
-                  <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                    {faq.answer}
-                  </p>
-                </details>
-              ))}
-            </div>
-          </section>
-        )}
+                  {utility.categoryName}
+                </Link>
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  v{utility.version}
+                </span>
+                {utility.isFeatured && (
+                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                    ★ Featured
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
+                {utility.name}
+              </h1>
+              <p className="text-base text-slate-600 max-w-3xl leading-relaxed">
+                {utility.description}
+              </p>
+            </section>
 
-        {/* Placement 5: BOTTOM_CONTENT */}
-        <AdSlot
-          placement="BOTTOM_CONTENT"
-          utilitySlug={utility.slug}
-          categorySlug={utility.categorySlug}
-        />
+            {/* Canonical Placement #2: TOP_CONTENT (Below Title/Description, Above Tool Workspace) */}
+            <AdPlacementSlot
+              placement="TOP_CONTENT"
+              utilitySlug={utility.slug}
+              categorySlug={utility.categorySlug}
+            />
 
-        {/* Personalized Related Utilities Section */}
-        <PersonalizedRelatedUtilities
-          utilitySlug={utility.slug}
-          categorySlug={utility.categorySlug}
-          categoryName={utility.categoryName}
-          initialRelatedSlugs={utility.relatedSlugs || []}
-        />
+            {/* Primary Interactive Workspace */}
+            <section className="w-full">
+              <ToolRunner utility={utility} />
+            </section>
+
+            {/* Canonical Placement #3: AFTER_TOOL (Immediately below workspace) */}
+            <AdPlacementSlot
+              placement="AFTER_TOOL"
+              utilitySlug={utility.slug}
+              categorySlug={utility.categorySlug}
+            />
+
+            {/* How-to Guide & Documentation Section */}
+            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs">
+              <h2 className="text-xl font-bold text-slate-900">How to Use {utility.name}</h2>
+              <div className="text-slate-600 space-y-3 text-sm leading-relaxed">
+                <p>
+                  This utility is designed for maximum speed, precision, and privacy. Follow these simple steps:
+                </p>
+                <ol className="list-decimal list-inside space-y-2 text-slate-700 font-medium">
+                  <li>Upload your source file or enter text in the workspace above.</li>
+                  <li>Configure desired settings (e.g. compression quality, angle, size, or style).</li>
+                  <li>Click &ldquo;Run {utility.name}&rdquo; to process instantly.</li>
+                  <li>Download your processed file or copy the result directly to your clipboard.</li>
+                </ol>
+                <p className="text-xs text-slate-500 pt-3 border-t border-slate-100">
+                  Zero storage retention: Operations process entirely in-browser or inside isolated memory containers with zero disk retention.
+                </p>
+              </div>
+            </section>
+
+            {/* Canonical Placement #4: MID_CONTENT (Between How-to Guide and FAQ) */}
+            <AdPlacementSlot
+              placement="MID_CONTENT"
+              utilitySlug={utility.slug}
+              categorySlug={utility.categorySlug}
+            />
+
+            {/* Frequently Asked Questions (FAQ) Section */}
+            {hasFaqs && (
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
+                <div className="space-y-3">
+                  {utility.faqContent.map((faq, idx) => (
+                    <details
+                      key={idx}
+                      className="group bg-white border border-slate-200/80 rounded-2xl p-4 open:shadow-xs transition-all"
+                    >
+                      <summary className="font-semibold text-slate-800 text-sm cursor-pointer list-none flex items-center justify-between">
+                        <span>{faq.question}</span>
+                        <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                        {faq.answer}
+                      </p>
+                    </details>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Personalized Related Utilities Section */}
+            <PersonalizedRelatedUtilities
+              utilitySlug={utility.slug}
+              categorySlug={utility.categorySlug}
+              categoryName={utility.categoryName}
+              initialRelatedSlugs={utility.relatedSlugs || []}
+            />
+
+            {/* Canonical Placement #5: BOTTOM_CONTENT (Below Related Utilities, Above Footer) */}
+            <AdPlacementSlot
+              placement="BOTTOM_CONTENT"
+              utilitySlug={utility.slug}
+              categorySlug={utility.categorySlug}
+            />
+          </div>
+
+          {/* Canonical Placement #6: SIDEBAR (Desktop Right Column only) */}
+          <aside className="hidden lg:block w-[300px] shrink-0 sticky top-20 space-y-6">
+            <AdPlacementSlot
+              placement="SIDEBAR"
+              utilitySlug={utility.slug}
+              categorySlug={utility.categorySlug}
+            />
+          </aside>
+        </div>
       </main>
 
-      {/* Floating Sticky Ad Slot (Mobile / Desktop) */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-2">
-        <div className="pointer-events-auto sm:hidden">
-          <AdSlot
-            placement="MOBILE_STICKY"
-            utilitySlug={utility.slug}
-            categorySlug={utility.categorySlug}
-            className="my-0 shadow-2xl"
-          />
-        </div>
-      </div>
+      {/* Canonical Placement #7: MOBILE_STICKY (Mobile fixed bottom overlay) */}
+      <AdPlacementSlot
+        placement="MOBILE_STICKY"
+        utilitySlug={utility.slug}
+        categorySlug={utility.categorySlug}
+      />
+
+      {/* Canonical Placement #8: DESKTOP_STICKY (Desktop floating corner overlay) */}
+      <AdPlacementSlot
+        placement="DESKTOP_STICKY"
+        utilitySlug={utility.slug}
+        categorySlug={utility.categorySlug}
+      />
 
       {/* Footer */}
       <Footer />

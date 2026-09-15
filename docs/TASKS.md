@@ -1,16 +1,11 @@
-# Tasks
-
-## Phase 29 Tasks — User Account Registration & Identity
-- [x] Audit Phase 3 Auth and Phase 26 Billing/Entitlements infrastructure.
-- [x] Exclude all credit models, credit ledgers, and credit fields.
-- [x] Extend `@ad-utility/shared` auth contracts with `RegisterRequestDto`.
-- [x] Create `RegisterDto` with class-validator validation, email normalization, and password length checks.
-- [x] Implement `AuthService.register` with bcrypt hashing (10 rounds), default customer role (`roles: []`), and audit logging.
-- [x] Add `@Public() @Post('register')` endpoint in `AuthController` issuing secure HTTP-only cookies.
-- [x] Build `/signup` page with "Utility Universe" creative visual split layout, real-time client validation, and onboarding success transition.
-- [x] Build `/login` page with accessible password toggles and deferred password recovery guidance.
-- [x] Build `/account` dashboard displaying user identity, plan tier, utility quick launchpad, and direct billing links.
-- [x] Update `Navbar.tsx` with dynamic session detection (initials avatar, account dropdown menu).
-- [x] Write and pass automated test suite `apps/backend/test/auth-registration.spec.ts` (including privilege escalation prevention).
-- [x] Run full platform regression test suites and verify production builds.
-- [x] Generate ADR-029, verification reports, and guides.
+## Phase 30 Tasks — Standardized Ad Placement Inventory
+- [x] Audit existing `AdSelectorService`, `AdDeliveryService`, `AdSlot`, `AdPlacement`, and page layouts.
+- [x] Enforce canonical 8-placement inventory: `HEADER_BANNER`, `TOP_CONTENT`, `AFTER_TOOL`, `MID_CONTENT`, `BOTTOM_CONTENT`, `SIDEBAR`, `MOBILE_STICKY`, `DESKTOP_STICKY`.
+- [x] Implement `AdPlacementSlot` frontend wrapper standardizing responsive visibility, layout reservations, and CSS classes.
+- [x] Standardize Utility Tool Page layout (`apps/frontend/src/app/[slug]/page.tsx`) with 2-column Desktop Sidebar, Mobile Sticky, and Desktop Sticky.
+- [x] Standardize Category Page layout (`apps/frontend/src/app/category/[categorySlug]/page.tsx`).
+- [x] Standardize Homepage layout (`apps/frontend/src/components/home/HomeClient.tsx`).
+- [x] Add Canonical Placement Inventory Device Matrix guide to Admin Ad Manager (`apps/frontend/src/app/admin/ad-manager/page.tsx`).
+- [x] Preserve strict tool-level targeting rules in backend `AdSelectorService` (unassigned tools return `hasAd: false`).
+- [x] Write automated test suite `apps/backend/test/ad-placement-inventory.spec.ts`.
+- [x] Generate ADR-030, verification report, and canonical placement inventory documentation.

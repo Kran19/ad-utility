@@ -29,7 +29,7 @@ import {
   Lock,
   ArrowRight,
 } from 'lucide-react';
-import { AdSlot } from '../ads/ad-slot';
+import { AdPlacementSlot } from '../ads/ad-placement-slot';
 
 interface HomeClientProps {
   categories: CategoryPublicDto[];
@@ -403,8 +403,8 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </div>
       </section>
 
-      {/* Placement 2: MID_CONTENT */}
-      <AdSlot placement="MID_CONTENT" />
+      {/* Canonical Placement #4: MID_CONTENT */}
+      <AdPlacementSlot placement="MID_CONTENT" />
 
       {/* All Online Tools Directory Grouped by Category */}
       <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
@@ -496,8 +496,8 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         )}
       </section>
 
-      {/* Placement 3: BOTTOM_CONTENT */}
-      <AdSlot placement="BOTTOM_CONTENT" />
+      {/* Canonical Placement #5: BOTTOM_CONTENT */}
+      <AdPlacementSlot placement="BOTTOM_CONTENT" />
     </div>
   );
 };

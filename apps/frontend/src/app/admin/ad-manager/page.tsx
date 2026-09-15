@@ -430,6 +430,19 @@ export default function AdminAdManagerPage() {
     }, 100);
   };
 
+  const [showInventoryGuide, setShowInventoryGuide] = useState(false);
+
+  const CANONICAL_PLACEMENTS_REFERENCE = [
+    { code: 'HEADER_BANNER', desktop: true, tablet: true, mobile: true, location: 'Below navbar, above breadcrumbs' },
+    { code: 'TOP_CONTENT', desktop: true, tablet: true, mobile: true, location: 'Below description, above Tool workspace' },
+    { code: 'AFTER_TOOL', desktop: true, tablet: true, mobile: true, location: 'Immediately below primary Tool workspace' },
+    { code: 'MID_CONTENT', desktop: true, tablet: true, mobile: true, location: 'Embedded between How-to Guide and FAQ' },
+    { code: 'BOTTOM_CONTENT', desktop: true, tablet: true, mobile: true, location: 'Below Related Utilities, above Footer' },
+    { code: 'SIDEBAR', desktop: true, tablet: false, mobile: false, location: 'Desktop right-column advertisement' },
+    { code: 'MOBILE_STICKY', desktop: false, tablet: true, mobile: true, location: 'Mobile bottom fixed sticky overlay' },
+    { code: 'DESKTOP_STICKY', desktop: true, tablet: false, mobile: false, location: 'Desktop bottom-right corner sticky ad' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -441,6 +454,12 @@ export default function AdminAdManagerPage() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setShowInventoryGuide(!showInventoryGuide)}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl shadow-md transition-colors flex items-center gap-1.5"
+          >
+            <span>📐</span> {showInventoryGuide ? 'Hide Inventory Matrix' : 'Placement Matrix'}
+          </button>
           <button
             onClick={() => {
               if (!previewUtilitySlug && matrix.length > 0) {
@@ -460,6 +479,42 @@ export default function AdminAdManagerPage() {
           </Link>
         </div>
       </div>
+
+      {/* Canonical Placement Inventory Device Matrix Guide */}
+      {showInventoryGuide && (
+        <div className="bg-slate-900 border border-indigo-500/30 rounded-xl p-5 shadow-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>📐</span> Canonical Ad Placement Inventory (Phase 30)
+            </h3>
+            <span className="text-[11px] text-slate-400 font-mono">Supported Device Compatibility</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800 text-[10px]">
+                <tr>
+                  <th className="px-3 py-2">Placement Code</th>
+                  <th className="px-3 py-2 text-center">Desktop</th>
+                  <th className="px-3 py-2 text-center">Tablet</th>
+                  <th className="px-3 py-2 text-center">Mobile</th>
+                  <th className="px-3 py-2">Physical Location & Semantics</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 font-mono text-[11px]">
+                {CANONICAL_PLACEMENTS_REFERENCE.map((p) => (
+                  <tr key={p.code} className="hover:bg-slate-800/40">
+                    <td className="px-3 py-2 font-bold text-indigo-400">{p.code}</td>
+                    <td className="px-3 py-2 text-center">{p.desktop ? <span className="text-emerald-400 font-bold">✓</span> : <span className="text-slate-600">—</span>}</td>
+                    <td className="px-3 py-2 text-center">{p.tablet ? <span className="text-emerald-400 font-bold">✓</span> : <span className="text-slate-600">—</span>}</td>
+                    <td className="px-3 py-2 text-center">{p.mobile ? <span className="text-emerald-400 font-bold">✓</span> : <span className="text-slate-600">—</span>}</td>
+                    <td className="px-3 py-2 font-sans text-slate-300">{p.location}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Overview Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

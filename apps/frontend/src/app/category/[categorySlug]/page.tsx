@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { ApiEnvelope, CategoryPublicDto } from '@ad-utility/shared';
 import { getSiteOrigin, getInternalApiUrl, siteConfig } from '../../../lib/site-config';
-import { AdSlot } from '../../../components/ads/ad-slot';
+import { AdPlacementSlot } from '../../../components/ads/ad-placement-slot';
 import { Breadcrumbs } from '../../../components/navigation/Breadcrumbs';
 import { JsonLd } from '../../../components/seo/JsonLd';
 import { Navbar } from '../../../components/navigation/Navbar';
@@ -171,13 +171,15 @@ export default async function CategoryPage({ params }: PageProps) {
       {/* Top Navigation */}
       <Navbar />
 
+      {/* Canonical Placement #1: HEADER_BANNER (Below Navbar, Above Breadcrumbs) */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 w-full">
+        <AdPlacementSlot placement="HEADER_BANNER" categorySlug={category.slug} />
+      </div>
+
       {/* Main Content */}
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 space-y-8 w-full">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-16 space-y-8 w-full">
         {/* Breadcrumbs */}
         <Breadcrumbs items={breadcrumbs} />
-
-        {/* Placement 1: HEADER_BANNER */}
-        <AdSlot placement="HEADER_BANNER" categorySlug={category.slug} />
 
         {/* Hero Section */}
         <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-3 shadow-xs">
@@ -193,8 +195,8 @@ export default async function CategoryPage({ params }: PageProps) {
           </p>
         </section>
 
-        {/* Placement 2: TOP_CONTENT */}
-        <AdSlot placement="TOP_CONTENT" categorySlug={category.slug} />
+        {/* Canonical Placement #2: TOP_CONTENT */}
+        <AdPlacementSlot placement="TOP_CONTENT" categorySlug={category.slug} />
 
         {/* Utilities Grid */}
         <section className="space-y-4">
@@ -233,8 +235,13 @@ export default async function CategoryPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Placement 3: BOTTOM_CONTENT */}
-        <AdSlot placement="BOTTOM_CONTENT" categorySlug={category.slug} />
+        {/* Canonical Placement #4: MID_CONTENT (if category has meaningful list of tools) */}
+        {category.utilities.length >= 6 && (
+          <AdPlacementSlot placement="MID_CONTENT" categorySlug={category.slug} />
+        )}
+
+        {/* Canonical Placement #5: BOTTOM_CONTENT */}
+        <AdPlacementSlot placement="BOTTOM_CONTENT" categorySlug={category.slug} />
       </main>
 
       {/* Footer */}
