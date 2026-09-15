@@ -78,13 +78,6 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/?q=${encodeURIComponent(searchQuery.trim())}#tools`);
-    }
-  };
-
   const getCategoryIcon = (slug: string) => {
     switch (slug) {
       case 'image':
