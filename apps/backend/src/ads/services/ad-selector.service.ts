@@ -100,7 +100,23 @@ export class AdSelectorService implements OnModuleInit {
     const currentHourUtc = now.getUTCHours();
 
     try {
-      // 1. Query active targeting rules matching placement & schedule
+      // 1. Resolve categorySlug if utilitySlug is provided but categorySlug was omitted
+      let categorySlug = request.categorySlug?.toLowerCase();
+      if (request.utilitySlug && !categorySlug) {
+        try {
+          const utility = await this.prisma.utility.findUnique({
+            where: { slug: request.utilitySlug.toLowerCase() },
+            include: { category: true },
+          });
+          if (utility?.category?.slug) {
+            categorySlug = utility.category.slug.toLowerCase();
+          }
+        } catch (err: any) {
+          this.logger.warn(`Could not resolve category for utility ${request.utilitySlug}: ${err.message}`);
+        }
+      }
+
+      // 2. Query active targeting rules matching placement & schedule
       const rules = await this.prisma.adTargetingRule.findMany({
         where: {
           isActive: true,
@@ -122,11 +138,11 @@ export class AdSelectorService implements OnModuleInit {
         },
       });
 
-      // 2. Filter rules by schedule, device, geography, and frequency cap
+      // 3. Filter rules by schedule, device, geography, frequency cap, and utility assignment
       const eligibleCandidates: SelectedCandidate[] = [];
 
       for (const rule of rules) {
-        // Step 2. Schedule evaluation
+        // Step 3a. Schedule evaluation
         if (rule.campaign.schedules && rule.campaign.schedules.length > 0) {
           const isScheduleMatch = rule.campaign.schedules.some((s) => {
             if (s.dayOfWeek !== currentDayOfWeek) return false;
@@ -135,21 +151,21 @@ export class AdSelectorService implements OnModuleInit {
           if (!isScheduleMatch) continue;
         }
 
-        // Step 3. Device Match
+        // Step 3b. Device Match
         if (rule.deviceTypes && rule.deviceTypes.length > 0) {
           if (!rule.deviceTypes.includes(device as any)) {
             continue;
           }
         }
 
-        // Step 4. Country / Geographic Match
+        // Step 3c. Country / Geographic Match
         if (rule.countries && rule.countries.length > 0) {
           if (!country || !rule.countries.map((c) => c.toUpperCase()).includes(country.toUpperCase())) {
             continue;
           }
         }
 
-        // Step 5. Frequency Cap check in Redis
+        // Step 3d. Frequency Cap check in Redis
         const isFreqAllowed = await this.redisCache.checkFrequencyCap(
           rule.campaignId,
           sessionId,
@@ -160,25 +176,33 @@ export class AdSelectorService implements OnModuleInit {
           continue;
         }
 
-        // Calculate Tier Specificity
-        const isExactUtility =
+        // Step 3e. Scope & Tier Specificity
+        const isExactUtility = Boolean(
           request.utilitySlug &&
           rule.utilitySlugs &&
-          rule.utilitySlugs.includes(request.utilitySlug.toLowerCase());
+          rule.utilitySlugs.some((s) => s.toLowerCase() === request.utilitySlug?.toLowerCase())
+        );
 
-        const isCategoryMatch =
-          request.categorySlug &&
+        const isCategoryMatch = Boolean(
+          categorySlug &&
           rule.categorySlugs &&
-          rule.categorySlugs.includes(request.categorySlug.toLowerCase());
+          rule.categorySlugs.some((s) => s.toLowerCase() === categorySlug?.toLowerCase())
+        );
 
-        // Filter out non-matching utility-specific rules
-        if (rule.utilitySlugs && rule.utilitySlugs.length > 0 && !isExactUtility) {
-          continue;
-        }
-
-        // Filter out non-matching category-specific rules
-        if (rule.categorySlugs && rule.categorySlugs.length > 0 && !isCategoryMatch && !isExactUtility) {
-          continue;
+        // STRICT TOOL ASSIGNMENT CHECK:
+        // If requesting for a utility tool, ONLY allow rules explicitly assigned to that tool or its category.
+        if (request.utilitySlug) {
+          if (!isExactUtility && !isCategoryMatch) {
+            continue;
+          }
+        } else {
+          // If general / non-utility page, do not serve rules targeted exclusively to specific tools/categories
+          if (rule.utilitySlugs && rule.utilitySlugs.length > 0 && !isExactUtility) {
+            continue;
+          }
+          if (rule.categorySlugs && rule.categorySlugs.length > 0 && !isCategoryMatch) {
+            continue;
+          }
         }
 
         let fallbackTier = 'TIER_3_GLOBAL_PLACEMENT';
@@ -215,30 +239,49 @@ export class AdSelectorService implements OnModuleInit {
         });
       }
 
-      // 3. Evaluate Tier A (Internal Campaign Candidates: Exact Utility > Category > Global Placement)
+      // 4. Evaluate Tier Candidates
       const tier1 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_1_EXACT_UTILITY');
       const tier2 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_2_CATEGORY');
       const tier3 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_3_GLOBAL_PLACEMENT');
       const tier4 = eligibleCandidates.filter((c) => c.fallbackTier === 'TIER_4_GLOBAL_FALLBACK');
 
-      const selectedPool =
-        tier1.length > 0
-          ? tier1
-          : tier2.length > 0
-            ? tier2
-            : tier3.length > 0
-              ? tier3
-              : [];
+      let selectedPool: SelectedCandidate[] = [];
+
+      if (request.utilitySlug) {
+        // STRICT RULE: If the request is for a utility tool, show ads ONLY if assigned in admin panel
+        if (tier1.length > 0) {
+          selectedPool = tier1;
+        } else if (tier2.length > 0) {
+          selectedPool = tier2;
+        } else {
+          // No ad assigned to this tool or category in admin panel -> strictly DO NOT show ad
+          return {
+            hasAd: false,
+            placement: request.placement,
+            fallbackTier: 'TIER_5_NO_AD',
+            sessionId,
+          };
+        }
+      } else {
+        selectedPool =
+          tier1.length > 0
+            ? tier1
+            : tier2.length > 0
+              ? tier2
+              : tier3.length > 0
+                ? tier3
+                : [];
+      }
 
       if (selectedPool.length > 0) {
-        // 4. Priority selection (highest priority first)
+        // 5. Priority selection (highest priority first)
         const highestPriority = Math.max(...selectedPool.map((c) => c.effectivePriority));
         const topPriorityCandidates = selectedPool.filter((c) => c.effectivePriority === highestPriority);
 
-        // 5. Weighted rotation among top priority candidates
+        // 6. Weighted rotation among top priority candidates
         const chosen = this.weightedRandomSelect(topPriorityCandidates);
 
-        // 6. Generate signed tracking token
+        // 7. Generate signed tracking token
         const trackingToken = this.trackingTokenService.generateToken({
           creativeId: chosen.creativeId,
           campaignId: chosen.campaignId,
@@ -270,7 +313,17 @@ export class AdSelectorService implements OnModuleInit {
         };
       }
 
-      // Tier B: External Ad Provider
+      // If utilitySlug is set and no assigned ads exist, immediately return NO_AD
+      if (request.utilitySlug) {
+        return {
+          hasAd: false,
+          placement: request.placement,
+          fallbackTier: 'TIER_5_NO_AD',
+          sessionId,
+        };
+      }
+
+      // Tier B: External Ad Provider (only for general/global requests without utilitySlug)
       // Evaluated only when no internal campaign targeting rules match
       const externalAd = await this.externalAdNetwork.requestAd(request, {
         device,

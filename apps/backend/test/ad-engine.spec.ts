@@ -119,11 +119,21 @@ describe('Phase 5: Ad Engine, Deterministic Targeting, Rotation & Tracking Verif
       expect(response.fallbackTier).toBe('TIER_5_NO_AD');
     });
 
-    it('should match global fallback creative when no exact or category ad exists (Tier 4)', async () => {
+    it('should return clean no-ad (hasAd: false) on tools without explicit assignment', async () => {
       const response = await adDeliveryService.getAdForSlot({
         placement: 'AFTER_TOOL',
         utilitySlug: 'word-counter',
         categorySlug: 'text',
+        device: 'DESKTOP',
+      });
+
+      expect(response.hasAd).toBe(false);
+      expect(response.fallbackTier).toBe('TIER_5_NO_AD');
+    });
+
+    it('should match global fallback creative on general/global pages without utilitySlug (Tier 4)', async () => {
+      const response = await adDeliveryService.getAdForSlot({
+        placement: 'AFTER_TOOL',
         device: 'DESKTOP',
       });
 
