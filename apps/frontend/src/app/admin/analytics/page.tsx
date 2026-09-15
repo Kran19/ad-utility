@@ -47,19 +47,19 @@ export default function AdminAnalyticsPage() {
         adminApiFetch(`/admin/analytics/journey?days=${days}`),
         adminApiFetch(`/admin/analytics/seo?days=${days}`),
         adminApiFetch(`/admin/analytics/personalization?days=${days}`),
-        adminApiFetch('/admin/ads/creatives?pageSize=100').catch(() => ({ success: false })),
-        adminApiFetch('/admin/ads/targeting').catch(() => ({ success: false })),
+        adminApiFetch('/admin/ads/creatives?pageSize=100').catch(() => ({ success: false, data: null })),
+        adminApiFetch('/admin/ads/targeting').catch(() => ({ success: false, data: null })),
       ]);
 
-      if (growthRes.success && growthRes.data) setData(growthRes.data);
-      if (overviewRes.success && overviewRes.data) setOverviewData(overviewRes.data);
-      if (monetizationRes.success && monetizationRes.data) setMonetizationData(monetizationRes.data);
-      if (biRes.success && biRes.data) setBiData(biRes.data);
-      if (journeyRes.success && journeyRes.data) setJourneyData(journeyRes.data);
-      if (seoRes.success && seoRes.data) setSeoData(seoRes.data);
-      if (persRes.success && persRes.data) setPersonalizationData(persRes.data);
-      if (creativesRes.success && creativesRes.data?.items) setCreativeLibrary(creativesRes.data.items);
-      if (targetingRes.success && Array.isArray(targetingRes.data)) setTargetingRulesList(targetingRes.data);
+      if (growthRes && 'data' in growthRes && growthRes.data) setData((growthRes as any).data);
+      if (overviewRes && 'data' in overviewRes && overviewRes.data) setOverviewData((overviewRes as any).data);
+      if (monetizationRes && 'data' in monetizationRes && monetizationRes.data) setMonetizationData((monetizationRes as any).data);
+      if (biRes && 'data' in biRes && biRes.data) setBiData((biRes as any).data);
+      if (journeyRes && 'data' in journeyRes && journeyRes.data) setJourneyData((journeyRes as any).data);
+      if (seoRes && 'data' in seoRes && seoRes.data) setSeoData((seoRes as any).data);
+      if (persRes && 'data' in persRes && persRes.data) setPersonalizationData((persRes as any).data);
+      if (creativesRes && (creativesRes as any).success && (creativesRes as any).data?.items) setCreativeLibrary((creativesRes as any).data.items);
+      if (targetingRes && (targetingRes as any).success && Array.isArray((targetingRes as any).data)) setTargetingRulesList((targetingRes as any).data);
     } catch {}
   };
 
@@ -117,36 +117,36 @@ export default function AdminAnalyticsPage() {
         adminApiFetch(`/admin/analytics/journey?days=${days}`),
         adminApiFetch(`/admin/analytics/seo?days=${days}`),
         adminApiFetch(`/admin/analytics/personalization?days=${days}`),
-        adminApiFetch('/admin/ads/creatives?pageSize=100').catch(() => ({ success: false })),
-        adminApiFetch('/admin/ads/targeting').catch(() => ({ success: false })),
+        adminApiFetch('/admin/ads/creatives?pageSize=100').catch(() => ({ success: false, data: null })),
+        adminApiFetch('/admin/ads/targeting').catch(() => ({ success: false, data: null })),
       ]);
 
-      if (growthRes.success && growthRes.data) {
-        setData(growthRes.data);
+      if (growthRes && 'data' in growthRes && growthRes.data) {
+        setData((growthRes as any).data);
       }
-      if (overviewRes.success && overviewRes.data) {
-        setOverviewData(overviewRes.data);
+      if (overviewRes && 'data' in overviewRes && overviewRes.data) {
+        setOverviewData((overviewRes as any).data);
       }
-      if (monetizationRes.success && monetizationRes.data) {
-        setMonetizationData(monetizationRes.data);
+      if (monetizationRes && 'data' in monetizationRes && monetizationRes.data) {
+        setMonetizationData((monetizationRes as any).data);
       }
-      if (biRes.success && biRes.data) {
-        setBiData(biRes.data);
+      if (biRes && 'data' in biRes && biRes.data) {
+        setBiData((biRes as any).data);
       }
-      if (journeyRes.success && journeyRes.data) {
-        setJourneyData(journeyRes.data);
+      if (journeyRes && 'data' in journeyRes && journeyRes.data) {
+        setJourneyData((journeyRes as any).data);
       }
-      if (seoRes.success && seoRes.data) {
-        setSeoData(seoRes.data);
+      if (seoRes && 'data' in seoRes && seoRes.data) {
+        setSeoData((seoRes as any).data);
       }
-      if (persRes.success && persRes.data) {
-        setPersonalizationData(persRes.data);
+      if (persRes && 'data' in persRes && persRes.data) {
+        setPersonalizationData((persRes as any).data);
       }
-      if (creativesRes.success && creativesRes.data?.items) {
-        setCreativeLibrary(creativesRes.data.items);
+      if (creativesRes && (creativesRes as any).success && (creativesRes as any).data?.items) {
+        setCreativeLibrary((creativesRes as any).data.items);
       }
-      if (targetingRes.success && Array.isArray(targetingRes.data)) {
-        setTargetingRulesList(targetingRes.data);
+      if (targetingRes && (targetingRes as any).success && Array.isArray((targetingRes as any).data)) {
+        setTargetingRulesList((targetingRes as any).data);
       }
       setLoading(false);
     }
