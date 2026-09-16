@@ -1484,9 +1484,19 @@ export default function AdminAdManagerPage() {
                   className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">{placements.length === 0 ? '-- No Placements Available --' : '-- Choose Placement Slot --'}</option>
-                  {placements.map((p) => (
-                    <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
-                  ))}
+                  {placements.map((p) => {
+                    let label = `${p.code} — ${p.name}`;
+                    if (selectedUtility?.slug === 'home') {
+                      if (p.code === 'MID_CONTENT') label = `MID_CONTENT — In-feed Banner (After PDF Tools)`;
+                      if (p.code === 'AFTER_TOOL') label = `AFTER_TOOL — In-feed Banner (After Video Tools)`;
+                      if (p.code === 'HEADER_BANNER') label = `HEADER_BANNER — Header Banner (Top of Page)`;
+                      if (p.code === 'TOP_CONTENT') label = `TOP_CONTENT — Top Content Banner (Below Hero)`;
+                      if (p.code === 'BOTTOM_CONTENT') label = `BOTTOM_CONTENT — Bottom Content Banner (Bottom of Page)`;
+                    }
+                    return (
+                      <option key={p.id} value={p.id}>{label}</option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -1968,11 +1978,19 @@ export default function AdminAdManagerPage() {
                   className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">{placements.length === 0 ? '-- No Placements Available --' : '-- Choose Placement Slot --'}</option>
-                  {placements.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code} — {p.name}
-                    </option>
-                  ))}
+                  {placements.map((p) => {
+                    let label = `${p.code} — ${p.name}`;
+                    if (selectedUtility?.slug === 'home') {
+                      if (p.code === 'MID_CONTENT') label = `MID_CONTENT — In-feed Banner (After PDF Tools)`;
+                      if (p.code === 'AFTER_TOOL') label = `AFTER_TOOL — In-feed Banner (After Video Tools)`;
+                      if (p.code === 'HEADER_BANNER') label = `HEADER_BANNER — Header Banner (Top of Page)`;
+                      if (p.code === 'TOP_CONTENT') label = `TOP_CONTENT — Top Content Banner (Below Hero)`;
+                      if (p.code === 'BOTTOM_CONTENT') label = `BOTTOM_CONTENT — Bottom Content Banner (Bottom of Page)`;
+                    }
+                    return (
+                      <option key={p.id} value={p.id}>{label}</option>
+                    );
+                  })}
                 </select>
               </div>
 

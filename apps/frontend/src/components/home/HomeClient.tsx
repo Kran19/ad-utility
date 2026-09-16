@@ -239,6 +239,9 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
 
   return (
     <div className="w-full">
+      {/* Canonical Placement: HEADER_BANNER */}
+      <AdPlacementSlot placement="HEADER_BANNER" utilitySlug="home" />
+
       {/* Placement 1: TOP_CONTENT */}
       <AdPlacementSlot placement="TOP_CONTENT" utilitySlug="home" />
 
@@ -391,9 +394,6 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
         </div>
       </section>
 
-      {/* Canonical Placement #4: MID_CONTENT */}
-      <AdPlacementSlot placement="MID_CONTENT" />
-
       {/* All Online Tools Directory Grouped by Category */}
       <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
         <div className="border-b border-slate-200 pb-4">
@@ -422,63 +422,79 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
           filteredCategories.map((cat) => {
             const meta = getCategoryMeta(cat.slug);
             return (
-              <div key={cat.slug} className="space-y-4">
-                {/* Category Header Bar */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-xl ${meta.bg} ${meta.border} border flex items-center justify-center shrink-0 shadow-2xs`}>
-                      {meta.badgeIcon}
+              <React.Fragment key={cat.slug}>
+                <div className="space-y-4">
+                  {/* Category Header Bar */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-xl ${meta.bg} ${meta.border} border flex items-center justify-center shrink-0 shadow-2xs`}>
+                        {meta.badgeIcon}
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>{cat.name}</span>
+                        <span className="text-xs font-normal text-slate-500">({cat.utilities.length})</span>
+                      </h3>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
-                      <span>{cat.name}</span>
-                      <span className="text-xs font-normal text-slate-500">({cat.utilities.length})</span>
-                    </h3>
+                    <Link
+                      href={`/category/${cat.slug}`}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 btn-interactive"
+                    >
+                      <span>View All</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
-                  <Link
-                    href={`/category/${cat.slug}`}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 btn-interactive"
-                  >
-                    <span>View All</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
 
-                {/* 3-column Grid of Individual Tool Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {cat.utilities.map((util) => {
-                    const toolIconMeta = getToolIcon(util.slug);
-                    return (
-                      <Link
-                        key={util.slug}
-                        href={`/${util.slug}`}
-                        className="tool-card group p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:bg-gradient-to-br hover:from-white hover:to-blue-50/20 flex items-start gap-3.5"
-                      >
-                        {/* Tool Icon Box */}
-                        <div className={`w-10 h-10 rounded-xl ${toolIconMeta.bg} border flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-2xs`}>
-                          {toolIconMeta.icon}
-                        </div>
-
-                        {/* Content */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                              {util.name}
-                            </h4>
-                            {util.isFeatured && (
-                              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded-full shrink-0 shadow-2xs">
-                                ★ Featured
-                              </span>
-                            )}
+                  {/* 3-column Grid of Individual Tool Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {cat.utilities.map((util) => {
+                      const toolIconMeta = getToolIcon(util.slug);
+                      return (
+                        <Link
+                          key={util.slug}
+                          href={`/${util.slug}`}
+                          className="tool-card group p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:bg-gradient-to-br hover:from-white hover:to-blue-50/20 flex items-start gap-3.5"
+                        >
+                          {/* Tool Icon Box */}
+                          <div className={`w-10 h-10 rounded-xl ${toolIconMeta.bg} border flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-2xs`}>
+                            {toolIconMeta.icon}
                           </div>
-                          <p className="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5 group-hover:text-slate-600 transition-colors">
-                            {util.description}
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
+
+                          {/* Content */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                                {util.name}
+                              </h4>
+                              {util.isFeatured && (
+                                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded-full shrink-0 shadow-2xs">
+                                  ★ Featured
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 leading-snug line-clamp-2 mt-0.5 group-hover:text-slate-600 transition-colors">
+                              {util.description}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+
+                {/* In-feed Ad after PDF Tools (MID_CONTENT) */}
+                {cat.slug === 'pdf' && (
+                  <div className="my-6">
+                    <AdPlacementSlot placement="MID_CONTENT" utilitySlug="home" />
+                  </div>
+                )}
+
+                {/* In-feed Ad after Video Tools (AFTER_TOOL) */}
+                {cat.slug === 'video' && (
+                  <div className="my-6">
+                    <AdPlacementSlot placement="AFTER_TOOL" utilitySlug="home" />
+                  </div>
+                )}
+              </React.Fragment>
             );
           })
         )}
@@ -486,6 +502,10 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
 
       {/* Canonical Placement #5: BOTTOM_CONTENT */}
       <AdPlacementSlot placement="BOTTOM_CONTENT" utilitySlug="home" />
+
+      {/* Floating Sticky Overlays (Active only if targeted in Admin) */}
+      <AdPlacementSlot placement="MOBILE_STICKY" utilitySlug="home" />
+      <AdPlacementSlot placement="DESKTOP_STICKY" utilitySlug="home" />
     </div>
   );
 };
