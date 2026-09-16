@@ -277,7 +277,6 @@ export function UserAuthProvider({ children }: { children: React.ReactNode }) {
   const requireAuth = useCallback(
     (actionCallback?: () => void, message?: string): boolean => {
       if (user) {
-        if (actionCallback) actionCallback();
         return true;
       }
 
