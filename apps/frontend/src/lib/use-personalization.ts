@@ -81,16 +81,18 @@ export interface UsePersonalizationOptions {
   currentStepCompleted?: boolean;
 }
 
-/**
- * Non-blocking progressive enhancement hook for personalization.
- * Instantly returns default fallback to prevent any render delays.
- */
 export function usePersonalization(
   surface: PersonalizationSurface,
   options?: UsePersonalizationOptions,
 ): PersonalizationDecisionDto {
   const defaultVal = DEFAULT_DECISIONS[surface] || DEFAULT_DECISIONS.HERO_CTA;
   const [decision, setDecision] = useState<PersonalizationDecisionDto>(defaultVal);
+
+  const utilitySlug = options?.utilitySlug;
+  const categorySlug = options?.categorySlug;
+  const sessionDepth = options?.sessionDepth;
+  const currentStep = options?.currentStep;
+  const currentStepCompleted = options?.currentStepCompleted;
 
   useEffect(() => {
     let isMounted = true;
@@ -105,11 +107,11 @@ export function usePersonalization(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             surface,
-            utilitySlug: options?.utilitySlug,
-            categorySlug: options?.categorySlug,
-            sessionDepth: options?.sessionDepth || 1,
-            currentStep: options?.currentStep || 'LANDING',
-            currentStepCompleted: options?.currentStepCompleted || false,
+            utilitySlug,
+            categorySlug,
+            sessionDepth: sessionDepth || 1,
+            currentStep: currentStep || 'LANDING',
+            currentStepCompleted: currentStepCompleted || false,
             sessionToken,
           }),
         });
@@ -117,7 +119,15 @@ export function usePersonalization(
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data && isMounted) {
-            setDecision(json.data);
+            setDecision((prev) => {
+              if (
+                prev.variantId === json.data.variantId &&
+                JSON.stringify(prev.payload) === JSON.stringify(json.data.payload)
+              ) {
+                return prev;
+              }
+              return json.data;
+            });
           }
         }
       } catch {
@@ -132,11 +142,11 @@ export function usePersonalization(
     };
   }, [
     surface,
-    options?.utilitySlug,
-    options?.categorySlug,
-    options?.sessionDepth,
-    options?.currentStep,
-    options?.currentStepCompleted,
+    utilitySlug,
+    categorySlug,
+    sessionDepth,
+    currentStep,
+    currentStepCompleted,
   ]);
 
   return decision;

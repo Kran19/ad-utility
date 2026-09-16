@@ -75,6 +75,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
   const handleImageLoaded = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const nw = e.currentTarget.naturalWidth || 800;
     const nh = e.currentTarget.naturalHeight || 600;
+    if (naturalDimensions.width === nw && naturalDimensions.height === nh) return;
     setNaturalDimensions({ width: nw, height: nh });
 
     // Auto-initialize crop to full image

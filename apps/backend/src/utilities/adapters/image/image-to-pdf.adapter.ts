@@ -6,6 +6,7 @@ import {
   ImageToPdfOutput,
 } from '@ad-utility/shared';
 import { PDFDocument, PageSizes } from 'pdf-lib';
+import { PNG } from 'pngjs';
 import {
   parseBase64Payload,
   bufferToDataUrl,
@@ -84,7 +85,13 @@ export class ImageToPdfAdapter implements UtilityAdapter<ImageToPdfInput, ImageT
       if (img.format === 'image/jpeg') {
         embeddedImage = await pdfDoc.embedJpg(img.buffer);
       } else if (img.format === 'image/png') {
-        embeddedImage = await pdfDoc.embedPng(img.buffer);
+        try {
+          embeddedImage = await pdfDoc.embedPng(img.buffer);
+        } catch {
+          const parsed = PNG.sync.read(img.buffer);
+          const normalizedBuffer = PNG.sync.write(parsed);
+          embeddedImage = await pdfDoc.embedPng(normalizedBuffer);
+        }
       } else {
         throw new Error(`Unsupported image format for PDF embedding: ${img.format}`);
       }
