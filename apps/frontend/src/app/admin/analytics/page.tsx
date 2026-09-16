@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { adminApiFetch } from '../../../lib/admin-api';
+import { normalizeMediaUrl } from '../../../lib/site-config';
 
 type TabKey = 'personalization' | 'bi' | 'journey' | 'seo' | 'funnel' | 'acquisition' | 'utilities' | 'monetization' | 'experiments' | 'telemetry';
 
@@ -2107,6 +2108,7 @@ export default function AdminAnalyticsPage() {
 
                   return {
                     ...item,
+                    mediaUrl: normalizeMediaUrl(item.mediaUrl) || item.mediaUrl,
                     clicks,
                     impressions,
                     ctr,
@@ -2414,7 +2416,7 @@ export default function AdminAnalyticsPage() {
                                         type="button"
                                         onClick={() =>
                                           setPreviewModalImage({
-                                            url: item.mediaUrl,
+                                            url: normalizeMediaUrl(item.mediaUrl) || item.mediaUrl,
                                             title: item.creativeName,
                                             targetUrl: item.targetUrl,
                                             creativeId: item.creativeId,
@@ -2426,12 +2428,19 @@ export default function AdminAnalyticsPage() {
                                         title="Click to zoom image banner"
                                       >
                                         <img
-                                          src={item.mediaUrl}
+                                          src={normalizeMediaUrl(item.mediaUrl) || item.mediaUrl}
                                           alt={item.creativeName || 'Ad Banner'}
                                           className="h-12 w-28 object-cover rounded transition-transform group-hover:scale-105"
                                           onError={(e) => {
-                                            (e.currentTarget as HTMLImageElement).onerror = null;
-                                            (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="50" viewBox="0 0 120 50"><rect width="120" height="50" fill="%230f172a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2364748b" font-size="10" font-family="sans-serif">Custom Creative</text></svg>';
+                                            const current = (e.currentTarget as HTMLImageElement).src;
+                                            if (current.includes('/utility/')) {
+                                              (e.currentTarget as HTMLImageElement).src = current.replace('/utility/', '/');
+                                            } else if (current.includes('/media/')) {
+                                              (e.currentTarget as HTMLImageElement).src = `/utility${current.substring(current.indexOf('/media/'))}`;
+                                            } else {
+                                              (e.currentTarget as HTMLImageElement).onerror = null;
+                                              (e.currentTarget as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="50" viewBox="0 0 120 50"><rect width="120" height="50" fill="%230f172a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2338bdf8" font-size="10" font-family="sans-serif">Banner Image</text></svg>';
+                                            }
                                           }}
                                         />
                                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
@@ -2792,9 +2801,17 @@ export default function AdminAnalyticsPage() {
 
             <div className="flex items-center justify-center bg-slate-950/80 rounded-xl p-4 min-h-[220px] max-h-[70vh] overflow-hidden border border-slate-800">
               <img
-                src={previewModalImage.url}
+                src={normalizeMediaUrl(previewModalImage.url) || previewModalImage.url}
                 alt={previewModalImage.title || 'Creative Preview'}
                 className="max-h-[65vh] max-w-full object-contain rounded-lg shadow-lg"
+                onError={(e) => {
+                  const current = (e.currentTarget as HTMLImageElement).src;
+                  if (current.includes('/utility/')) {
+                    (e.currentTarget as HTMLImageElement).src = current.replace('/utility/', '/');
+                  } else if (current.includes('/media/')) {
+                    (e.currentTarget as HTMLImageElement).src = `/utility${current.substring(current.indexOf('/media/'))}`;
+                  }
+                }}
               />
             </div>
 
