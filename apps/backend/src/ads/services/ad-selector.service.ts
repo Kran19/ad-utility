@@ -189,9 +189,16 @@ export class AdSelectorService implements OnModuleInit {
           rule.categorySlugs.some((s) => s.toLowerCase() === categorySlug?.toLowerCase())
         );
 
+        const isHomeRequest = request.utilitySlug?.toLowerCase() === 'home';
+        const isGlobalRule = (!rule.utilitySlugs || rule.utilitySlugs.length === 0) &&
+          (!rule.categorySlugs || rule.categorySlugs.length === 0);
+
         // STRICT TOOL ASSIGNMENT CHECK:
-        // If requesting for a utility tool, ONLY allow rules explicitly assigned to that tool or its category.
-        if (request.utilitySlug) {
+        if (isHomeRequest) {
+          if (!isExactUtility && !isGlobalRule) {
+            continue;
+          }
+        } else if (request.utilitySlug) {
           if (!isExactUtility && !isCategoryMatch) {
             continue;
           }
@@ -210,6 +217,8 @@ export class AdSelectorService implements OnModuleInit {
           fallbackTier = 'TIER_1_EXACT_UTILITY';
         } else if (isCategoryMatch) {
           fallbackTier = 'TIER_2_CATEGORY';
+        } else if (isHomeRequest && isGlobalRule) {
+          fallbackTier = 'TIER_1_EXACT_UTILITY';
         } else if (rule.creative.isGlobalFallback) {
           fallbackTier = 'TIER_4_GLOBAL_FALLBACK';
         }
@@ -248,11 +257,15 @@ export class AdSelectorService implements OnModuleInit {
       let selectedPool: SelectedCandidate[] = [];
 
       if (request.utilitySlug) {
-        // STRICT RULE: If the request is for a utility tool, show ads ONLY if assigned in admin panel
+        // If request is for a utility tool or home page
         if (tier1.length > 0) {
           selectedPool = tier1;
         } else if (tier2.length > 0) {
           selectedPool = tier2;
+        } else if (request.utilitySlug.toLowerCase() === 'home' && tier3.length > 0) {
+          selectedPool = tier3;
+        } else if (request.utilitySlug.toLowerCase() === 'home' && tier4.length > 0) {
+          selectedPool = tier4;
         } else {
           // No ad assigned to this tool or category in admin panel -> strictly DO NOT show ad
           return {

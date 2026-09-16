@@ -426,7 +426,16 @@ export class AdminAdsService {
     const where: Prisma.AdTargetingRuleWhereInput = {};
     if (query.campaignId) where.campaignId = query.campaignId;
     if (query.placementId) where.placementId = query.placementId;
-    if (query.utilitySlug) where.utilitySlugs = { has: query.utilitySlug.toLowerCase() };
+    if (query.utilitySlug) {
+      if (query.utilitySlug.toLowerCase() === 'home') {
+        where.OR = [
+          { utilitySlugs: { has: 'home' } },
+          { utilitySlugs: { isEmpty: true }, categorySlugs: { isEmpty: true } },
+        ];
+      } else {
+        where.utilitySlugs = { has: query.utilitySlug.toLowerCase() };
+      }
+    }
     if (query.deviceType) where.deviceTypes = { has: query.deviceType as any };
     if (query.isActive !== undefined) where.isActive = query.isActive;
 
@@ -644,28 +653,82 @@ export class AdminAdsService {
       };
     });
 
+    // Dedicated Home Page / Global Website entry
+    const isSearchMatchHome =
+      !query.search ||
+      'home page'.includes(query.search.toLowerCase()) ||
+      'homepage'.includes(query.search.toLowerCase()) ||
+      'home'.includes(query.search.toLowerCase()) ||
+      'global'.includes(query.search.toLowerCase());
+
+    const isCategoryMatchHome = !query.categoryId;
+
+    const homeRules = rules.filter((r) => {
+      const hasExactHome = r.utilitySlugs && r.utilitySlugs.map((s) => s.toLowerCase()).includes('home');
+      const isGlobalPlacement =
+        (!r.utilitySlugs || r.utilitySlugs.length === 0) &&
+        (!r.categorySlugs || r.categorySlugs.length === 0);
+      return hasExactHome || isGlobalPlacement;
+    });
+
+    const homeDesktopRules = homeRules.filter(
+      (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('DESKTOP'),
+    );
+    const homeTabletRules = homeRules.filter(
+      (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('TABLET'),
+    );
+    const homeMobileRules = homeRules.filter(
+      (r) => r.deviceTypes.length === 0 || r.deviceTypes.includes('MOBILE'),
+    );
+
+    const homeItem =
+      isSearchMatchHome && isCategoryMatchHome
+        ? {
+            id: 'homepage-entry',
+            slug: 'home',
+            name: '🏠 Home Page (Website Homepage)',
+            category: { id: 'global-home', name: 'Homepage / Global', slug: 'home' },
+            status: 'ACTIVE',
+            desktop: homeDesktopRules.length,
+            tablet: homeTabletRules.length,
+            mobile: homeMobileRules.length,
+            total: homeRules.length,
+            activeAssignments: homeRules.filter((r) => r.isActive).length,
+          }
+        : null;
+
+    const fullMatrix = [...(homeItem ? [homeItem] : []), ...matrix];
+
     return {
       items: query.device
-        ? matrix.filter((item) => (item as any)[query.device!.toLowerCase()] > 0)
-        : matrix,
-      total: utilities.length,
+        ? fullMatrix.filter((item) => (item as any)[query.device!.toLowerCase()] > 0)
+        : fullMatrix,
+      total: fullMatrix.length,
     };
   }
 
   async previewAd(dto: AdminAdPreviewRequestDto) {
-    const utility = await this.prisma.utility.findUnique({
-      where: { slug: dto.utilitySlug.toLowerCase() },
-      include: { category: true },
-    });
-    if (!utility) {
-      throw new NotFoundException(`Utility with slug "${dto.utilitySlug}" not found`);
+    let utilitySlug = dto.utilitySlug.toLowerCase();
+    let utilityName = 'Home Page';
+    let categoryName: string | undefined = 'Homepage / Global';
+
+    if (utilitySlug !== 'home') {
+      const utility = await this.prisma.utility.findUnique({
+        where: { slug: dto.utilitySlug.toLowerCase() },
+        include: { category: true },
+      });
+      if (!utility) {
+        throw new NotFoundException(`Utility with slug "${dto.utilitySlug}" not found`);
+      }
+      utilityName = utility.name;
+      categoryName = utility.category?.name;
     }
 
     const selectionResult = await this.adSelectorService.selectAd(
       {
         placement: dto.placement as any,
-        utilitySlug: utility.slug,
-        categorySlug: utility.category?.slug,
+        utilitySlug,
+        categorySlug: undefined,
       },
       dto.device as any,
       dto.country,
@@ -676,12 +739,12 @@ export class AdminAdsService {
       TIER_1_EXACT_UTILITY: {
         code: 'EXACT_UTILITY',
         label: 'Exact Utility Match',
-        description: `Direct match: An active campaign rule is targeted specifically to "${utility.name}".`,
+        description: `Direct match: An active campaign rule is targeted specifically to "${utilityName}".`,
       },
       TIER_2_CATEGORY: {
         code: 'CATEGORY',
         label: 'Category Match',
-        description: `Category fallback: No exact rule found for "${utility.slug}". Selected rule targeted to category "${utility.category?.name}".`,
+        description: `Category fallback: No exact rule found for "${utilitySlug}". Selected rule targeted to category "${categoryName || 'General'}".`,
       },
       TIER_3_GLOBAL_PLACEMENT: {
         code: 'GLOBAL_PLACEMENT',
@@ -728,7 +791,7 @@ export class AdminAdsService {
       selectionTier: selectionResult.fallbackTier,
       placement: selectionResult.placement,
       selectedAd,
-      utility: { slug: utility.slug, name: utility.name, category: utility.category?.name },
+      utility: { slug: utilitySlug, name: utilityName, category: categoryName },
       device: dto.device,
     };
   }

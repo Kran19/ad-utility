@@ -240,7 +240,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
   return (
     <div className="w-full">
       {/* Placement 1: TOP_CONTENT */}
-      <AdPlacementSlot placement="TOP_CONTENT" />
+      <AdPlacementSlot placement="TOP_CONTENT" utilitySlug="home" />
 
       {/* Hero Section */}
       <section className="relative pt-6 sm:pt-10 pb-8 sm:pb-16 text-center max-w-4xl mx-auto px-4">
@@ -485,7 +485,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
       </section>
 
       {/* Canonical Placement #5: BOTTOM_CONTENT */}
-      <AdPlacementSlot placement="BOTTOM_CONTENT" />
+      <AdPlacementSlot placement="BOTTOM_CONTENT" utilitySlug="home" />
     </div>
   );
 };
