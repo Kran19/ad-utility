@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { adminApiFetch } from '../../../lib/admin-api';
 import { useResizableColumns, ResizableTh } from '../../../components/admin/ResizableTable';
+import { normalizeMediaUrl } from '../../../lib/site-config';
 
 interface GalleryItem {
   id: string;
@@ -68,9 +69,12 @@ export default function AdminGalleryPage() {
     try {
       const res = await adminApiFetch('/admin/ads/creatives?type=IMAGE&pageSize=100');
       if (res.success && res.data?.items) {
-        const imageItems: GalleryItem[] = res.data.items.filter(
-          (i: any) => i.type === 'IMAGE' && i.mediaUrl
-        );
+        const imageItems: GalleryItem[] = res.data.items
+          .filter((i: any) => i.type === 'IMAGE' && i.mediaUrl)
+          .map((i: any) => ({
+            ...i,
+            mediaUrl: normalizeMediaUrl(i.mediaUrl) || i.mediaUrl,
+          }));
         setItems(imageItems);
       }
     } catch {

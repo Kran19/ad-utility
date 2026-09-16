@@ -22,26 +22,31 @@ export const FALLBACK_BANNER_IMAGE = 'https://images.unsplash.com/photo-16180051
 
 export function sanitizeMediaUrl(url?: string | null): string | undefined {
   if (!url) return undefined;
+  if (url.startsWith('data:image/')) return url;
+
   const filename = url.split('/').pop() || '';
-  const lower = filename.toLowerCase();
+  const lower = (filename + ' ' + url).toLowerCase();
 
   if (lower.includes('aviator') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/aviator-top.jpg';
   if (lower.includes('aviator') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/aviator-mid.jpg';
-  if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/aviator-side.jpg';
+  if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('300 600') || lower.includes('side'))) return '/media/promos/aviator-side.jpg';
   if (lower.includes('aviator') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/aviator-badge.jpg';
   if (lower.includes('aviator') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/aviator-tall.jpg';
+  if (lower.includes('aviator')) return '/media/promos/aviator-top.jpg';
 
   if (lower.includes('jetx') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/jetx-top.jpg';
   if (lower.includes('jetx') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/jetx-mid.jpg';
-  if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/jetx-side.jpg';
+  if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('300 600') || lower.includes('side'))) return '/media/promos/jetx-side.jpg';
   if (lower.includes('jetx') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/jetx-badge.jpg';
   if (lower.includes('jetx') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/jetx-tall.jpg';
+  if (lower.includes('jetx')) return '/media/promos/jetx-top.jpg';
 
   if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('728') || lower.includes('top'))) return '/media/promos/roulette-top.jpg';
   if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/roulette-mid.jpg';
-  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/roulette-side.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('300 600') || lower.includes('side'))) return '/media/promos/roulette-side.jpg';
   if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/roulette-badge.jpg';
   if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/roulette-tall.jpg';
+  if (lower.includes('roulette') || lower.includes('roullet')) return '/media/promos/roulette-top.jpg';
 
   return url;
 }

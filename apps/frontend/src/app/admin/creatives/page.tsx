@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { adminApiFetch } from '../../../lib/admin-api';
 import { PhotoGalleryModal, GalleryPhoto } from '../../../components/admin/PhotoGalleryModal';
+import { normalizeMediaUrl } from '../../../lib/site-config';
 
 const BANNER_SIZES = {
   horizontal: {
@@ -49,7 +50,7 @@ export default function AdminCreativesPage() {
 
     setNewCreative((prev) => ({
       ...prev,
-      mediaUrl: photo.mediaUrl,
+      mediaUrl: normalizeMediaUrl(photo.mediaUrl) || photo.mediaUrl,
       name: prev.name || photo.name,
       altText: prev.altText || photo.altText || photo.name,
       targetUrl: prev.targetUrl || photo.targetUrl || 'https://rocky11.club/?refercode=SEO',
@@ -109,7 +110,11 @@ export default function AdminCreativesPage() {
 
     const res = await adminApiFetch(path);
     if (res.success && res.data) {
-      setCreatives(res.data.items || []);
+      const items = (res.data.items || []).map((i: any) => ({
+        ...i,
+        mediaUrl: normalizeMediaUrl(i.mediaUrl) || i.mediaUrl,
+      }));
+      setCreatives(items);
     }
     setLoading(false);
   };

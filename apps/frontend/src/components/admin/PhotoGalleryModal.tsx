@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { adminApiFetch } from '../../lib/admin-api';
+import { normalizeMediaUrl } from '../../lib/site-config';
 
 export interface GalleryPhoto {
   id: string;
@@ -51,7 +52,7 @@ export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({
             id: item.id,
             name: item.name || 'Untitled Image',
             type: item.type,
-            mediaUrl: item.mediaUrl,
+            mediaUrl: normalizeMediaUrl(item.mediaUrl) || item.mediaUrl,
             targetUrl: item.targetUrl,
             width: item.width,
             height: item.height,

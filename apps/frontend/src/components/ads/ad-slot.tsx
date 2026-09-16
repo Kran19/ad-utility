@@ -8,7 +8,7 @@ import {
   DeviceType,
   ApiEnvelope,
 } from '@ad-utility/shared';
-import { getClientApiUrl } from '../../lib/site-config';
+import { getClientApiUrl, normalizeMediaUrl, getBasePath } from '../../lib/site-config';
 
 interface AdSlotProps {
   placement: AdPlacement;
@@ -16,46 +16,6 @@ interface AdSlotProps {
   categorySlug?: string;
   className?: string;
 }
-
-const getBasePath = (): string => {
-  if (typeof window !== 'undefined') {
-    if (window.location.pathname.startsWith('/utility')) return '/utility';
-  }
-  return (process.env.NEXT_PUBLIC_BASE_PATH || '').replace(/\/+$/, '');
-};
-
-const normalizeMediaUrl = (url?: string): string | undefined => {
-  if (!url) return undefined;
-  const filename = url.split('/').pop() || '';
-  const lower = filename.toLowerCase();
-  const bp = getBasePath();
-
-  let promoPath = '';
-  if (lower.includes('aviator') && (lower.includes('728') || lower.includes('top'))) promoPath = '/media/promos/aviator-top.jpg';
-  else if (lower.includes('aviator') && (lower.includes('250') || lower.includes('mid'))) promoPath = '/media/promos/aviator-mid.jpg';
-  else if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) promoPath = '/media/promos/aviator-side.jpg';
-  else if (lower.includes('aviator') && (lower.includes('125') || lower.includes('badge'))) promoPath = '/media/promos/aviator-badge.jpg';
-  else if (lower.includes('aviator') && (lower.includes('160') || lower.includes('tall'))) promoPath = '/media/promos/aviator-tall.jpg';
-
-  else if (lower.includes('jetx') && (lower.includes('728') || lower.includes('top'))) promoPath = '/media/promos/jetx-top.jpg';
-  else if (lower.includes('jetx') && (lower.includes('250') || lower.includes('mid'))) promoPath = '/media/promos/jetx-mid.jpg';
-  else if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) promoPath = '/media/promos/jetx-side.jpg';
-  else if (lower.includes('jetx') && (lower.includes('125') || lower.includes('badge'))) promoPath = '/media/promos/jetx-badge.jpg';
-  else if (lower.includes('jetx') && (lower.includes('160') || lower.includes('tall'))) promoPath = '/media/promos/jetx-tall.jpg';
-
-  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('728') || lower.includes('top'))) promoPath = '/media/promos/roulette-top.jpg';
-  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('250') || lower.includes('mid'))) promoPath = '/media/promos/roulette-mid.jpg';
-  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) promoPath = '/media/promos/roulette-side.jpg';
-  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('125') || lower.includes('badge'))) promoPath = '/media/promos/roulette-badge.jpg';
-  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('160') || lower.includes('tall'))) promoPath = '/media/promos/roulette-tall.jpg';
-  else {
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    if (url.startsWith('/')) return `${bp}${url}`;
-    return `${bp}/${url}`;
-  }
-
-  return `${bp}${promoPath}`;
-};
 
 const PLACEMENT_CONFIG: Record<AdPlacement, { label: string; minHeight: string; maxWidth?: string }> = {
   HEADER_BANNER: { label: 'Header Banner', minHeight: 'min-h-[50px] sm:min-h-[90px]', maxWidth: 'max-w-[728px]' },
