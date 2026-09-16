@@ -60,6 +60,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./apps/backend/prisma:/app/apps/backend/prisma
+      - ./apps/backend/img:/app/apps/backend/img
     networks:
       - internal_prod_net
 
