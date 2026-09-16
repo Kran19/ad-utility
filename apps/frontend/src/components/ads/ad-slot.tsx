@@ -212,10 +212,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
       ref={slotRef}
       data-ad-placement={placement}
       data-creative-id={adCreative.creativeId}
-      style={{
-        maxWidth: adCreative.width ? `${adCreative.width}px` : undefined,
-      }}
-      className={`w-full mx-auto my-4 relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-xs ${!adCreative.width ? config.maxWidth : ''} ${className}`}
+      className={`w-full mx-auto my-4 relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-xs ${config.maxWidth || 'max-w-full'} ${className}`}
     >
       <div className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-wider text-white/95 bg-slate-950/75 backdrop-blur-xs px-2 py-0.5 rounded font-mono font-semibold pointer-events-none shadow-sm">
         Ad
@@ -227,15 +224,12 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           onClick={handleAdClick}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center w-full transition-opacity hover:opacity-95"
+          className="block w-full transition-opacity hover:opacity-95"
         >
           <img
             src={adCreative.mediaUrl}
             alt={adCreative.altText || 'Advertisement'}
-            style={{
-              maxHeight: adCreative.height ? `${adCreative.height}px` : undefined,
-            }}
-            className="w-full h-auto object-contain block rounded-2xl"
+            className="w-full h-auto block rounded-2xl"
             loading="lazy"
           />
         </a>
