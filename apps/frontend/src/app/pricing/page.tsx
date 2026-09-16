@@ -110,8 +110,43 @@ function PricingContent() {
     <div className="min-h-screen bg-[#FAFBFD] text-slate-900 font-sans flex flex-col">
       <Navbar />
 
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-16 sm:py-24 text-center space-y-6 flex flex-col items-center justify-center">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs">
+          <span>✨</span>
+          <span>100% FREE ACCESS</span>
+        </div>
+        
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
+          All Tools Are Completely Free
+        </h1>
+        
+        <p className="text-sm sm:text-base text-slate-600 max-w-lg mx-auto leading-relaxed">
+          Every web utility on our platform is 100% free to use with zero subscriptions, hidden fees, or mandatory sign-ups.
+        </p>
+
+        <div className="pt-2">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <span>Explore Free Utilities</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+
+  /* =========================================================================
+     PRICING PAGE FULL CODE (COMMENTED OUT FOR FUTURE USE)
+     =========================================================================
+  return (
+    <div className="min-h-screen bg-[#FAFBFD] text-slate-900 font-sans flex flex-col">
+      <Navbar />
+
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-12 sm:py-16">
-        {/* Notice Banner */}
         {notice && (
           <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex items-start gap-3 shadow-xs">
             <span className="text-xl">⏳</span>
@@ -122,7 +157,6 @@ function PricingContent() {
           </div>
         )}
 
-        {/* Hero Section */}
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 animate-fade-in-up">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 mb-4 shadow-xs hover:scale-105 transition-transform cursor-default">
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
@@ -137,14 +171,12 @@ function PricingContent() {
           </p>
         </div>
 
-        {/* Pricing Cards */}
         {loading ? (
           <div className="flex justify-center py-16 animate-fade-in">
             <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch animate-fade-in-up animate-delay-100">
-            {/* Free Plan Card */}
             <div className="tool-card rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-slate-300 transition-all">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -195,7 +227,6 @@ function PricingContent() {
               </button>
             </div>
 
-            {/* Premium Plan Card */}
             <div className="tool-card rounded-3xl bg-gradient-to-b from-blue-50/60 via-white to-white border-2 border-blue-600 p-6 sm:p-8 flex flex-col justify-between shadow-lg shadow-blue-500/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all relative">
               <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-600 text-white shadow-md shadow-blue-500/30 flex items-center gap-1 animate-pulse">
                 <Star className="w-3 h-3 fill-current" />
@@ -306,6 +337,7 @@ function PricingContent() {
       <Footer />
     </div>
   );
+  ========================================================================= */
 }
 
 export default function PricingPage() {

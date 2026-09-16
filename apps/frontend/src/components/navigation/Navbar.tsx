@@ -221,12 +221,14 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
             </div>
 
 
+            {/* Pricing Link (Commented out)
             <Link
               href="/pricing"
               className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 transition-colors"
             >
               Pricing
             </Link>
+            */}
           </nav>
         </div>
 
@@ -326,7 +328,7 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
                 Sign up
               </button>
 
-              {/* Get Premium button */}
+              {/* Get Premium button (Commented out)
               <Link
                 href="/pricing"
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm shadow-blue-500/25 flex items-center gap-1.5 transition-all hover:scale-[1.03] active:scale-[0.97] btn-interactive"
@@ -334,6 +336,7 @@ export const Navbar: React.FC<NavbarProps> = ({ categories = [] }) => {
                 <Crown className="w-3.5 h-3.5 fill-current" />
                 <span>Get Premium</span>
               </Link>
+              */}
             </div>
           )}
 

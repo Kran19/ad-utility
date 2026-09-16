@@ -38,11 +38,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
 
+              {/* Pricing link (Commented out)
               <li>
                 <Link href="/pricing" className="text-slate-500 hover:text-blue-600 transition-colors">
                   Pricing
                 </Link>
               </li>
+              */}
             </ul>
           </div>
 
