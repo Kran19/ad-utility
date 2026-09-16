@@ -5,6 +5,7 @@ import { UtilityPublicDto, defaultUtilityRegistry } from '@ad-utility/shared';
 import { Type, Copy, Check, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { useUserAuth } from '../../../context/user-auth-context';
+import { validateFileSecurity } from '../../../lib/file-security';
 
 interface TextWorkspaceProps {
   utility: UtilityPublicDto;
@@ -19,7 +20,14 @@ export const TextWorkspace: React.FC<TextWorkspaceProps> = ({ utility }) => {
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleDropFile = (file: File) => {
+  const handleDropFile = async (file: File) => {
+    setErrorMsg(null);
+    const securityCheck = await validateFileSecurity(file, { category: 'text' });
+    if (!securityCheck.valid) {
+      setErrorMsg(securityCheck.error || 'File validation failed.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;

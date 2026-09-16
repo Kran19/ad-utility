@@ -21,8 +21,8 @@ export class PdfToJpgAdapter implements UtilityAdapter<PdfToJpgInput, PdfToJpgOu
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 20 * 1024 * 1024, // 20MB
-    maxExecutionTimeMs: 25000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 40000,
     allowedMimeTypes: ['application/pdf'],
   };
 
@@ -51,9 +51,9 @@ export class PdfToJpgAdapter implements UtilityAdapter<PdfToJpgInput, PdfToJpgOu
   async execute(input: PdfToJpgInput, _context: UtilityExecutionContext): Promise<PdfToJpgOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 20971520;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`PDF file size exceeds the 20MB limit`);
+      throw new Error(`PDF file size exceeds the 200MB limit`);
     }
 
     // Magic bytes verification

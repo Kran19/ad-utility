@@ -15,8 +15,8 @@ export class VideoCompressorAdapter implements UtilityAdapter<VideoCompressorInp
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 50 * 1024 * 1024, // 50MB
-    maxExecutionTimeMs: 30000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 60000,
     allowedMimeTypes: ['video/mp4', 'video/webm', 'video/quicktime'],
   };
 
@@ -41,9 +41,9 @@ export class VideoCompressorAdapter implements UtilityAdapter<VideoCompressorInp
   async execute(input: VideoCompressorInput, _context: UtilityExecutionContext): Promise<VideoCompressorOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 52428800;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`Video file size exceeds the 50MB limit`);
+      throw new Error(`Video file size exceeds the 200MB limit`);
     }
 
     let crf = input.crf;

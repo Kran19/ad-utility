@@ -18,8 +18,8 @@ export class PdfToTextAdapter implements UtilityAdapter<PdfToTextInput, PdfToTex
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 20 * 1024 * 1024, // 20MB
-    maxExecutionTimeMs: 15000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 25000,
     allowedMimeTypes: ['application/pdf'],
   };
 
@@ -41,9 +41,9 @@ export class PdfToTextAdapter implements UtilityAdapter<PdfToTextInput, PdfToTex
   async execute(input: PdfToTextInput, _context: UtilityExecutionContext): Promise<PdfToTextOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 20971520;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`PDF file size exceeds the 20MB limit`);
+      throw new Error(`PDF file size exceeds the 200MB limit`);
     }
 
     validatePdfMagicBytes(buffer);

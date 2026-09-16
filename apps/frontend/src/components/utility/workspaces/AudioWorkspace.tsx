@@ -6,6 +6,7 @@ import { Music, Upload, Download, RefreshCw, AlertCircle, Scissors, Sliders, Che
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
 import { useUserAuth } from '../../../context/user-auth-context';
+import { validateFileSecurity } from '../../../lib/file-security';
 
 interface AudioWorkspaceProps {
   utility: UtilityPublicDto;
@@ -35,12 +36,13 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setErrorMsg(null);
     setResultData(null);
 
-    if (file.size > 30 * 1024 * 1024) {
-      setErrorMsg('File size exceeds the 30MB limit. Please select a smaller audio file.');
+    const securityCheck = await validateFileSecurity(file, { category: 'audio' });
+    if (!securityCheck.valid) {
+      setErrorMsg(securityCheck.error || 'Audio file validation failed.');
       return;
     }
 
@@ -175,7 +177,7 @@ export const AudioWorkspace: React.FC<AudioWorkspaceProps> = ({ utility }) => {
             <h3 className="text-base font-bold text-slate-900">
               Drag & drop your audio file here, or <span className="text-blue-600 underline">browse</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-1">Supports MP3, WAV, OGG, M4A, AAC (Max 30MB)</p>
+            <p className="text-xs text-slate-500 mt-1">Supports MP3, WAV, OGG, M4A, AAC (Max 200MB)</p>
           </div>
           <input
             ref={fileInputRef}

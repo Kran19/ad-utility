@@ -19,6 +19,7 @@ import {
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
 import { useUserAuth } from '../../../context/user-auth-context';
+import { validateFileSecurity } from '../../../lib/file-security';
 
 interface VideoWorkspaceProps {
   utility: UtilityPublicDto;
@@ -150,12 +151,13 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
   };
 
   // --- Handlers for File-based Video Tools ---
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setErrorMsg(null);
     setResultData(null);
 
-    if (file.size > 50 * 1024 * 1024) {
-      setErrorMsg('File size exceeds the 50MB limit. Please select a smaller video.');
+    const securityCheck = await validateFileSecurity(file, { category: 'video' });
+    if (!securityCheck.valid) {
+      setErrorMsg(securityCheck.error || 'Video file validation failed.');
       return;
     }
 
@@ -456,7 +458,7 @@ export const VideoWorkspace: React.FC<VideoWorkspaceProps> = ({ utility }) => {
                 <h3 className="text-base font-bold text-slate-900">
                   Drag & drop your video here, or <span className="text-blue-600 underline">browse</span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">Supports MP4, WebM, MOV (Max 50MB)</p>
+                <p className="text-xs text-slate-500 mt-1">Supports MP4, WebM, MOV (Max 200MB)</p>
               </div>
               <input
                 ref={fileInputRef}

@@ -28,6 +28,7 @@ import {
 } from '@ad-utility/shared';
 import { randomUUID } from 'crypto';
 import { registerServerAdapters } from './adapters';
+import { validateBase64Security, BACKEND_MAX_FILE_SIZE } from '../common/security/file-security.util';
 
 const DEFAULT_RELATED_MAP: Record<string, string[]> = {
   'jpg-to-png': ['png-to-jpg', 'image-compressor'],
@@ -487,6 +488,26 @@ export class UtilitiesService implements OnModuleInit {
       validatedInput = adapter.validateInput(rawInput);
     } catch (valErr: any) {
       throw new BadRequestException(valErr.message || 'Invalid input payload provided');
+    }
+
+    // 3.5. Universal File Security Inspection (200MB Limit & Malware/Zip/Executable Magic Byte Shield)
+    if (validatedInput && typeof validatedInput === 'object') {
+      if (typeof (validatedInput as any).fileData === 'string') {
+        const secCheck = validateBase64Security((validatedInput as any).fileData, BACKEND_MAX_FILE_SIZE);
+        if (!secCheck.valid) {
+          throw new BadRequestException(secCheck.error || 'File failed security validation.');
+        }
+      }
+      if (Array.isArray((validatedInput as any).files)) {
+        for (const fileObj of (validatedInput as any).files) {
+          if (fileObj && typeof fileObj.fileData === 'string') {
+            const secCheck = validateBase64Security(fileObj.fileData, BACKEND_MAX_FILE_SIZE);
+            if (!secCheck.valid) {
+              throw new BadRequestException(secCheck.error || 'Batch file failed security validation.');
+            }
+          }
+        }
+      }
     }
 
     // 4. Build execution context

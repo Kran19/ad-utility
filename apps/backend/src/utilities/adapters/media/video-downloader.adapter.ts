@@ -14,8 +14,8 @@ export class VideoDownloaderAdapter implements UtilityAdapter<VideoDownloaderInp
   public readonly version = '1.0.0';
   public readonly mode = 'SERVER' as const;
   public readonly resourceLimits = {
-    maxFileSizeBytes: 50 * 1024 * 1024,
-    maxExecutionTimeMs: 30000,
+    maxFileSizeBytes: 200 * 1024 * 1024,
+    maxExecutionTimeMs: 60000,
     allowedMimeTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/x-msvideo'],
   };
 

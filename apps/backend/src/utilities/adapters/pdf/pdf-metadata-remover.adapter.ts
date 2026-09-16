@@ -20,8 +20,8 @@ export class PdfMetadataRemoverAdapter implements UtilityAdapter<PdfMetadataRemo
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 30 * 1024 * 1024, // 30MB
-    maxExecutionTimeMs: 15000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 20000,
     allowedMimeTypes: ['application/pdf'],
   };
 
@@ -44,9 +44,9 @@ export class PdfMetadataRemoverAdapter implements UtilityAdapter<PdfMetadataRemo
   async execute(input: PdfMetadataRemoverInput, _context: UtilityExecutionContext): Promise<PdfMetadataRemoverOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 31457280;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`PDF file size exceeds the 30MB limit`);
+      throw new Error(`PDF file size exceeds the 200MB limit`);
     }
 
     validatePdfMagicBytes(buffer);

@@ -24,6 +24,7 @@ import {
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
 import { useUserAuth } from '../../../context/user-auth-context';
+import { validateFileSecurity } from '../../../lib/file-security';
 
 interface ImageWorkspaceProps {
   utility: UtilityPublicDto;
@@ -179,39 +180,18 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
     setTargetHeight(Math.max(1, Math.round(nh * scale)));
   };
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setErrorMsg(null);
     setResultData(null);
 
-    // Validate size (20MB)
-    if (file.size > 20 * 1024 * 1024) {
-      setErrorMsg('File size exceeds the 20MB limit. Please select a smaller image.');
-      return;
-    }
+    // Validate security, dangerous types, magic bytes & 200MB size limit
+    const securityCheck = await validateFileSecurity(file, {
+      category: 'image',
+      utilitySlug: utility.slug,
+    });
 
-    // Validate MIME
-    const isJpg = file.type === 'image/jpeg' || file.type === 'image/jpg' || /\.jpe?g$/i.test(file.name);
-    const isPng = file.type === 'image/png' || /\.png$/i.test(file.name);
-    const isWebp = file.type === 'image/webp' || /\.webp$/i.test(file.name);
-
-    if (utility.slug === 'jpg-to-png' && !isJpg) {
-      setErrorMsg('Please select a valid JPG or JPEG image.');
-      return;
-    }
-    if (utility.slug === 'png-to-jpg' && !isPng) {
-      setErrorMsg('Please select a valid PNG image.');
-      return;
-    }
-    if (utility.slug === 'webp-to-jpg' && !isWebp) {
-      setErrorMsg('Please select a valid WebP image.');
-      return;
-    }
-    if (utility.slug === 'jpg-to-webp' && !isJpg) {
-      setErrorMsg('Please select a valid JPG or JPEG image.');
-      return;
-    }
-    if (utility.slug === 'png-to-webp' && !isPng) {
-      setErrorMsg('Please select a valid PNG image.');
+    if (!securityCheck.valid) {
+      setErrorMsg(securityCheck.error || 'File validation failed.');
       return;
     }
 
@@ -345,7 +325,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900">{utility.name} Workspace</h2>
-            <p className="text-xs text-slate-500">Max file size: 20MB &bull; 100% Secure in-memory processing</p>
+            <p className="text-xs text-slate-500">Max file size: 200MB &bull; 100% Secure in-memory processing</p>
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 uppercase">
@@ -393,7 +373,7 @@ export const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({ utility }) => {
             Drag & drop your image here, or <span className="text-blue-600 underline">browse</span>
           </h3>
           <p className="text-xs text-slate-500">
-            Supports {getAcceptedMimes().replace(/image\//g, '.').toUpperCase()} up to 20MB
+            Supports {getAcceptedMimes().replace(/image\//g, '.').toUpperCase()} up to 200MB
           </p>
         </div>
       ) : (

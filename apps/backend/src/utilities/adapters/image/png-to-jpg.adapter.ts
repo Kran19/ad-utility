@@ -21,8 +21,8 @@ export class PngToJpgAdapter implements UtilityAdapter<PngToJpgInput, PngToJpgOu
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 15 * 1024 * 1024, // 15MB
-    maxExecutionTimeMs: 10000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 15000,
     allowedMimeTypes: ['image/png'],
   };
 
@@ -50,9 +50,9 @@ export class PngToJpgAdapter implements UtilityAdapter<PngToJpgInput, PngToJpgOu
   async execute(input: PngToJpgInput, _context: UtilityExecutionContext): Promise<PngToJpgOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 15728640;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`File size (${Math.round(buffer.length / 1024)}KB) exceeds the 15MB limit`);
+      throw new Error(`File size exceeds the 200MB limit`);
     }
 
     // Authoritative magic bytes verification

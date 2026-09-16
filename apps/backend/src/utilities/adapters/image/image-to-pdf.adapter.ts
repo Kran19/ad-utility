@@ -20,8 +20,8 @@ export class ImageToPdfAdapter implements UtilityAdapter<ImageToPdfInput, ImageT
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 25 * 1024 * 1024, // 25MB total
-    maxExecutionTimeMs: 15000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB total
+    maxExecutionTimeMs: 25000,
     allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png'],
   };
 
@@ -72,9 +72,9 @@ export class ImageToPdfAdapter implements UtilityAdapter<ImageToPdfInput, ImageT
     }
 
     const totalBytes = rawImages.reduce((sum, img) => sum + img.buffer.length, 0);
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 26214400;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (totalBytes > maxBytes) {
-      throw new Error(`Combined images size (${Math.round(totalBytes / 1024)}KB) exceeds the 25MB limit`);
+      throw new Error(`Combined images size exceeds the 200MB limit`);
     }
 
     const pdfDoc = await PDFDocument.create();

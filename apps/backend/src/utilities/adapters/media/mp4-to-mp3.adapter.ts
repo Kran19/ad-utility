@@ -15,8 +15,8 @@ export class Mp4ToMp3Adapter implements UtilityAdapter<Mp4ToMp3Input, Mp4ToMp3Ou
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 50 * 1024 * 1024, // 50MB
-    maxExecutionTimeMs: 25000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 60000,
     allowedMimeTypes: ['video/mp4', 'video/webm', 'video/quicktime'],
   };
 
@@ -39,9 +39,9 @@ export class Mp4ToMp3Adapter implements UtilityAdapter<Mp4ToMp3Input, Mp4ToMp3Ou
   async execute(input: Mp4ToMp3Input, _context: UtilityExecutionContext): Promise<Mp4ToMp3Output> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 52428800;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`Video file size exceeds the 50MB limit`);
+      throw new Error(`Video file size exceeds the 200MB limit`);
     }
 
     const { outputBuffer } = await runFfmpegSafe({

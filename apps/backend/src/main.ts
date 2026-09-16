@@ -51,14 +51,14 @@ async function bootstrap() {
     bodyParser: true,
   });
 
-  // Raise JSON body size limit to support base64-encoded file payloads.
-  // Real per-adapter file-size limits (15MB images / 25MB PDFs / 50MB pdf-merge combined)
-  // are enforced inside each adapter — this only allows the request to reach those guards.
+  // Raise JSON body size limit to 300mb to support base64-encoded 200MB file payloads.
+  // Real per-adapter file-size limits (200MB) and binary magic byte security checks
+  // are enforced inside each adapter and security guard.
   app.getHttpAdapter().getInstance().use(
-    json({ limit: '70mb' }),
+    json({ limit: '300mb' }),
   );
   app.getHttpAdapter().getInstance().use(
-    urlencoded({ extended: true, limit: '70mb' }),
+    urlencoded({ extended: true, limit: '300mb' }),
   );
 
   // Serve static promo assets and ads across containerized and local monorepo layouts

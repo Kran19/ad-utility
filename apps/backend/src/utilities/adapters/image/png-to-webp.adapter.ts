@@ -20,8 +20,8 @@ export class PngToWebpAdapter implements UtilityAdapter<PngToWebpInput, PngToWeb
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 20 * 1024 * 1024, // 20MB
-    maxExecutionTimeMs: 10000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 15000,
     allowedMimeTypes: ['image/png'],
   };
 
@@ -45,9 +45,9 @@ export class PngToWebpAdapter implements UtilityAdapter<PngToWebpInput, PngToWeb
   async execute(input: PngToWebpInput, _context: UtilityExecutionContext): Promise<PngToWebpOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 20971520;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`File size exceeds the 20MB limit`);
+      throw new Error(`File size exceeds the 200MB limit`);
     }
 
     validatePngMagicBytes(buffer);

@@ -19,9 +19,9 @@ export class PdfMergeAdapter implements UtilityAdapter<PdfMergeInput, PdfMergeOu
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 50 * 1024 * 1024, // 50MB combined
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB combined
     maxBatchCount: 10,
-    maxExecutionTimeMs: 20000,
+    maxExecutionTimeMs: 45000,
     allowedMimeTypes: ['application/pdf'],
   };
 
@@ -51,7 +51,7 @@ export class PdfMergeAdapter implements UtilityAdapter<PdfMergeInput, PdfMergeOu
   async execute(input: PdfMergeInput, _context: UtilityExecutionContext): Promise<PdfMergeOutput> {
     const mergedDoc = await PDFDocument.create();
     let totalCombinedBytes = 0;
-    const maxCombinedBytes = this.resourceLimits?.maxFileSizeBytes || 52428800;
+    const maxCombinedBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
 
     for (let i = 0; i < input.files.length; i++) {
       const fileItem = input.files[i];
@@ -59,7 +59,7 @@ export class PdfMergeAdapter implements UtilityAdapter<PdfMergeInput, PdfMergeOu
 
       totalCombinedBytes += buffer.length;
       if (totalCombinedBytes > maxCombinedBytes) {
-        throw new Error(`Combined PDF size exceeds the 50MB limit`);
+        throw new Error(`Combined PDF size exceeds the 200MB limit`);
       }
 
       // Verify magic bytes

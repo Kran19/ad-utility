@@ -22,6 +22,7 @@ import {
 import { trackToolStart, trackToolComplete, trackToolError, trackResultDownload } from '../../../lib/analytics';
 import { getClientApiUrl } from '../../../lib/site-config';
 import { useUserAuth } from '../../../context/user-auth-context';
+import { validateFileSecurity } from '../../../lib/file-security';
 
 interface PdfWorkspaceProps {
   utility: UtilityPublicDto;
@@ -133,12 +134,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
     setResultData(null);
     setCopiedText(false);
 
-    const pdfFiles = Array.from(filesList).filter((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
-
-    if (pdfFiles.length === 0) {
-      setErrorMsg('Please select valid PDF document files.');
-      return;
-    }
+    const inputFiles = Array.from(filesList);
 
     if (isMerge) {
       const remainingSlots = 10 - mergeFiles.length;
@@ -146,12 +142,13 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
         setErrorMsg('Maximum 10 PDF files can be merged at once.');
         return;
       }
-      const filesToProcess = pdfFiles.slice(0, remainingSlots);
+      const filesToProcess = inputFiles.slice(0, remainingSlots);
       const newItems: Array<{ file: File; base64: string }> = [];
 
       for (const f of filesToProcess) {
-        if (f.size > 25 * 1024 * 1024) {
-          setErrorMsg(`File ${f.name} exceeds the 25MB limit.`);
+        const check = await validateFileSecurity(f, { category: 'pdf' });
+        if (!check.valid) {
+          setErrorMsg(check.error || `File ${f.name} failed security check.`);
           return;
         }
         const base64 = await readFileAsBase64(f);
@@ -160,9 +157,10 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
 
       setMergeFiles((prev) => [...prev, ...newItems]);
     } else {
-      const first = pdfFiles[0];
-      if (first.size > 25 * 1024 * 1024) {
-        setErrorMsg('PDF file exceeds the 25MB limit.');
+      const first = inputFiles[0];
+      const check = await validateFileSecurity(first, { category: 'pdf' });
+      if (!check.valid) {
+        setErrorMsg(check.error || 'PDF file validation failed.');
         return;
       }
       const base64 = await readFileAsBase64(first);
@@ -418,7 +416,7 @@ export const PdfWorkspace: React.FC<PdfWorkspaceProps> = ({ utility }) => {
             {isMerge ? 'Drag & drop multiple PDF files, or browse' : 'Drag & drop your PDF file here, or browse'}
           </h3>
           <p className="text-xs text-slate-500">
-            {isMerge ? 'Add up to 10 files (max 50MB combined)' : 'PDF documents up to 25MB'}
+            {isMerge ? 'Add up to 10 files (up to 200MB each)' : 'PDF documents up to 200MB'}
           </p>
         </div>
       ) : (

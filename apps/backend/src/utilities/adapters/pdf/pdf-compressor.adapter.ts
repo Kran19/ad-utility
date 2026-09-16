@@ -87,8 +87,8 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
   readonly version = '2.2.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 25 * 1024 * 1024, // 25MB
-    maxExecutionTimeMs: 30000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 60000,
     allowedMimeTypes: ['application/pdf'],
   };
 
@@ -130,9 +130,9 @@ export class PdfCompressorAdapter implements UtilityAdapter<PdfCompressorInput, 
     const { buffer } = parseBase64Payload(input.fileData);
     const originalSize = buffer.length;
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 26214400;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (originalSize > maxBytes) {
-      throw new Error(`PDF file size (${Math.round(originalSize / (1024 * 1024))}MB) exceeds the 25MB limit`);
+      throw new Error(`PDF file size exceeds the 200MB limit`);
     }
 
     validatePdfMagicBytes(buffer);

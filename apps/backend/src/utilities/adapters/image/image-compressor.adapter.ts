@@ -21,8 +21,8 @@ export class ImageCompressorAdapter implements UtilityAdapter<ImageCompressorInp
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 15 * 1024 * 1024, // 15MB
-    maxExecutionTimeMs: 10000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 15000,
     allowedMimeTypes: ['image/jpeg', 'image/png'],
   };
 
@@ -50,9 +50,9 @@ export class ImageCompressorAdapter implements UtilityAdapter<ImageCompressorInp
   async execute(input: ImageCompressorInput, _context: UtilityExecutionContext): Promise<ImageCompressorOutput> {
     const { buffer, mimeType } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 15728640;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`File size (${Math.round(buffer.length / 1024)}KB) exceeds the 15MB limit`);
+      throw new Error(`File size exceeds the 200MB limit`);
     }
 
     const isJpeg =

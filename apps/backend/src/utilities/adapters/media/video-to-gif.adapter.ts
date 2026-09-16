@@ -15,8 +15,8 @@ export class VideoToGifAdapter implements UtilityAdapter<VideoToGifInput, VideoT
   readonly version = '1.0.0';
   readonly mode = 'SERVER';
   readonly resourceLimits: UtilityResourceLimits = {
-    maxFileSizeBytes: 40 * 1024 * 1024, // 40MB
-    maxExecutionTimeMs: 25000,
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200MB
+    maxExecutionTimeMs: 60000,
     allowedMimeTypes: ['video/mp4', 'video/webm', 'video/quicktime'],
   };
 
@@ -42,9 +42,9 @@ export class VideoToGifAdapter implements UtilityAdapter<VideoToGifInput, VideoT
   async execute(input: VideoToGifInput, _context: UtilityExecutionContext): Promise<VideoToGifOutput> {
     const { buffer } = parseBase64Payload(input.fileData);
 
-    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 41943040;
+    const maxBytes = this.resourceLimits?.maxFileSizeBytes || 209715200;
     if (buffer.length > maxBytes) {
-      throw new Error(`Video file size exceeds the 40MB limit`);
+      throw new Error(`Video file size exceeds the 200MB limit`);
     }
 
     const start = input.startTimeSec || 0;
