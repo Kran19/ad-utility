@@ -45,9 +45,7 @@ export default function AdminCreativesPage() {
     const isSquareOrVertical = (photo.height || 1) >= (photo.width || 1) * 0.75;
     const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
     const autoPreset = isSquareOrVertical ? 'small' : 'medium';
-    const defaultDimensions = isSquareOrVertical
-      ? BANNER_SIZES.vertical.small
-      : BANNER_SIZES.horizontal.medium;
+    const defaultDimensions = BANNER_SIZES[autoOrientation][autoPreset];
 
     setNewCreative((prev) => ({
       ...prev,
@@ -57,8 +55,8 @@ export default function AdminCreativesPage() {
       targetUrl: prev.targetUrl || photo.targetUrl || 'https://example.com',
       sizeOrientation: autoOrientation,
       sizePreset: autoPreset,
-      width: photo.width || defaultDimensions.width,
-      height: photo.height || defaultDimensions.height,
+      width: defaultDimensions.width,
+      height: defaultDimensions.height,
     }));
   };
 
@@ -122,12 +120,16 @@ export default function AdminCreativesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const presetDims = BANNER_SIZES[newCreative.sizeOrientation]?.[newCreative.sizePreset];
+    const finalWidth = presetDims ? presetDims.width : (Number(newCreative.width) || undefined);
+    const finalHeight = presetDims ? presetDims.height : (Number(newCreative.height) || undefined);
+
     const res = await adminApiFetch('/admin/ads/creatives', {
       method: 'POST',
       body: JSON.stringify({
         ...newCreative,
-        width: Number(newCreative.width) || undefined,
-        height: Number(newCreative.height) || undefined,
+        width: finalWidth,
+        height: finalHeight,
       }),
     });
 

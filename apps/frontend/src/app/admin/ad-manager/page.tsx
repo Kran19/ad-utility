@@ -225,9 +225,7 @@ export default function AdminAdManagerPage() {
     const isSquareOrVertical = (photo.height || 1) >= (photo.width || 1) * 0.75;
     const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
     const autoPreset = isSquareOrVertical ? 'small' : 'medium';
-    const defaultDimensions = isSquareOrVertical
-      ? BANNER_SIZES.vertical.small
-      : BANNER_SIZES.horizontal.medium;
+    const defaultDimensions = BANNER_SIZES[autoOrientation][autoPreset];
 
     if (isEdit) {
       setEditForm((prev) => ({
@@ -237,8 +235,8 @@ export default function AdminAdManagerPage() {
         creativeName: prev.creativeName || photo.name,
         sizeOrientation: autoOrientation,
         sizePreset: autoPreset,
-        width: photo.width || defaultDimensions.width,
-        height: photo.height || defaultDimensions.height,
+        width: defaultDimensions.width,
+        height: defaultDimensions.height,
       }));
     } else {
       setAssignForm((prev) => ({
@@ -248,8 +246,8 @@ export default function AdminAdManagerPage() {
         creativeName: prev.creativeName || photo.name,
         sizeOrientation: autoOrientation,
         sizePreset: autoPreset,
-        width: photo.width || defaultDimensions.width,
-        height: photo.height || defaultDimensions.height,
+        width: defaultDimensions.width,
+        height: defaultDimensions.height,
       }));
     }
   };
@@ -276,9 +274,7 @@ export default function AdminAdManagerPage() {
         const isSquareOrVertical = testImg.naturalHeight >= testImg.naturalWidth * 0.75;
         const autoOrientation = isSquareOrVertical ? 'vertical' : 'horizontal';
         const autoPreset = isSquareOrVertical ? 'small' : 'medium';
-        const defaultDimensions = isSquareOrVertical
-          ? BANNER_SIZES.vertical.small
-          : BANNER_SIZES.horizontal.medium;
+        const defaultDimensions = BANNER_SIZES[autoOrientation][autoPreset];
 
         if (isEdit) {
           setEditForm((prev) => ({
@@ -465,6 +461,10 @@ export default function AdminAdManagerPage() {
       }
 
       const placementObj = placements.find((p) => p.id === assignForm.placementId);
+      const presetDims = BANNER_SIZES[assignForm.sizeOrientation]?.[assignForm.sizePreset];
+      const finalWidth = presetDims ? presetDims.width : (Number(assignForm.width) || 728);
+      const finalHeight = presetDims ? presetDims.height : (Number(assignForm.height) || 90);
+
       const creativeRes = await adminApiFetch('/admin/ads/creatives', {
         method: 'POST',
         body: JSON.stringify({
@@ -473,8 +473,8 @@ export default function AdminAdManagerPage() {
           mediaUrl: assignForm.mediaUrl,
           targetUrl: assignForm.targetUrl,
           altText: assignForm.altText || assignForm.creativeName || `${selectedUtility.name} Advertisement`,
-          width: Number(assignForm.width) || 728,
-          height: Number(assignForm.height) || 90,
+          width: finalWidth,
+          height: finalHeight,
         }),
       });
 
@@ -600,6 +600,10 @@ export default function AdminAdManagerPage() {
         return;
       }
 
+      const presetDims = BANNER_SIZES[editForm.sizeOrientation]?.[editForm.sizePreset];
+      const finalWidth = presetDims ? presetDims.width : (Number(editForm.width) || 728);
+      const finalHeight = presetDims ? presetDims.height : (Number(editForm.height) || 90);
+
       // If existing rule had an attached creative and it was an IMAGE creative, update it
       const currentCreativeId = editingRule.creativeId || editingRule.creative?.id;
       if (currentCreativeId && editingRule.creative?.type === 'IMAGE') {
@@ -611,8 +615,8 @@ export default function AdminAdManagerPage() {
             mediaUrl: editForm.mediaUrl,
             targetUrl: editForm.targetUrl,
             altText: editForm.altText || editForm.creativeName || `${selectedUtility.name} Advertisement`,
-            width: Number(editForm.width) || 728,
-            height: Number(editForm.height) || 90,
+            width: finalWidth,
+            height: finalHeight,
           }),
         });
         if (!updateCrRes.success) {
@@ -632,8 +636,8 @@ export default function AdminAdManagerPage() {
             mediaUrl: editForm.mediaUrl,
             targetUrl: editForm.targetUrl,
             altText: editForm.altText || editForm.creativeName || `${selectedUtility.name} Advertisement`,
-            width: Number(editForm.width) || 728,
-            height: Number(editForm.height) || 90,
+            width: finalWidth,
+            height: finalHeight,
           }),
         });
         if (!createCrRes.success || !createCrRes.data?.id) {
