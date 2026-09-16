@@ -259,10 +259,143 @@ export class AdSelectorService implements OnModuleInit {
         return (idxA >= 0 ? idxA : 999) - (idxB >= 0 ? idxB : 999);
       });
 
-      // Clear existing targeting rules to avoid duplicates
-      await this.prisma.adTargetingRule.deleteMany();
+      // Check if targeting rules already exist in database to protect admin customizations
+      const existingRulesCount = await this.prisma.adTargetingRule.count();
+      if (existingRulesCount > 0) {
+        this.logger.log(`Targeting rules already present (${existingRulesCount} rules). Preserving all existing rules without overwriting.`);
+        return;
+      }
 
       const rulesToCreate: any[] = [];
+
+      // 1. Home Page Default Targeting Rules
+      const homeDesktopTheme = themeConfigs[0]; // Aviator
+      const homeMobileTheme = themeConfigs[1];  // JetX
+      const homeAltTheme = themeConfigs[2];     // Roulette
+
+      rulesToCreate.push(
+        // Home Header Banner - Desktop
+        {
+          campaignId: homeDesktopTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
+          creativeId: homeDesktopTheme.desktopHeader.id,
+          deviceTypes: [PrismaDeviceType.DESKTOP],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Header Banner - Mobile
+        {
+          campaignId: homeMobileTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
+          creativeId: homeMobileTheme.mobileHeader.id,
+          deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Top Content - Desktop
+        {
+          campaignId: homeDesktopTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.TOP_CONTENT].id,
+          creativeId: homeDesktopTheme.desktopHeader.id,
+          deviceTypes: [PrismaDeviceType.DESKTOP],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Top Content - Mobile
+        {
+          campaignId: homeMobileTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.TOP_CONTENT].id,
+          creativeId: homeMobileTheme.mobileHeader.id,
+          deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Mid Content - Desktop
+        {
+          campaignId: homeDesktopTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.MID_CONTENT].id,
+          creativeId: homeDesktopTheme.desktopAfterTool.id,
+          deviceTypes: [PrismaDeviceType.DESKTOP],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Mid Content - Mobile
+        {
+          campaignId: homeMobileTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.MID_CONTENT].id,
+          creativeId: homeMobileTheme.mobileAfterTool.id,
+          deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home After Tool - Desktop
+        {
+          campaignId: homeAltTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
+          creativeId: homeAltTheme.desktopAfterTool.id,
+          deviceTypes: [PrismaDeviceType.DESKTOP],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home After Tool - Mobile
+        {
+          campaignId: homeAltTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
+          creativeId: homeAltTheme.mobileAfterTool.id,
+          deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Bottom Content - Desktop
+        {
+          campaignId: homeDesktopTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.BOTTOM_CONTENT].id,
+          creativeId: homeDesktopTheme.desktopHeader.id,
+          deviceTypes: [PrismaDeviceType.DESKTOP],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Bottom Content - Mobile
+        {
+          campaignId: homeMobileTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.BOTTOM_CONTENT].id,
+          creativeId: homeMobileTheme.mobileHeader.id,
+          deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+        // Home Mobile Sticky Footer
+        {
+          campaignId: homeAltTheme.campaign.id,
+          placementId: createdPlacements[PlacementCode.MOBILE_STICKY].id,
+          creativeId: homeAltTheme.mobileSticky.id,
+          deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+          utilitySlugs: ['home'],
+          priorityOverride: 100,
+          weight: 100,
+          isActive: true,
+        },
+      );
 
       for (let idx = 0; idx < sortedUtilities.length; idx++) {
         const u = sortedUtilities[idx];

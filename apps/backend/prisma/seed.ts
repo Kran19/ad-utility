@@ -1095,13 +1095,36 @@ async function main() {
       return (idxA >= 0 ? idxA : 999) - (idxB >= 0 ? idxB : 999);
     });
 
-  for (let idx = 0; idx < activeUtilities.length; idx++) {
-    const u = activeUtilities[idx];
-    const desktopTheme = themeConfigs[idx % 3];
-    const mobileTheme = themeConfigs[(idx + 1) % 3];
+    // 0. Seed Home Page Default Targeting Rules
+    const homeDesktopTheme = themeConfigs[0];
+    const homeMobileTheme = themeConfigs[1];
+    const homeAltTheme = themeConfigs[2];
 
-    // Rule 1: Header Banner - Desktop (Desktop Theme)
-    await prisma.adTargetingRule.create({
+    const homeRules = [
+      { campaignId: homeDesktopTheme.campaign.id, placementId: createdPlacements[PlacementCode.HEADER_BANNER].id, creativeId: homeDesktopTheme.desktopHeader.id, deviceTypes: [DeviceType.DESKTOP], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeMobileTheme.campaign.id, placementId: createdPlacements[PlacementCode.HEADER_BANNER].id, creativeId: homeMobileTheme.mobileHeader.id, deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeDesktopTheme.campaign.id, placementId: createdPlacements[PlacementCode.TOP_CONTENT].id, creativeId: homeDesktopTheme.desktopHeader.id, deviceTypes: [DeviceType.DESKTOP], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeMobileTheme.campaign.id, placementId: createdPlacements[PlacementCode.TOP_CONTENT].id, creativeId: homeMobileTheme.mobileHeader.id, deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeDesktopTheme.campaign.id, placementId: createdPlacements[PlacementCode.MID_CONTENT].id, creativeId: homeDesktopTheme.desktopAfterTool.id, deviceTypes: [DeviceType.DESKTOP], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeMobileTheme.campaign.id, placementId: createdPlacements[PlacementCode.MID_CONTENT].id, creativeId: homeMobileTheme.mobileAfterTool.id, deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeAltTheme.campaign.id, placementId: createdPlacements[PlacementCode.AFTER_TOOL].id, creativeId: homeAltTheme.desktopAfterTool.id, deviceTypes: [DeviceType.DESKTOP], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeAltTheme.campaign.id, placementId: createdPlacements[PlacementCode.AFTER_TOOL].id, creativeId: homeAltTheme.mobileAfterTool.id, deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeDesktopTheme.campaign.id, placementId: createdPlacements[PlacementCode.BOTTOM_CONTENT].id, creativeId: homeDesktopTheme.desktopHeader.id, deviceTypes: [DeviceType.DESKTOP], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeMobileTheme.campaign.id, placementId: createdPlacements[PlacementCode.BOTTOM_CONTENT].id, creativeId: homeMobileTheme.mobileHeader.id, deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+      { campaignId: homeAltTheme.campaign.id, placementId: createdPlacements[PlacementCode.MOBILE_STICKY].id, creativeId: homeAltTheme.mobileSticky.id, deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET], utilitySlugs: ['home'], priorityOverride: 100, weight: 100, isActive: true },
+    ];
+
+    for (const hr of homeRules) {
+      await prisma.adTargetingRule.create({ data: hr });
+    }
+
+    for (let idx = 0; idx < activeUtilities.length; idx++) {
+      const u = activeUtilities[idx];
+      const desktopTheme = themeConfigs[idx % 3];
+      const mobileTheme = themeConfigs[(idx + 1) % 3];
+
+      // Rule 1: Header Banner - Desktop (Desktop Theme)
+      await prisma.adTargetingRule.create({
       data: {
         campaignId: desktopTheme.campaign.id,
         placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
