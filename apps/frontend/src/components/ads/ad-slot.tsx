@@ -17,30 +17,44 @@ interface AdSlotProps {
   className?: string;
 }
 
+const getBasePath = (): string => {
+  if (typeof window !== 'undefined') {
+    if (window.location.pathname.startsWith('/utility')) return '/utility';
+  }
+  return (process.env.NEXT_PUBLIC_BASE_PATH || '').replace(/\/+$/, '');
+};
+
 const normalizeMediaUrl = (url?: string): string | undefined => {
   if (!url) return undefined;
   const filename = url.split('/').pop() || '';
   const lower = filename.toLowerCase();
+  const bp = getBasePath();
 
-  if (lower.includes('aviator') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/aviator-top.jpg';
-  if (lower.includes('aviator') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/aviator-mid.jpg';
-  if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/aviator-side.jpg';
-  if (lower.includes('aviator') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/aviator-badge.jpg';
-  if (lower.includes('aviator') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/aviator-tall.jpg';
+  let promoPath = '';
+  if (lower.includes('aviator') && (lower.includes('728') || lower.includes('top'))) promoPath = '/media/promos/aviator-top.jpg';
+  else if (lower.includes('aviator') && (lower.includes('250') || lower.includes('mid'))) promoPath = '/media/promos/aviator-mid.jpg';
+  else if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) promoPath = '/media/promos/aviator-side.jpg';
+  else if (lower.includes('aviator') && (lower.includes('125') || lower.includes('badge'))) promoPath = '/media/promos/aviator-badge.jpg';
+  else if (lower.includes('aviator') && (lower.includes('160') || lower.includes('tall'))) promoPath = '/media/promos/aviator-tall.jpg';
 
-  if (lower.includes('jetx') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/jetx-top.jpg';
-  if (lower.includes('jetx') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/jetx-mid.jpg';
-  if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/jetx-side.jpg';
-  if (lower.includes('jetx') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/jetx-badge.jpg';
-  if (lower.includes('jetx') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/jetx-tall.jpg';
+  else if (lower.includes('jetx') && (lower.includes('728') || lower.includes('top'))) promoPath = '/media/promos/jetx-top.jpg';
+  else if (lower.includes('jetx') && (lower.includes('250') || lower.includes('mid'))) promoPath = '/media/promos/jetx-mid.jpg';
+  else if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) promoPath = '/media/promos/jetx-side.jpg';
+  else if (lower.includes('jetx') && (lower.includes('125') || lower.includes('badge'))) promoPath = '/media/promos/jetx-badge.jpg';
+  else if (lower.includes('jetx') && (lower.includes('160') || lower.includes('tall'))) promoPath = '/media/promos/jetx-tall.jpg';
 
-  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('728') || lower.includes('top'))) return '/media/promos/roulette-top.jpg';
-  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/roulette-mid.jpg';
-  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/roulette-side.jpg';
-  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/roulette-badge.jpg';
-  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/roulette-tall.jpg';
+  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('728') || lower.includes('top'))) promoPath = '/media/promos/roulette-top.jpg';
+  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('250') || lower.includes('mid'))) promoPath = '/media/promos/roulette-mid.jpg';
+  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) promoPath = '/media/promos/roulette-side.jpg';
+  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('125') || lower.includes('badge'))) promoPath = '/media/promos/roulette-badge.jpg';
+  else if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('160') || lower.includes('tall'))) promoPath = '/media/promos/roulette-tall.jpg';
+  else {
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('/')) return `${bp}${url}`;
+    return `${bp}/${url}`;
+  }
 
-  return url;
+  return `${bp}${promoPath}`;
 };
 
 const PLACEMENT_CONFIG: Record<AdPlacement, { label: string; minHeight: string; maxWidth?: string }> = {
@@ -63,6 +77,8 @@ export const AdSlot: React.FC<AdSlotProps> = ({
   const [adCreative, setAdCreative] = useState<AdCreativePayload | null>(null);
   const [hasAd, setHasAd] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [imgSrc, setImgSrc] = useState<string>('');
+  const [hasImageError, setHasImageError] = useState<boolean>(false);
   const slotRef = useRef<HTMLDivElement>(null);
   const impressionRecordedRef = useRef<boolean>(false);
 
@@ -149,6 +165,8 @@ export const AdSlot: React.FC<AdSlotProps> = ({
               creative.mediaUrl = normalizeMediaUrl(creative.mediaUrl);
             }
             setAdCreative(creative);
+            setImgSrc(creative.mediaUrl || '');
+            setHasImageError(false);
             setHasAd(true);
           } else {
             setHasAd(false);
@@ -299,7 +317,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           className="block w-full text-center transition-opacity hover:opacity-95"
         >
           <img
-            src={adCreative.mediaUrl}
+            src={imgSrc || adCreative.mediaUrl}
             alt={adCreative.altText || 'Advertisement'}
             style={{
               maxHeight: imageMaxHeight || undefined,
@@ -307,6 +325,19 @@ export const AdSlot: React.FC<AdSlotProps> = ({
             }}
             className="w-full h-auto max-w-full mx-auto block rounded-2xl object-contain"
             loading="lazy"
+            onError={() => {
+              if (!hasImageError) {
+                setHasImageError(true);
+                const current = imgSrc || adCreative.mediaUrl || '';
+                if (current.startsWith('/utility/')) {
+                  // Fallback without /utility
+                  setImgSrc(current.replace('/utility/', '/'));
+                } else if (current.startsWith('/media/')) {
+                  // Fallback with /utility
+                  setImgSrc(`/utility${current}`);
+                }
+              }
+            }}
           />
         </a>
       )}

@@ -71,7 +71,7 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       args:
-        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/utility}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://stock-247.com/utility}
         NEXT_PUBLIC_API_URL: ${FRONTEND_API_URL:-}
     container_name: ad_utility_frontend_prod
@@ -81,15 +81,17 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/utility}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://stock-247.com/utility}
       NEXT_PUBLIC_API_URL: ${FRONTEND_API_URL:-}
       INTERNAL_API_URL: http://backend:4000/api/v1
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/utility || wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - ./apps/frontend/public:/app/apps/frontend/public
     depends_on:
       backend:
         condition: service_healthy
