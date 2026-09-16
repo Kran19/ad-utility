@@ -1263,45 +1263,6 @@ export default function AdminAdManagerPage() {
               })}
             </div>
 
-            {/* Phase 31: Core 4-Ad Monetization Inventory Coverage Card */}
-            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800/90 space-y-2.5">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-white">Core 4-Ad Monetization Inventory</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
-                    Phase 31
-                  </span>
-                </div>
-                <span className="text-[11px] font-mono text-emerald-400 font-bold">
-                  {['HEADER_BANNER', 'TOP_CONTENT', 'AFTER_TOOL', 'BOTTOM_CONTENT'].filter(code => rules.some(r => r.placement?.code === code && r.isActive)).length}/4 Core Covered
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px] font-mono">
-                {[
-                  { code: 'HEADER_BANNER', label: '1. Header' },
-                  { code: 'TOP_CONTENT', label: '2. Top Content' },
-                  { code: 'AFTER_TOOL', label: '3. After Tool' },
-                  { code: 'BOTTOM_CONTENT', label: '4. Bottom' },
-                ].map(({ code, label }) => {
-                  const isCovered = rules.some(r => r.placement?.code === code && r.isActive);
-                  return (
-                    <div
-                      key={code}
-                      className={`p-2 rounded-lg border text-center transition-all ${
-                        isCovered
-                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 shadow-xs'
-                          : 'bg-slate-900 border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <div className="font-semibold text-slate-300">{label}</div>
-                      <div className="text-[9px] mt-0.5 font-bold">
-                        {isCovered ? <span className="text-emerald-400">✓ Active</span> : <span className="text-slate-500">Unassigned</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* Header + Add Assignment Button */}
             <div className="flex items-center justify-between pt-1">
