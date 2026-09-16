@@ -12,9 +12,9 @@ const BANNER_SIZES = {
     large: { label: 'Large', dimensions: '970 × 250 px', width: 970, height: 250, desc: 'Large Billboard' },
   },
   vertical: {
-    small: { label: 'Small', dimensions: '200 × 200 px', width: 200, height: 200, desc: 'Square / QR' },
-    medium: { label: 'Medium', dimensions: '300 × 250 px', width: 300, height: 250, desc: 'Medium Card / Box' },
-    large: { label: 'Large', dimensions: '300 × 600 px', width: 300, height: 600, desc: 'Tall Skyscraper' },
+    small: { label: 'Small (QR)', dimensions: '200 × 200 px', width: 200, height: 200, desc: 'Compact QR Code / Square' },
+    medium: { label: 'Medium', dimensions: '350 × 350 px', width: 350, height: 350, desc: 'Medium Box (Larger to QR)' },
+    large: { label: 'Large', dimensions: '600 × 600 px', width: 600, height: 600, desc: 'Large Featured Square' },
   },
 };
 

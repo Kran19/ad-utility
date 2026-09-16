@@ -148,9 +148,9 @@ export default function AdminAdManagerPage() {
       large: { label: 'Large', dimensions: '970 × 250 px', width: 970, height: 250, desc: 'Large Billboard' },
     },
     vertical: {
-      small: { label: 'Small', dimensions: '200 × 200 px', width: 200, height: 200, desc: 'Square / QR' },
-      medium: { label: 'Medium', dimensions: '300 × 250 px', width: 300, height: 250, desc: 'Medium Card / Box' },
-      large: { label: 'Large', dimensions: '300 × 600 px', width: 300, height: 600, desc: 'Tall Skyscraper' },
+      small: { label: 'Small (QR)', dimensions: '200 × 200 px', width: 200, height: 200, desc: 'Compact QR Code / Square' },
+      medium: { label: 'Medium', dimensions: '350 × 350 px', width: 350, height: 350, desc: 'Medium Box (Larger to QR)' },
+      large: { label: 'Large', dimensions: '600 × 600 px', width: 600, height: 600, desc: 'Large Featured Square' },
     },
   };
 
@@ -546,6 +546,17 @@ export default function AdminAdManagerPage() {
     const crWidth = existingCreative?.width || (isVertical ? 200 : 728);
     const crHeight = existingCreative?.height || (isVertical ? 200 : 90);
 
+    let detectedPreset: 'small' | 'medium' | 'large' = 'medium';
+    if (isVertical) {
+      if (crWidth <= 220) detectedPreset = 'small';
+      else if (crWidth <= 450) detectedPreset = 'medium';
+      else detectedPreset = 'large';
+    } else {
+      if (crWidth <= 500) detectedPreset = 'small';
+      else if (crWidth <= 800) detectedPreset = 'medium';
+      else detectedPreset = 'large';
+    }
+
     setEditForm({
       placementId: rule.placementId || rule.placement?.id || '',
       adMode: existingCreative?.type === 'IMAGE' || !rule.creativeId ? 'custom_image' : 'library',
@@ -555,7 +566,7 @@ export default function AdminAdManagerPage() {
       targetUrl: existingCreative?.targetUrl || '',
       altText: existingCreative?.altText || existingCreative?.name || '',
       sizeOrientation: isVertical ? 'vertical' : 'horizontal',
-      sizePreset: (crWidth === 468 || crWidth === 200) ? 'small' : (crWidth === 970 || crHeight === 600) ? 'large' : 'medium',
+      sizePreset: detectedPreset,
       width: crWidth,
       height: crHeight,
       deviceTypes: rule.deviceTypes && rule.deviceTypes.length > 0 ? [...rule.deviceTypes] : ['DESKTOP', 'TABLET', 'MOBILE'],

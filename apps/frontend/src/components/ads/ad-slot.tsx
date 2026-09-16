@@ -207,12 +207,26 @@ export const AdSlot: React.FC<AdSlotProps> = ({
     return null; // Clean no-ad behavior
   }
 
+  // Determine container max width based on creative dimension or placement default
+  const containerMaxWidth = adCreative?.width && adCreative.width > 0
+    ? `${adCreative.width}px`
+    : undefined;
+
+  const imageMaxHeight = adCreative?.height && adCreative.height > 0
+    ? `${adCreative.height}px`
+    : undefined;
+
   return (
     <div
       ref={slotRef}
       data-ad-placement={placement}
       data-creative-id={adCreative.creativeId}
-      className={`w-full mx-auto my-4 relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-xs ${config.maxWidth || 'max-w-full'} ${className}`}
+      style={{
+        maxWidth: containerMaxWidth || undefined,
+      }}
+      className={`w-full mx-auto my-4 relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-xs flex justify-center items-center ${
+        !containerMaxWidth ? config.maxWidth || 'max-w-full' : 'max-w-full'
+      } ${className}`}
     >
       <div className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-wider text-white/95 bg-slate-950/75 backdrop-blur-xs px-2 py-0.5 rounded font-mono font-semibold pointer-events-none shadow-sm">
         Ad
@@ -224,12 +238,16 @@ export const AdSlot: React.FC<AdSlotProps> = ({
           onClick={handleAdClick}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full transition-opacity hover:opacity-95"
+          className="block w-full text-center transition-opacity hover:opacity-95"
         >
           <img
             src={adCreative.mediaUrl}
             alt={adCreative.altText || 'Advertisement'}
-            className="w-full h-auto block rounded-2xl"
+            style={{
+              maxHeight: imageMaxHeight || undefined,
+              maxWidth: containerMaxWidth || undefined,
+            }}
+            className="w-auto h-auto max-w-full mx-auto block rounded-2xl object-contain"
             loading="lazy"
           />
         </a>
