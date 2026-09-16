@@ -29,7 +29,7 @@ export default function AdminCreativesPage() {
     name: '',
     type: 'IMAGE',
     mediaUrl: '',
-    targetUrl: '',
+    targetUrl: 'https://rocky11.club/?refercode=SEO',
     width: 728,
     height: 90,
     sizeOrientation: 'horizontal' as 'horizontal' | 'vertical',
@@ -52,7 +52,7 @@ export default function AdminCreativesPage() {
       mediaUrl: photo.mediaUrl,
       name: prev.name || photo.name,
       altText: prev.altText || photo.altText || photo.name,
-      targetUrl: prev.targetUrl || photo.targetUrl || 'https://example.com',
+      targetUrl: prev.targetUrl || photo.targetUrl || 'https://rocky11.club/?refercode=SEO',
       sizeOrientation: autoOrientation,
       sizePreset: autoPreset,
       width: defaultDimensions.width,
@@ -451,13 +451,14 @@ export default function AdminCreativesPage() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-300">Target Landing URL (https://...)</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/landing"
-                  value={newCreative.targetUrl}
-                  onChange={(e) => setNewCreative({ ...newCreative, targetUrl: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white"
-                />
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://rocky11.club/?refercode=SEO"
+                    value={newCreative.targetUrl}
+                    onChange={(e) => setNewCreative({ ...newCreative, targetUrl: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  />
               </div>
 
               {newCreative.type === 'IMAGE' && (

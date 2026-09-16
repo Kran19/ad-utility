@@ -64,7 +64,7 @@ export function getClientApiUrl(): string {
       return `${basePath}/api/v1`;
     }
     const hostname = window.location?.hostname || 'localhost';
-    const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || '4000';
+    const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || (window.location?.port === '3001' ? '4001' : '4001');
     return `http://${hostname}:${backendPort}/api/v1`;
   }
 
@@ -78,7 +78,7 @@ export function getClientApiUrl(): string {
     return 'http://backend:4000/api/v1';
   }
 
-  const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || '4000';
+  const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || '4001';
   return `http://localhost:${backendPort}/api/v1`;
 }
 

@@ -169,7 +169,7 @@ export default function AdminAdManagerPage() {
     creativeId: '',
     creativeName: '',
     mediaUrl: '',
-    targetUrl: '',
+    targetUrl: 'https://rocky11.club/?refercode=SEO',
     altText: '',
     sizeOrientation: 'horizontal' as 'horizontal' | 'vertical',
     sizePreset: 'medium' as 'small' | 'medium' | 'large',
@@ -191,7 +191,7 @@ export default function AdminAdManagerPage() {
     creativeId: '',
     creativeName: '',
     mediaUrl: '',
-    targetUrl: '',
+    targetUrl: 'https://rocky11.club/?refercode=SEO',
     altText: '',
     sizeOrientation: 'horizontal' as 'horizontal' | 'vertical',
     sizePreset: 'medium' as 'small' | 'medium' | 'large',
@@ -520,7 +520,7 @@ export default function AdminAdManagerPage() {
         creativeId: '',
         creativeName: '',
         mediaUrl: '',
-        targetUrl: '',
+        targetUrl: 'https://rocky11.club/?refercode=SEO',
         altText: '',
         sizeOrientation: 'horizontal',
         sizePreset: 'medium',
@@ -1745,7 +1745,7 @@ export default function AdminAdManagerPage() {
                     <input
                       type="url"
                       required
-                      placeholder="https://example.com/landing-page"
+                      placeholder="https://rocky11.club/?refercode=SEO"
                       value={assignForm.targetUrl}
                       onChange={(e) => setAssignForm({ ...assignForm, targetUrl: e.target.value })}
                       className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
@@ -2239,7 +2239,7 @@ export default function AdminAdManagerPage() {
                     <input
                       type="url"
                       required
-                      placeholder="https://example.com/landing-page"
+                      placeholder="https://rocky11.club/?refercode=SEO"
                       value={editForm.targetUrl}
                       onChange={(e) => setEditForm({ ...editForm, targetUrl: e.target.value })}
                       className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"

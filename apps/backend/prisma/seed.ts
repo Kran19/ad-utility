@@ -830,62 +830,181 @@ async function main() {
   await prisma.adCampaign.deleteMany();
   await prisma.adCreative.deleteMany();
 
-  const creatives = [
+  const DEFAULT_TARGET_URL = 'https://rocky11.club/?refercode=SEO';
+
+  const creativesData = [
+    // Aviator Creatives
     {
-      name: 'JSON Pro Mobile Banner',
+      name: 'Aviator Desktop Leaderboard (728x90)',
       type: CreativeType.IMAGE,
-      mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=320&h=50&fit=crop',
-      targetUrl: 'https://example.com/json-pro-mobile',
-      width: 320,
-      height: 50,
-      altText: 'JSON Pro for Mobile',
-      isGlobalFallback: false,
-    },
-    {
-      name: 'JSON Pro Tablet Banner',
-      type: CreativeType.IMAGE,
-      mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=468&h=60&fit=crop',
-      targetUrl: 'https://example.com/json-pro-tablet',
-      width: 468,
-      height: 60,
-      altText: 'JSON Pro for Tablet',
-      isGlobalFallback: false,
-    },
-    {
-      name: 'JSON Pro Desktop Leaderboard',
-      type: CreativeType.IMAGE,
-      mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=728&h=90&fit=crop',
-      targetUrl: 'https://example.com/json-pro-desktop',
+      mediaUrl: '/media/promos/aviator-top.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
       width: 728,
       height: 90,
-      altText: 'JSON Pro for Desktop',
+      altText: 'Play Aviator Game Online',
       isGlobalFallback: false,
     },
     {
-      name: 'Developer Tools Category Banner',
+      name: 'Aviator Medium Banner (300x250)',
       type: CreativeType.IMAGE,
-      mediaUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=728&h=90&fit=crop',
-      targetUrl: 'https://example.com/dev-tools-sponsor',
-      width: 728,
-      height: 90,
-      altText: 'Developer Tools Sponsor',
+      mediaUrl: '/media/promos/aviator-mid.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 300,
+      height: 250,
+      altText: 'Aviator Online Multiplier',
       isGlobalFallback: false,
     },
+    {
+      name: 'Aviator Sidebar Skyscraper (300x600)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/aviator-side.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 300,
+      height: 600,
+      altText: 'Aviator Crash Game Bonus',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'Aviator Mobile Badge (125x125)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/aviator-badge.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 125,
+      height: 125,
+      altText: 'Aviator Quick Play',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'Aviator Skyscraper (160x600)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/aviator-tall.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 160,
+      height: 600,
+      altText: 'Aviator Crash Game',
+      isGlobalFallback: false,
+    },
+
+    // JetX Creatives
+    {
+      name: 'JetX Desktop Leaderboard (728x90)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/jetx-top.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 728,
+      height: 90,
+      altText: 'Play JetX Game Online',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'JetX Medium Banner (300x250)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/jetx-mid.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 300,
+      height: 250,
+      altText: 'JetX Online Multiplier',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'JetX Sidebar Skyscraper (300x600)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/jetx-side.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 300,
+      height: 600,
+      altText: 'JetX Rocket Game Bonus',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'JetX Mobile Badge (125x125)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/jetx-badge.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 125,
+      height: 125,
+      altText: 'JetX Quick Play',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'JetX Skyscraper (160x600)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/jetx-tall.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 160,
+      height: 600,
+      altText: 'JetX Crash Game',
+      isGlobalFallback: false,
+    },
+
+    // Roulette Creatives
+    {
+      name: 'Roulette Desktop Leaderboard (728x90)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/roulette-top.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 728,
+      height: 90,
+      altText: 'Play Roulette Online Casino',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'Roulette Medium Banner (300x250)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/roulette-mid.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 300,
+      height: 250,
+      altText: 'Roulette Classic Casino',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'Roulette Sidebar Skyscraper (300x600)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/roulette-side.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 300,
+      height: 600,
+      altText: 'Roulette Live Wheel Bonus',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'Roulette Mobile Badge (125x125)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/roulette-badge.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 125,
+      height: 125,
+      altText: 'Roulette Quick Play',
+      isGlobalFallback: false,
+    },
+    {
+      name: 'Roulette Skyscraper (160x600)',
+      type: CreativeType.IMAGE,
+      mediaUrl: '/media/promos/roulette-tall.jpg',
+      targetUrl: DEFAULT_TARGET_URL,
+      width: 160,
+      height: 600,
+      altText: 'Roulette Classic Game',
+      isGlobalFallback: false,
+    },
+
+    // Global Fallback Sponsor
     {
       name: 'Platform Global Fallback Sponsor',
       type: CreativeType.HTML,
-      mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=200&fit=crop&q=80',
-      customHtml: '<div style="width:100%;max-width:728px;margin:0 auto;position:relative;overflow:hidden;border-radius:8px;border:1px solid #1e293b;background:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;"><img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=200&fit=crop&q=80" alt="⚡ Global Platform Sponsor • Fast Utilities" style="width:100%;max-height:100px;object-fit:cover;display:block;" /><div style="position:absolute;bottom:6px;left:10px;background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#38bdf8;border:1px solid rgba(56,189,248,0.25);display:flex;align-items:center;gap:4px;">⚡ Global Platform Sponsor &bull; Fast Utilities</div></div>',
-      targetUrl: 'https://example.com/platform-sponsor',
+      mediaUrl: '/ads/aviator-728x90.jpg',
+      customHtml: '<div style="width:100%;max-width:728px;margin:0 auto;position:relative;overflow:hidden;border-radius:8px;border:1px solid #1e293b;background:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;"><img src="/ads/aviator-728x90.jpg" alt="⚡ Rocky11 • Official Sponsor" style="width:100%;max-height:90px;object-fit:cover;display:block;" /></div>',
+      targetUrl: DEFAULT_TARGET_URL,
       width: 728,
       height: 90,
-      altText: 'Global Platform Sponsor • Fast Utilities',
+      altText: 'Rocky11 Official Sponsor',
       isGlobalFallback: true,
     },
   ];
 
   const createdCreatives: Record<string, any> = {};
-  for (const c of creatives) {
+  for (const c of creativesData) {
     const creative = await prisma.adCreative.create({
       data: c,
     });
@@ -893,103 +1012,178 @@ async function main() {
   }
 
   // 8. Seed Campaigns
-  const campaignJsonExact = await prisma.adCampaign.create({
+  const campaignAviator = await prisma.adCampaign.create({
     data: {
-      name: 'JSON Formatter Device Targeting Campaign',
+      name: 'Aviator Game Campaign',
       status: CampaignStatus.ACTIVE,
       priority: 100,
       weight: 100,
-      dailyImpressionCap: 100,
     },
   });
 
-  const campaignDevCategory = await prisma.adCampaign.create({
+  const campaignJetX = await prisma.adCampaign.create({
     data: {
-      name: 'Developer Tools Category Campaign',
+      name: 'JetX Game Campaign',
       status: CampaignStatus.ACTIVE,
-      priority: 70,
+      priority: 100,
       weight: 100,
     },
   });
 
-  const campaignGlobalFallback = await prisma.adCampaign.create({
+  const campaignRoulette = await prisma.adCampaign.create({
     data: {
-      name: 'Global Fallback Campaign',
+      name: 'Roulette Game Campaign',
       status: CampaignStatus.ACTIVE,
-      priority: 10,
+      priority: 100,
       weight: 100,
     },
   });
 
-  // 9. Seed Targeting Rules (Verifying Mobile, Tablet, Desktop device-specific targeting)
-  // Rule A: Mobile -> Creative A on /json-formatter TOP_CONTENT
-  await prisma.adTargetingRule.create({
-    data: {
-      campaignId: campaignJsonExact.id,
-      placementId: createdPlacements[PlacementCode.TOP_CONTENT].id,
-      creativeId: createdCreatives['JSON Pro Mobile Banner'].id,
-      deviceTypes: [DeviceType.MOBILE],
-      utilitySlugs: ['json-formatter'],
-      priorityOverride: 100,
-      weight: 100,
-      isActive: true,
+  // 9. Seed Zig-Zag Targeting Rules across all active tools
+  // Group configs:
+  const themeConfigs = [
+    {
+      name: 'Aviator',
+      campaign: campaignAviator,
+      desktopHeader: createdCreatives['Aviator Desktop Leaderboard (728x90)'],
+      mobileHeader: createdCreatives['Aviator Desktop Leaderboard (728x90)'],
+      desktopAfterTool: createdCreatives['Aviator Medium Banner (300x250)'],
+      mobileAfterTool: createdCreatives['Aviator Mobile Badge (125x125)'],
+      desktopSidebar: createdCreatives['Aviator Sidebar Skyscraper (300x600)'],
+      mobileSticky: createdCreatives['Aviator Desktop Leaderboard (728x90)'],
     },
-  });
+    {
+      name: 'JetX',
+      campaign: campaignJetX,
+      desktopHeader: createdCreatives['JetX Desktop Leaderboard (728x90)'],
+      mobileHeader: createdCreatives['JetX Desktop Leaderboard (728x90)'],
+      desktopAfterTool: createdCreatives['JetX Medium Banner (300x250)'],
+      mobileAfterTool: createdCreatives['JetX Mobile Badge (125x125)'],
+      desktopSidebar: createdCreatives['JetX Sidebar Skyscraper (300x600)'],
+      mobileSticky: createdCreatives['JetX Desktop Leaderboard (728x90)'],
+    },
+    {
+      name: 'Roulette',
+      campaign: campaignRoulette,
+      desktopHeader: createdCreatives['Roulette Desktop Leaderboard (728x90)'],
+      mobileHeader: createdCreatives['Roulette Desktop Leaderboard (728x90)'],
+      desktopAfterTool: createdCreatives['Roulette Medium Banner (300x250)'],
+      mobileAfterTool: createdCreatives['Roulette Mobile Badge (125x125)'],
+      desktopSidebar: createdCreatives['Roulette Sidebar Skyscraper (300x600)'],
+      mobileSticky: createdCreatives['Roulette Desktop Leaderboard (728x90)'],
+    },
+  ];
 
-  // Rule B: Tablet -> Creative B on /json-formatter TOP_CONTENT
-  await prisma.adTargetingRule.create({
-    data: {
-      campaignId: campaignJsonExact.id,
-      placementId: createdPlacements[PlacementCode.TOP_CONTENT].id,
-      creativeId: createdCreatives['JSON Pro Tablet Banner'].id,
-      deviceTypes: [DeviceType.TABLET],
-      utilitySlugs: ['json-formatter'],
-      priorityOverride: 100,
-      weight: 100,
-      isActive: true,
-    },
-  });
+  // Canonical tool list order (Image -> PDF -> Text -> Developer -> AI -> Video -> Audio -> QR)
+  const canonicalToolOrder = [
+    'jpg-to-png', 'png-to-jpg', 'image-compressor', 'image-to-pdf', 'image-resizer', 'image-cropper', 'webp-to-jpg', 'jpg-to-webp', 'png-to-webp',
+    'pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg', 'pdf-to-png', 'pdf-to-text', 'pdf-page-extractor', 'pdf-rotator', 'pdf-reorder-pages', 'pdf-watermark', 'pdf-metadata-remover',
+    'word-counter', 'text-cleaner', 'case-converter',
+    'json-formatter', 'text-hash',
+    'ai-summarizer', 'ai-humanizer', 'ai-paraphraser', 'ai-grammar-checker',
+    'video-compressor', 'mp4-to-mp3', 'video-to-gif', 'video-trimmer',
+    'audio-cutter',
+    'qr-code-generator',
+  ];
 
-  // Rule C: Desktop -> Creative C on /json-formatter TOP_CONTENT
-  await prisma.adTargetingRule.create({
-    data: {
-      campaignId: campaignJsonExact.id,
-      placementId: createdPlacements[PlacementCode.TOP_CONTENT].id,
-      creativeId: createdCreatives['JSON Pro Desktop Leaderboard'].id,
-      deviceTypes: [DeviceType.DESKTOP],
-      utilitySlugs: ['json-formatter'],
-      priorityOverride: 100,
-      weight: 100,
-      isActive: true,
-    },
-  });
+  // Filter and sort active utilities according to canonical catalog order
+  const activeUtilities = utilities
+    .filter((u) => u.status === UtilityStatus.ACTIVE)
+    .sort((a, b) => {
+      const idxA = canonicalToolOrder.indexOf(a.slug);
+      const idxB = canonicalToolOrder.indexOf(b.slug);
+      return (idxA >= 0 ? idxA : 999) - (idxB >= 0 ? idxB : 999);
+    });
 
-  // Rule D: Category level -> HEADER_BANNER for all 'developer' category tools
-  await prisma.adTargetingRule.create({
-    data: {
-      campaignId: campaignDevCategory.id,
-      placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
-      creativeId: createdCreatives['Developer Tools Category Banner'].id,
-      deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET, DeviceType.DESKTOP],
-      categorySlugs: ['developer'],
-      priorityOverride: 70,
-      weight: 100,
-      isActive: true,
-    },
-  });
+  for (let idx = 0; idx < activeUtilities.length; idx++) {
+    const u = activeUtilities[idx];
+    const desktopTheme = themeConfigs[idx % 3];
+    const mobileTheme = themeConfigs[(idx + 1) % 3];
 
-  // Rule E: Global Fallback on AFTER_TOOL placement
-  await prisma.adTargetingRule.create({
-    data: {
-      campaignId: campaignGlobalFallback.id,
-      placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
-      creativeId: createdCreatives['Platform Global Fallback Sponsor'].id,
-      deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET, DeviceType.DESKTOP],
-      priorityOverride: 10,
-      weight: 100,
-      isActive: true,
-    },
-  });
+    // Rule 1: Header Banner - Desktop (Desktop Theme)
+    await prisma.adTargetingRule.create({
+      data: {
+        campaignId: desktopTheme.campaign.id,
+        placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
+        creativeId: desktopTheme.desktopHeader.id,
+        deviceTypes: [DeviceType.DESKTOP],
+        utilitySlugs: [u.slug],
+        priorityOverride: 100,
+        weight: 100,
+        isActive: true,
+      },
+    });
+
+    // Rule 2: Header Banner - Mobile & Tablet (Mobile Theme - Different Game)
+    await prisma.adTargetingRule.create({
+      data: {
+        campaignId: mobileTheme.campaign.id,
+        placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
+        creativeId: mobileTheme.mobileHeader.id,
+        deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET],
+        utilitySlugs: [u.slug],
+        priorityOverride: 100,
+        weight: 100,
+        isActive: true,
+      },
+    });
+
+    // Rule 3: After Tool - Desktop (Desktop Theme)
+    await prisma.adTargetingRule.create({
+      data: {
+        campaignId: desktopTheme.campaign.id,
+        placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
+        creativeId: desktopTheme.desktopAfterTool.id,
+        deviceTypes: [DeviceType.DESKTOP],
+        utilitySlugs: [u.slug],
+        priorityOverride: 100,
+        weight: 100,
+        isActive: true,
+      },
+    });
+
+    // Rule 4: After Tool - Mobile & Tablet (Mobile Theme - Different Game)
+    await prisma.adTargetingRule.create({
+      data: {
+        campaignId: mobileTheme.campaign.id,
+        placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
+        creativeId: mobileTheme.mobileAfterTool.id,
+        deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET],
+        utilitySlugs: [u.slug],
+        priorityOverride: 100,
+        weight: 100,
+        isActive: true,
+      },
+    });
+
+    // Rule 5: Sidebar - Desktop (Desktop Theme)
+    await prisma.adTargetingRule.create({
+      data: {
+        campaignId: desktopTheme.campaign.id,
+        placementId: createdPlacements[PlacementCode.SIDEBAR].id,
+        creativeId: desktopTheme.desktopSidebar.id,
+        deviceTypes: [DeviceType.DESKTOP],
+        utilitySlugs: [u.slug],
+        priorityOverride: 100,
+        weight: 100,
+        isActive: true,
+      },
+    });
+
+    // Rule 6: Mobile Sticky - Mobile & Tablet (Mobile Theme - Different Game)
+    await prisma.adTargetingRule.create({
+      data: {
+        campaignId: mobileTheme.campaign.id,
+        placementId: createdPlacements[PlacementCode.MOBILE_STICKY].id,
+        creativeId: mobileTheme.mobileSticky.id,
+        deviceTypes: [DeviceType.MOBILE, DeviceType.TABLET],
+        utilitySlugs: [u.slug],
+        priorityOverride: 100,
+        weight: 100,
+        isActive: true,
+      },
+    });
+  }
 
   // 10. Platform Settings
   const settings = [

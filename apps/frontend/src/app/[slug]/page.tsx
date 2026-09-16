@@ -227,19 +227,12 @@ export default async function UtilityPage({ params }: PageProps) {
               </p>
             </section>
 
-            {/* Canonical Placement #2: TOP_CONTENT (Below Title/Description, Above Tool Workspace) */}
-            <AdPlacementSlot
-              placement="TOP_CONTENT"
-              utilitySlug={utility.slug}
-              categorySlug={utility.categorySlug}
-            />
-
             {/* Primary Interactive Workspace */}
             <section className="w-full animate-fade-in-up animate-delay-100">
               <ToolRunner utility={utility} />
             </section>
 
-            {/* Canonical Placement #3: AFTER_TOOL (Immediately below workspace) */}
+            {/* Canonical Placement: AFTER_TOOL (Immediately below workspace) */}
             <AdPlacementSlot
               placement="AFTER_TOOL"
               utilitySlug={utility.slug}
@@ -264,13 +257,6 @@ export default async function UtilityPage({ params }: PageProps) {
                 </p>
               </div>
             </section>
-
-            {/* Canonical Placement #4: MID_CONTENT (Between How-to Guide and FAQ) */}
-            <AdPlacementSlot
-              placement="MID_CONTENT"
-              utilitySlug={utility.slug}
-              categorySlug={utility.categorySlug}
-            />
 
             {/* Frequently Asked Questions (FAQ) Section */}
             {hasFaqs && (
@@ -304,16 +290,9 @@ export default async function UtilityPage({ params }: PageProps) {
                 initialRelatedSlugs={utility.relatedSlugs || []}
               />
             </div>
-
-            {/* Canonical Placement #5: BOTTOM_CONTENT (Below Related Utilities, Above Footer) */}
-            <AdPlacementSlot
-              placement="BOTTOM_CONTENT"
-              utilitySlug={utility.slug}
-              categorySlug={utility.categorySlug}
-            />
           </div>
 
-          {/* Canonical Placement #6: SIDEBAR (Desktop Right Column only) */}
+          {/* Canonical Placement: SIDEBAR (Desktop Right Column only) */}
           <aside className="hidden lg:block w-[300px] shrink-0 sticky top-20 space-y-6">
             <AdPlacementSlot
               placement="SIDEBAR"
@@ -324,16 +303,9 @@ export default async function UtilityPage({ params }: PageProps) {
         </div>
       </main>
 
-      {/* Canonical Placement #7: MOBILE_STICKY (Mobile fixed bottom overlay) */}
+      {/* Canonical Placement: MOBILE_STICKY (Mobile & Tablet fixed bottom overlay) */}
       <AdPlacementSlot
         placement="MOBILE_STICKY"
-        utilitySlug={utility.slug}
-        categorySlug={utility.categorySlug}
-      />
-
-      {/* Canonical Placement #8: DESKTOP_STICKY (Desktop floating corner overlay) */}
-      <AdPlacementSlot
-        placement="DESKTOP_STICKY"
         utilitySlug={utility.slug}
         categorySlug={utility.categorySlug}
       />

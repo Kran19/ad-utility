@@ -9,10 +9,42 @@ import {
   DeviceType,
   CreativeType,
 } from '@ad-utility/shared';
-import { PlacementCode, CampaignStatus } from '@prisma/client';
+import {
+  PlacementCode,
+  CampaignStatus,
+  CreativeType as PrismaCreativeType,
+  DeviceType as PrismaDeviceType,
+  UtilityStatus,
+} from '@prisma/client';
 import { ExternalAdNetworkService } from '../providers/external-ad-network.service';
 
 export const FALLBACK_BANNER_IMAGE = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=200&fit=crop&q=80';
+
+export function sanitizeMediaUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  const filename = url.split('/').pop() || '';
+  const lower = filename.toLowerCase();
+
+  if (lower.includes('aviator') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/aviator-top.jpg';
+  if (lower.includes('aviator') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/aviator-mid.jpg';
+  if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/aviator-side.jpg';
+  if (lower.includes('aviator') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/aviator-badge.jpg';
+  if (lower.includes('aviator') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/aviator-tall.jpg';
+
+  if (lower.includes('jetx') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/jetx-top.jpg';
+  if (lower.includes('jetx') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/jetx-mid.jpg';
+  if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/jetx-side.jpg';
+  if (lower.includes('jetx') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/jetx-badge.jpg';
+  if (lower.includes('jetx') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/jetx-tall.jpg';
+
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('728') || lower.includes('top'))) return '/media/promos/roulette-top.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/roulette-mid.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/roulette-side.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/roulette-badge.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/roulette-tall.jpg';
+
+  return url;
+}
 
 export function formatGlobalFallbackHtml(mediaUrl?: string): string {
   const bannerUrl = mediaUrl || FALLBACK_BANNER_IMAGE;
@@ -52,25 +84,263 @@ export class AdSelectorService implements OnModuleInit {
     private readonly externalAdNetwork: ExternalAdNetworkService,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
+    // Run background setup asynchronously so HTTP healthcheck succeeds immediately
+    setImmediate(async () => {
+      try {
+        const bannerHtml = formatGlobalFallbackHtml();
+        await this.prisma.adCreative.updateMany({
+          where: {
+            OR: [
+              { isGlobalFallback: true },
+              { customHtml: { contains: 'Global Platform Sponsor' } },
+              { name: { contains: 'Global Fallback' } },
+            ],
+          },
+          data: {
+            customHtml: bannerHtml,
+            mediaUrl: FALLBACK_BANNER_IMAGE,
+          },
+        });
+        this.logger.log('Fallback ad creatives successfully synced with image banner');
+
+        await this.ensureDefaultTargeting();
+      } catch (err: any) {
+        this.logger.warn(`Could not sync fallback ad creatives or default targeting: ${err.message}`);
+      }
+    });
+  }
+
+  /**
+   * Self-healing default campaigns, creatives, and zig-zag targeting rules for all active tools
+   */
+  async ensureDefaultTargeting() {
     try {
-      const bannerHtml = formatGlobalFallbackHtml();
-      await this.prisma.adCreative.updateMany({
-        where: {
-          OR: [
-            { isGlobalFallback: true },
-            { customHtml: { contains: 'Global Platform Sponsor' } },
-            { name: { contains: 'Global Fallback' } },
-          ],
+      this.logger.log('Syncing Rocky11 campaigns, creatives, and tool targeting rules...');
+
+      const DEFAULT_TARGET_URL = 'https://rocky11.club/?refercode=SEO';
+
+      // 1. Ensure placements exist
+      const placementsData = [
+        { code: PlacementCode.HEADER_BANNER, name: 'Header Banner', description: 'Top horizontal banner (728x90 desktop / 320x50 mobile)', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.HTML, PrismaCreativeType.IFRAME] },
+        { code: PlacementCode.TOP_CONTENT, name: 'Top Content Banner', description: 'Banner displayed above the tool interface workspace', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.VIDEO, PrismaCreativeType.HTML, PrismaCreativeType.IFRAME] },
+        { code: PlacementCode.AFTER_TOOL, name: 'After Tool Banner', description: 'Banner placed directly below the active tool interface', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.VIDEO, PrismaCreativeType.HTML, PrismaCreativeType.IFRAME] },
+        { code: PlacementCode.MID_CONTENT, name: 'Mid Content Banner', description: 'Banner embedded inside the content / how-to documentation', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.HTML, PrismaCreativeType.IFRAME] },
+        { code: PlacementCode.BOTTOM_CONTENT, name: 'Bottom Content Banner', description: 'Banner placed directly above the FAQ section', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.HTML, PrismaCreativeType.IFRAME] },
+        { code: PlacementCode.SIDEBAR, name: 'Sidebar Banner', description: 'Vertical skyscraper banner on desktop viewports (300x250 / 160x600)', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.VIDEO, PrismaCreativeType.HTML, PrismaCreativeType.IFRAME] },
+        { code: PlacementCode.MOBILE_STICKY, name: 'Mobile Sticky Footer', description: 'Sticky bottom banner overlay on mobile viewports', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.HTML] },
+        { code: PlacementCode.DESKTOP_STICKY, name: 'Desktop Corner Sticky', description: 'Floating corner overlay on desktop viewports', supportedTypes: [PrismaCreativeType.IMAGE, PrismaCreativeType.HTML] },
+      ];
+
+      const createdPlacements: Record<string, any> = {};
+      for (const p of placementsData) {
+        const placement = await this.prisma.adPlacement.upsert({
+          where: { code: p.code },
+          update: { name: p.name, description: p.description, supportedTypes: p.supportedTypes },
+          create: p,
+        });
+        createdPlacements[p.code] = placement;
+      }
+
+      // 2. Ensure Creatives exist with clean adblock-safe media URLs
+      const creativesData = [
+        // Aviator Creatives
+        { name: 'Aviator Desktop Leaderboard (728x90)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/aviator-top.jpg', targetUrl: DEFAULT_TARGET_URL, width: 728, height: 90, altText: 'Play Aviator Game Online', isGlobalFallback: false },
+        { name: 'Aviator Medium Banner (300x250)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/aviator-mid.jpg', targetUrl: DEFAULT_TARGET_URL, width: 300, height: 250, altText: 'Aviator Online Multiplier', isGlobalFallback: false },
+        { name: 'Aviator Sidebar Skyscraper (300x600)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/aviator-side.jpg', targetUrl: DEFAULT_TARGET_URL, width: 300, height: 600, altText: 'Aviator Crash Game Bonus', isGlobalFallback: false },
+        { name: 'Aviator Mobile Badge (125x125)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/aviator-badge.jpg', targetUrl: DEFAULT_TARGET_URL, width: 125, height: 125, altText: 'Aviator Quick Play', isGlobalFallback: false },
+        { name: 'Aviator Skyscraper (160x600)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/aviator-tall.jpg', targetUrl: DEFAULT_TARGET_URL, width: 160, height: 600, altText: 'Aviator Crash Game', isGlobalFallback: false },
+        // JetX Creatives
+        { name: 'JetX Desktop Leaderboard (728x90)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/jetx-top.jpg', targetUrl: DEFAULT_TARGET_URL, width: 728, height: 90, altText: 'Play JetX Game Online', isGlobalFallback: false },
+        { name: 'JetX Medium Banner (300x250)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/jetx-mid.jpg', targetUrl: DEFAULT_TARGET_URL, width: 300, height: 250, altText: 'JetX Online Multiplier', isGlobalFallback: false },
+        { name: 'JetX Sidebar Skyscraper (300x600)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/jetx-side.jpg', targetUrl: DEFAULT_TARGET_URL, width: 300, height: 600, altText: 'JetX Rocket Game Bonus', isGlobalFallback: false },
+        { name: 'JetX Mobile Badge (125x125)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/jetx-badge.jpg', targetUrl: DEFAULT_TARGET_URL, width: 125, height: 125, altText: 'JetX Quick Play', isGlobalFallback: false },
+        { name: 'JetX Skyscraper (160x600)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/jetx-tall.jpg', targetUrl: DEFAULT_TARGET_URL, width: 160, height: 600, altText: 'JetX Crash Game', isGlobalFallback: false },
+        // Roulette Creatives
+        { name: 'Roulette Desktop Leaderboard (728x90)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/roulette-top.jpg', targetUrl: DEFAULT_TARGET_URL, width: 728, height: 90, altText: 'Play Roulette Online Casino', isGlobalFallback: false },
+        { name: 'Roulette Medium Banner (300x250)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/roulette-mid.jpg', targetUrl: DEFAULT_TARGET_URL, width: 300, height: 250, altText: 'Roulette Classic Casino', isGlobalFallback: false },
+        { name: 'Roulette Sidebar Skyscraper (300x600)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/roulette-side.jpg', targetUrl: DEFAULT_TARGET_URL, width: 300, height: 600, altText: 'Roulette Live Wheel Bonus', isGlobalFallback: false },
+        { name: 'Roulette Mobile Badge (125x125)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/roulette-badge.jpg', targetUrl: DEFAULT_TARGET_URL, width: 125, height: 125, altText: 'Roulette Quick Play', isGlobalFallback: false },
+        { name: 'Roulette Skyscraper (160x600)', type: PrismaCreativeType.IMAGE, mediaUrl: '/media/promos/roulette-tall.jpg', targetUrl: DEFAULT_TARGET_URL, width: 160, height: 600, altText: 'Roulette Classic Game', isGlobalFallback: false },
+      ];
+
+      const createdCreatives: Record<string, any> = {};
+      for (const c of creativesData) {
+        let creative = await this.prisma.adCreative.findFirst({ where: { name: c.name } });
+        if (!creative) {
+          creative = await this.prisma.adCreative.create({ data: c });
+        } else {
+          creative = await this.prisma.adCreative.update({
+            where: { id: creative.id },
+            data: { mediaUrl: c.mediaUrl, targetUrl: c.targetUrl, width: c.width, height: c.height },
+          });
+        }
+        createdCreatives[c.name] = creative;
+      }
+
+      // 3. Ensure Campaigns exist
+      let campaignAviator = await this.prisma.adCampaign.findFirst({ where: { name: 'Aviator Game Campaign' } });
+      if (!campaignAviator) {
+        campaignAviator = await this.prisma.adCampaign.create({
+          data: { name: 'Aviator Game Campaign', status: CampaignStatus.ACTIVE, priority: 100, weight: 100 },
+        });
+      }
+
+      let campaignJetX = await this.prisma.adCampaign.findFirst({ where: { name: 'JetX Game Campaign' } });
+      if (!campaignJetX) {
+        campaignJetX = await this.prisma.adCampaign.create({
+          data: { name: 'JetX Game Campaign', status: CampaignStatus.ACTIVE, priority: 100, weight: 100 },
+        });
+      }
+
+      let campaignRoulette = await this.prisma.adCampaign.findFirst({ where: { name: 'Roulette Game Campaign' } });
+      if (!campaignRoulette) {
+        campaignRoulette = await this.prisma.adCampaign.create({
+          data: { name: 'Roulette Game Campaign', status: CampaignStatus.ACTIVE, priority: 100, weight: 100 },
+        });
+      }
+
+      const themeConfigs = [
+        {
+          name: 'Aviator',
+          campaign: campaignAviator,
+          desktopHeader: createdCreatives['Aviator Desktop Leaderboard (728x90)'],
+          mobileHeader: createdCreatives['Aviator Desktop Leaderboard (728x90)'],
+          desktopAfterTool: createdCreatives['Aviator Medium Banner (300x250)'],
+          mobileAfterTool: createdCreatives['Aviator Mobile Badge (125x125)'],
+          desktopSidebar: createdCreatives['Aviator Sidebar Skyscraper (300x600)'],
+          mobileSticky: createdCreatives['Aviator Desktop Leaderboard (728x90)'],
         },
-        data: {
-          customHtml: bannerHtml,
-          mediaUrl: FALLBACK_BANNER_IMAGE,
+        {
+          name: 'JetX',
+          campaign: campaignJetX,
+          desktopHeader: createdCreatives['JetX Desktop Leaderboard (728x90)'],
+          mobileHeader: createdCreatives['JetX Desktop Leaderboard (728x90)'],
+          desktopAfterTool: createdCreatives['JetX Medium Banner (300x250)'],
+          mobileAfterTool: createdCreatives['JetX Mobile Badge (125x125)'],
+          desktopSidebar: createdCreatives['JetX Sidebar Skyscraper (300x600)'],
+          mobileSticky: createdCreatives['JetX Desktop Leaderboard (728x90)'],
         },
+        {
+          name: 'Roulette',
+          campaign: campaignRoulette,
+          desktopHeader: createdCreatives['Roulette Desktop Leaderboard (728x90)'],
+          mobileHeader: createdCreatives['Roulette Desktop Leaderboard (728x90)'],
+          desktopAfterTool: createdCreatives['Roulette Medium Banner (300x250)'],
+          mobileAfterTool: createdCreatives['Roulette Mobile Badge (125x125)'],
+          desktopSidebar: createdCreatives['Roulette Sidebar Skyscraper (300x600)'],
+          mobileSticky: createdCreatives['Roulette Desktop Leaderboard (728x90)'],
+        },
+      ];
+
+      const canonicalToolOrder = [
+        'jpg-to-png', 'png-to-jpg', 'image-compressor', 'image-to-pdf', 'image-resizer', 'image-cropper', 'webp-to-jpg', 'jpg-to-webp', 'png-to-webp',
+        'pdf-compressor', 'pdf-merge', 'pdf-split', 'pdf-to-jpg', 'pdf-to-png', 'pdf-to-text', 'pdf-page-extractor', 'pdf-rotator', 'pdf-reorder-pages', 'pdf-watermark', 'pdf-metadata-remover',
+        'word-counter', 'text-cleaner', 'case-converter',
+        'json-formatter', 'text-hash',
+        'ai-summarizer', 'ai-humanizer', 'ai-paraphraser', 'ai-grammar-checker',
+        'video-compressor', 'mp4-to-mp3', 'video-to-gif', 'video-trimmer',
+        'audio-cutter',
+        'qr-code-generator',
+      ];
+
+      const allActiveUtilities = await this.prisma.utility.findMany({
+        where: { status: UtilityStatus.ACTIVE },
       });
-      this.logger.log('Fallback ad creatives successfully synced with image banner');
+
+      const sortedUtilities = allActiveUtilities.sort((a, b) => {
+        const idxA = canonicalToolOrder.indexOf(a.slug);
+        const idxB = canonicalToolOrder.indexOf(b.slug);
+        return (idxA >= 0 ? idxA : 999) - (idxB >= 0 ? idxB : 999);
+      });
+
+      // Clear existing targeting rules to avoid duplicates
+      await this.prisma.adTargetingRule.deleteMany();
+
+      const rulesToCreate: any[] = [];
+
+      for (let idx = 0; idx < sortedUtilities.length; idx++) {
+        const u = sortedUtilities[idx];
+        const desktopTheme = themeConfigs[idx % 3];
+        const mobileTheme = themeConfigs[(idx + 1) % 3];
+
+        rulesToCreate.push(
+          // 1. Desktop Header (Desktop Theme)
+          {
+            campaignId: desktopTheme.campaign.id,
+            placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
+            creativeId: desktopTheme.desktopHeader.id,
+            deviceTypes: [PrismaDeviceType.DESKTOP],
+            utilitySlugs: [u.slug],
+            priorityOverride: 100,
+            weight: 100,
+            isActive: true,
+          },
+          // 2. Mobile Header (Mobile Theme - Different Game)
+          {
+            campaignId: mobileTheme.campaign.id,
+            placementId: createdPlacements[PlacementCode.HEADER_BANNER].id,
+            creativeId: mobileTheme.mobileHeader.id,
+            deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+            utilitySlugs: [u.slug],
+            priorityOverride: 100,
+            weight: 100,
+            isActive: true,
+          },
+          // 3. Desktop After Tool (Desktop Theme)
+          {
+            campaignId: desktopTheme.campaign.id,
+            placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
+            creativeId: desktopTheme.desktopAfterTool.id,
+            deviceTypes: [PrismaDeviceType.DESKTOP],
+            utilitySlugs: [u.slug],
+            priorityOverride: 100,
+            weight: 100,
+            isActive: true,
+          },
+          // 4. Mobile After Tool (Mobile Theme - Different Game)
+          {
+            campaignId: mobileTheme.campaign.id,
+            placementId: createdPlacements[PlacementCode.AFTER_TOOL].id,
+            creativeId: mobileTheme.mobileAfterTool.id,
+            deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+            utilitySlugs: [u.slug],
+            priorityOverride: 100,
+            weight: 100,
+            isActive: true,
+          },
+          // 5. Desktop Sidebar (Desktop Theme)
+          {
+            campaignId: desktopTheme.campaign.id,
+            placementId: createdPlacements[PlacementCode.SIDEBAR].id,
+            creativeId: desktopTheme.desktopSidebar.id,
+            deviceTypes: [PrismaDeviceType.DESKTOP],
+            utilitySlugs: [u.slug],
+            priorityOverride: 100,
+            weight: 100,
+            isActive: true,
+          },
+          // 6. Mobile Sticky Footer (Mobile Theme - Different Game)
+          {
+            campaignId: mobileTheme.campaign.id,
+            placementId: createdPlacements[PlacementCode.MOBILE_STICKY].id,
+            creativeId: mobileTheme.mobileSticky.id,
+            deviceTypes: [PrismaDeviceType.MOBILE, PrismaDeviceType.TABLET],
+            utilitySlugs: [u.slug],
+            priorityOverride: 100,
+            weight: 100,
+            isActive: true,
+          },
+        );
+      }
+
+      await this.prisma.adTargetingRule.createMany({
+        data: rulesToCreate,
+      });
+
+      this.logger.log(`Successfully bulk-seeded ${rulesToCreate.length} default targeting rules.`);
     } catch (err: any) {
-      this.logger.warn(`Could not sync fallback ad creatives: ${err.message}`);
+      this.logger.error(`Error in ensureDefaultTargeting: ${err.message}`);
     }
   }
 
@@ -314,7 +584,7 @@ export class AdSelectorService implements OnModuleInit {
             creativeId: chosen.creative.id,
             campaignId: chosen.campaignId,
             type: chosen.creative.type,
-            mediaUrl: chosen.creative.mediaUrl || undefined,
+            mediaUrl: sanitizeMediaUrl(chosen.creative.mediaUrl) || undefined,
             targetUrl: chosen.creative.targetUrl || undefined,
             width: chosen.creative.width || undefined,
             height: chosen.creative.height || undefined,

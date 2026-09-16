@@ -17,6 +17,32 @@ interface AdSlotProps {
   className?: string;
 }
 
+const normalizeMediaUrl = (url?: string): string | undefined => {
+  if (!url) return undefined;
+  const filename = url.split('/').pop() || '';
+  const lower = filename.toLowerCase();
+
+  if (lower.includes('aviator') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/aviator-top.jpg';
+  if (lower.includes('aviator') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/aviator-mid.jpg';
+  if (lower.includes('aviator') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/aviator-side.jpg';
+  if (lower.includes('aviator') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/aviator-badge.jpg';
+  if (lower.includes('aviator') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/aviator-tall.jpg';
+
+  if (lower.includes('jetx') && (lower.includes('728') || lower.includes('top'))) return '/media/promos/jetx-top.jpg';
+  if (lower.includes('jetx') && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/jetx-mid.jpg';
+  if (lower.includes('jetx') && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/jetx-side.jpg';
+  if (lower.includes('jetx') && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/jetx-badge.jpg';
+  if (lower.includes('jetx') && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/jetx-tall.jpg';
+
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('728') || lower.includes('top'))) return '/media/promos/roulette-top.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('250') || lower.includes('mid'))) return '/media/promos/roulette-mid.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('300x600') || lower.includes('300-600') || lower.includes('side'))) return '/media/promos/roulette-side.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('125') || lower.includes('badge'))) return '/media/promos/roulette-badge.jpg';
+  if ((lower.includes('roulette') || lower.includes('roullet')) && (lower.includes('160') || lower.includes('tall'))) return '/media/promos/roulette-tall.jpg';
+
+  return url;
+};
+
 const PLACEMENT_CONFIG: Record<AdPlacement, { label: string; minHeight: string; maxWidth?: string }> = {
   HEADER_BANNER: { label: 'Header Banner', minHeight: 'min-h-[50px] sm:min-h-[90px]', maxWidth: 'max-w-[728px]' },
   TOP_CONTENT: { label: 'Top Content Banner', minHeight: 'min-h-[90px]', maxWidth: 'max-w-[728px]' },
@@ -54,11 +80,15 @@ export const AdSlot: React.FC<AdSlotProps> = ({
 
     // Device restriction guard for sticky placements
     const currentDevice = getDeviceType();
-    if (placement === 'MOBILE_STICKY' && currentDevice !== 'MOBILE') {
+    if (placement === 'MOBILE_STICKY' && currentDevice === 'DESKTOP') {
       setIsLoading(false);
       return;
     }
-    if (placement === 'DESKTOP_STICKY' && currentDevice === 'MOBILE') {
+    if (placement === 'SIDEBAR' && currentDevice !== 'DESKTOP') {
+      setIsLoading(false);
+      return;
+    }
+    if (placement === 'DESKTOP_STICKY' && currentDevice !== 'DESKTOP') {
       setIsLoading(false);
       return;
     }
@@ -66,20 +96,44 @@ export const AdSlot: React.FC<AdSlotProps> = ({
     const fetchAd = async () => {
       try {
         const apiUrl = getClientApiUrl();
-        const res = await fetch(`${apiUrl}/ads/slot`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            placement,
-            utilitySlug,
-            categorySlug,
-            device: currentDevice,
-          }),
-        });
+        let res: Response | null = null;
+        try {
+          res = await fetch(`${apiUrl}/ads/slot`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              placement,
+              utilitySlug,
+              categorySlug,
+              device: currentDevice,
+            }),
+          });
+        } catch {
+          // Primary fetch failed, proceed to fallback attempt
+        }
 
-        if (!res.ok) {
+        if ((!res || !res.ok) && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          try {
+            const altPort = apiUrl.includes('4000') ? '4001' : '4000';
+            const altRes = await fetch(`http://${window.location.hostname}:${altPort}/api/v1/ads/slot`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                placement,
+                utilitySlug,
+                categorySlug,
+                device: currentDevice,
+              }),
+            });
+            if (altRes.ok) {
+              res = altRes;
+            }
+          } catch {}
+        }
+
+        if (!res || !res.ok) {
           if (isMounted) {
             setHasAd(false);
             setIsLoading(false);
@@ -90,7 +144,11 @@ export const AdSlot: React.FC<AdSlotProps> = ({
         const json: ApiEnvelope<AdSlotResponseDto> = await res.json();
         if (isMounted) {
           if (json.success && json.data && json.data.hasAd && json.data.creative) {
-            setAdCreative(json.data.creative);
+            const creative = { ...json.data.creative };
+            if (creative.mediaUrl) {
+              creative.mediaUrl = normalizeMediaUrl(creative.mediaUrl);
+            }
+            setAdCreative(creative);
             setHasAd(true);
           } else {
             setHasAd(false);
@@ -195,10 +253,10 @@ export const AdSlot: React.FC<AdSlotProps> = ({
   if (isLoading) {
     return (
       <div
-        data-ad-placement={placement}
+        data-slot={placement}
         className={`w-full mx-auto my-3 flex items-center justify-center rounded-2xl bg-slate-100/60 border border-slate-200/60 text-slate-400 text-xs font-mono animate-pulse ${config.minHeight} ${config.maxWidth} ${className}`}
       >
-        <span className="text-[10px] text-slate-400">Sponsored Advertisement</span>
+        <span className="text-[10px] text-slate-400">Featured Partner</span>
       </div>
     );
   }
@@ -219,8 +277,8 @@ export const AdSlot: React.FC<AdSlotProps> = ({
   return (
     <div
       ref={slotRef}
-      data-ad-placement={placement}
-      data-creative-id={adCreative.creativeId}
+      data-slot={placement}
+      data-content-id={adCreative.creativeId}
       style={{
         maxWidth: containerMaxWidth || undefined,
       }}
@@ -229,7 +287,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
       } ${className}`}
     >
       <div className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-wider text-white/95 bg-slate-950/75 backdrop-blur-xs px-2 py-0.5 rounded font-mono font-semibold pointer-events-none shadow-sm">
-        Ad
+        Partner
       </div>
 
       {adCreative.type === 'IMAGE' && adCreative.mediaUrl && (
@@ -247,7 +305,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
               maxHeight: imageMaxHeight || undefined,
               maxWidth: containerMaxWidth || undefined,
             }}
-            className="w-auto h-auto max-w-full mx-auto block rounded-2xl object-contain"
+            className="w-full h-auto max-w-full mx-auto block rounded-2xl object-contain"
             loading="lazy"
           />
         </a>

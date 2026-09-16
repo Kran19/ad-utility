@@ -61,6 +61,39 @@ async function bootstrap() {
     urlencoded({ extended: true, limit: '70mb' }),
   );
 
+  // Serve static promo assets and ads across containerized and local monorepo layouts
+  const fs = require('fs');
+  const path = require('path');
+  const possibleMediaDirs = [
+    path.join(process.cwd(), 'apps', 'frontend', 'public', 'media'),
+    path.join(process.cwd(), 'public', 'media'),
+    path.join(process.cwd(), '..', 'frontend', 'public', 'media'),
+    path.join(process.cwd(), 'apps', 'backend', 'img'),
+    path.join(process.cwd(), 'img'),
+  ];
+  for (const dir of possibleMediaDirs) {
+    if (fs.existsSync(dir)) {
+      app.getHttpAdapter().getInstance().use('/media', (require('express') as any).static(dir));
+      logger.log(`Serving static /media from: ${dir}`);
+      break;
+    }
+  }
+
+  const possibleAdsDirs = [
+    path.join(process.cwd(), 'img'),
+    path.join(process.cwd(), 'apps', 'backend', 'img'),
+    path.join(process.cwd(), 'public', 'ads'),
+    path.join(process.cwd(), 'apps', 'frontend', 'public', 'ads'),
+    path.join(process.cwd(), '..', 'frontend', 'public', 'ads'),
+  ];
+  for (const dir of possibleAdsDirs) {
+    if (fs.existsSync(dir)) {
+      app.getHttpAdapter().getInstance().use('/ads', (require('express') as any).static(dir));
+      logger.log(`Serving static /ads from: ${dir}`);
+      break;
+    }
+  }
+
 
   // Enable graceful shutdown hooks for SIGTERM / SIGINT handling
   app.enableShutdownHooks();

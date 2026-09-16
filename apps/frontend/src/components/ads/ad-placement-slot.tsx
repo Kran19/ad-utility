@@ -39,7 +39,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       return (
         <div
           className={`w-full flex justify-center items-center my-2 sm:my-3 ${className}`}
-          data-placement-type="HEADER_BANNER"
+          data-slot-area="header"
         >
           <AdSlot
             placement="HEADER_BANNER"
@@ -54,7 +54,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       return (
         <div
           className={`w-full flex justify-center items-center my-3 ${className}`}
-          data-placement-type="TOP_CONTENT"
+          data-slot-area="top"
         >
           <AdSlot
             placement="TOP_CONTENT"
@@ -69,7 +69,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       return (
         <div
           className={`w-full flex justify-center items-center my-4 ${className}`}
-          data-placement-type="AFTER_TOOL"
+          data-slot-area="after-tool"
         >
           <AdSlot
             placement="AFTER_TOOL"
@@ -84,7 +84,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       return (
         <div
           className={`w-full flex justify-center items-center my-4 ${className}`}
-          data-placement-type="MID_CONTENT"
+          data-slot-area="mid"
         >
           <AdSlot
             placement="MID_CONTENT"
@@ -99,7 +99,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       return (
         <div
           className={`w-full flex justify-center items-center my-4 sm:my-6 ${className}`}
-          data-placement-type="BOTTOM_CONTENT"
+          data-slot-area="bottom"
         >
           <AdSlot
             placement="BOTTOM_CONTENT"
@@ -115,7 +115,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       return (
         <div
           className={`hidden lg:block w-full max-w-[300px] sticky top-24 ${className}`}
-          data-placement-type="SIDEBAR"
+          data-slot-area="sidebar"
         >
           <AdSlot
             placement="SIDEBAR"
@@ -127,14 +127,15 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
       );
 
     case 'MOBILE_STICKY':
-      // Canonical Mobile Bottom Sticky (Mobile: visible, Desktop: hidden)
+      // Canonical Mobile Bottom Sticky (Mobile & Tablet: visible, Desktop: hidden)
       return (
-        <aside
-          aria-label="Sponsored Mobile Sticky Advertisement"
-          className={`fixed bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-2 px-2 md:hidden ${className}`}
-          data-placement-type="MOBILE_STICKY"
+        <div
+          role="complementary"
+          aria-label="Featured Partner"
+          className={`fixed bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-2 px-2 lg:hidden ${className}`}
+          data-slot-area="sticky-footer"
         >
-          <div className="pointer-events-auto max-w-[320px] w-full">
+          <div className="pointer-events-auto max-w-[728px] w-full">
             <AdSlot
               placement="MOBILE_STICKY"
               utilitySlug={utilitySlug}
@@ -142,7 +143,7 @@ export const AdPlacementSlot: React.FC<AdPlacementSlotProps> = ({
               className="my-0 shadow-2xl border-slate-300"
             />
           </div>
-        </aside>
+        </div>
       );
 
     case 'DESKTOP_STICKY':
