@@ -41,6 +41,21 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  // Smooth scroll to the tools directory section
+  const scrollToTools = () => {
+    setTimeout(() => {
+      const toolsSection = document.getElementById('tools');
+      if (toolsSection) {
+        const navHeight = 75; // Account for fixed/sticky navbar height
+        const targetPos = toolsSection.getBoundingClientRect().top + window.pageYOffset - navHeight;
+        window.scrollTo({
+          top: Math.max(0, targetPos),
+          behavior: 'smooth',
+        });
+      }
+    }, 50);
+  };
+
   // Helper for category metadata styling
   const getCategoryMeta = (slug: string) => {
     switch (slug) {
@@ -348,7 +363,10 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
           <h2 className="text-lg sm:text-xl font-bold text-slate-900">Browse by Category</h2>
           <button
             type="button"
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => {
+              setSelectedCategory(null);
+              scrollToTools();
+            }}
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 btn-interactive"
           >
             <span>View All</span>
@@ -369,6 +387,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
                     setSelectedCategory(null);
                   } else {
                     setSelectedCategory(cat.slug);
+                    scrollToTools();
                   }
                 }}
                 className={`p-3.5 rounded-2xl border text-left transition-all duration-300 flex flex-col justify-between group cursor-pointer ${
@@ -395,7 +414,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
       </section>
 
       {/* All Online Tools Directory Grouped by Category */}
-      <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+      <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 scroll-mt-20 sm:scroll-mt-24">
         <div className="border-b border-slate-200 pb-4">
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">All Online Tools</h2>
           <p className="text-xs text-slate-500 mt-1">
@@ -412,6 +431,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ categories, totalTools }
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory(null);
+                scrollToTools();
               }}
               className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm btn-interactive"
             >
