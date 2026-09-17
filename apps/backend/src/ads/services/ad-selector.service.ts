@@ -257,7 +257,9 @@ export class AdSelectorService implements OnModuleInit {
         const idxA = canonicalToolOrder.indexOf(a.slug);
         const idxB = canonicalToolOrder.indexOf(b.slug);
         return (idxA >= 0 ? idxA : 999) - (idxB >= 0 ? idxB : 999);
-      }      // 1. Check and seed Home Page default targeting rules if none exist
+      });
+
+      // 1. Check and seed Home Page default targeting rules if none exist
       const existingHomeRulesCount = await this.prisma.adTargetingRule.count({
         where: {
           isActive: true,
